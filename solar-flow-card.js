@@ -7,7 +7,7 @@
  * Built from src/*.js by scripts/build.mjs. Edit the sources, not this file.
  */
 (() => {
-const CARD_VERSION = "0.1.0-beta";
+const CARD_VERSION = "0.1.1-beta";
 const CARD_TAG = "solar-flow-card";
 const EDITOR_TAG = "solar-flow-card-editor";
 const THEMES = ["diorama", "aurora", "paper", "lcars", "atlantis"];
@@ -92,9 +92,15 @@ const STRINGS = {
     panelsEven: "All panels within 15% of the median",
     stringModules: "String {n} · {count} modules",
     paperHeadline: "{power} to the home",
-    paperShares: "The sun covers {pv}%, the battery {bat}% and the grid {grid}%.",
-    paperSunOnly: "The sun covers everything right now.",
-    paperSharesNoPv: "The battery covers {bat}% and the grid {grid}%.",
+    paperMix: "Right now: {parts}.",
+    paperOnly: "Right now everything comes from {source}.",
+    paperSun: "the sun",
+    paperBattery: "the battery",
+    paperGrid: "the grid",
+    sankeyFrom: "From",
+    sankeyTo: "To",
+    losses: "Losses",
+    otherSource: "Other",
     paperLasts: "At this rate the battery lasts until {time}.",
     paperFull: "The battery will be full around {time}.",
     paperExport: "{power} goes out to the grid.",
@@ -223,9 +229,15 @@ const STRINGS = {
     panelsEven: "Wszystkie panele w granicach 15% mediany",
     stringModules: "String {n} · {count} modułów",
     paperHeadline: "{power} do domu",
-    paperShares: "Słońce daje {pv}%, magazyn {bat}%, sieć {grid}%.",
-    paperSunOnly: "Teraz wszystko pokrywa słońce.",
-    paperSharesNoPv: "Magazyn daje {bat}%, sieć {grid}%.",
+    paperMix: "Teraz prąd daje {parts}.",
+    paperOnly: "Teraz cały prąd daje {source}.",
+    paperSun: "słońce",
+    paperBattery: "magazyn",
+    paperGrid: "sieć",
+    sankeyFrom: "Skąd",
+    sankeyTo: "Dokąd",
+    losses: "Straty",
+    otherSource: "Inne",
     paperLasts: "Przy tym tempie magazyn wystarczy do {time}.",
     paperFull: "Magazyn naładuje się ok. {time}.",
     paperExport: "Do sieci płynie {power}.",
@@ -1542,25 +1554,43 @@ function renderAurora(m) {
 // Paper: an editorial page with a Sankey diagram of where the power goes.
 // --------------------------------------------------------------------------
 
+// Where the power comes from right now, as shares that add up to 100%.
+// Sources are allocated to the uses in proportion, as in the Sankey.
+function liveSources(m) {
+  const { live } = m;
+  const items = [
+    ["pv", m.t.solar, m.config.showSolar ? live.solar : 0, m.ids.live.solar],
+    ["battery", m.t.battery, live.discharge, batteryEntityId(m)],
+    ["grid", m.t.grid, live.gridImport, gridEntityId(m)],
+  ];
+  const total = items.reduce((sum, [, , value]) => sum + (value > ACTIVE_W ? value : 0), 0);
+  const shares = items.map(([, , value]) => (total > 0 && value > ACTIVE_W ? (value / total) * 100 : 0));
+  const rounded = shares.map(Math.round);
+  const drift = 100 - rounded.reduce((a, b) => a + b, 0);
+  if (total > 0 && drift) rounded[shares.indexOf(Math.max(...shares))] += drift;
+  return { items, total, shares: rounded };
+}
+
 function sankeyHtml(m) {
   const { live, t, locale } = m;
-  const sources = [
-    ["pv", t.solar, live.solar, m.ids.live.solar],
-    ["battery", t.battery, live.discharge, batteryEntityId(m)],
-    ["grid", t.grid, live.gridImport, gridEntityId(m)],
-  ].filter(([, , value]) => value > ACTIVE_W);
+  const sources = liveSources(m).items.filter(([, , value]) => value > ACTIVE_W);
   const sinks = [
     ["load", t.home, live.load, m.ids.live.load],
     ["battery", t.battery, live.charge, batteryEntityId(m)],
     ["grid", t.grid, live.gridExport, gridEntityId(m)],
   ].filter(([, , value]) => value > ACTIVE_W);
   if (!sources.length || !sinks.length) return `<div class="pap-quiet">${escapeHtml(t.idle)}</div>`;
+  // Balance both sides: what goes in but is not measured going out is the
+  // inverter's losses and own use; the reverse is an unmeasured source.
+  const sourceTotal = sources.reduce((s, [, , v]) => s + v, 0);
+  const sinkTotal = sinks.reduce((s, [, , v]) => s + v, 0);
+  if (sourceTotal - sinkTotal > ACTIVE_W) sinks.push(["loss", t.losses, sourceTotal - sinkTotal, null]);
+  if (sinkTotal - sourceTotal > ACTIVE_W) sources.push(["other", t.otherSource, sinkTotal - sourceTotal, null]);
+  const total = Math.max(sourceTotal, sinkTotal);
   const W = 468;
   const H = 200;
   const gap = 14;
-  const sourceTotal = sources.reduce((s, [, , v]) => s + v, 0);
-  const sinkTotal = sinks.reduce((s, [, , v]) => s + v, 0);
-  const scale = (H - gap * (Math.max(sources.length, sinks.length) - 1)) / Math.max(sourceTotal, sinkTotal);
+  const scale = (H - gap * (Math.max(sources.length, sinks.length) - 1)) / total;
   const stack = (items) => {
     let y = 0;
     return items.map(([kind, label, value, entityId]) => {
@@ -1572,28 +1602,26 @@ function sankeyHtml(m) {
   const left = stack(sources);
   const right = stack(sinks);
   let ribbons = "";
-  // Each source feeds the sinks in proportion to their size; the left end
-  // of a ribbon is measured against the source, the right end against the
-  // sink, so both bars fill exactly even when the totals differ slightly.
+  // Each source feeds every use in proportion to the use's share.
   for (const s of left) {
     for (const k of right) {
-      const h = ((s.value * k.value) / sinkTotal) * scale;
-      const hk = ((k.value * s.value) / sourceTotal) * scale;
-      if (h < 0.5 && hk < 0.5) continue;
+      const h = ((s.value * k.value) / total) * scale;
+      if (h < 0.5) continue;
       const y0 = s.y + s.used;
       const y1 = k.y + k.used;
       s.used += h;
-      k.used += hk;
-      ribbons += `<path class="pap-ribbon ${s.kind}" d="M10 ${y0.toFixed(1)} C${W / 2} ${y0.toFixed(1)} ${W / 2} ${y1.toFixed(1)} ${W - 10} ${y1.toFixed(1)} L${W - 10} ${(y1 + hk).toFixed(1)} C${W / 2} ${(y1 + hk).toFixed(1)} ${W / 2} ${(y0 + h).toFixed(1)} 10 ${(y0 + h).toFixed(1)} Z"/>`;
+      k.used += h;
+      ribbons += `<path class="pap-ribbon ${s.kind}" d="M10 ${y0.toFixed(1)} C${W / 2} ${y0.toFixed(1)} ${W / 2} ${y1.toFixed(1)} ${W - 10} ${y1.toFixed(1)} L${W - 10} ${(y1 + h).toFixed(1)} C${W / 2} ${(y1 + h).toFixed(1)} ${W / 2} ${(y0 + h).toFixed(1)} 10 ${(y0 + h).toFixed(1)} Z"/>`;
     }
   }
   const bars = left.map((s) => `<rect class="pap-node ${s.kind}" x="0" y="${s.y.toFixed(1)}" width="10" height="${s.h.toFixed(1)}"/>`).join("")
     + right.map((k) => `<rect class="pap-node sink ${k.kind}" x="${W - 10}" y="${k.y.toFixed(1)}" width="10" height="${k.h.toFixed(1)}"/>`).join("");
   const label = (node, side) => `
-    <button class="pap-label ${side}" style="top:${((Math.max(0, node.y + node.h / 2 - 16) / H) * 100).toFixed(1)}%" ${entityAttr(node.entityId)}>
+    <button class="pap-label ${side} ${node.kind}" style="top:${((Math.max(0, node.y + node.h / 2 - 16) / H) * 100).toFixed(1)}%" ${entityAttr(node.entityId)}>
       <b>${escapeHtml(formatPower(node.value, locale))}</b>${escapeHtml(node.label)}${node.kind === "battery" && isNum(live.soc) ? ` · ${escapeHtml(formatPercent(live.soc, locale))}` : ""}
     </button>`;
   return `
+    <div class="pap-cols"><span>${escapeHtml(t.sankeyFrom)}</span><span>${escapeHtml(t.sankeyTo)}</span></div>
     <div class="pap-sankey">
       <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">${ribbons}${bars}</svg>
       ${left.map((n) => label(n, "left")).join("")}
@@ -1605,15 +1633,13 @@ function renderPaper(m) {
   const { t, locale, live } = m;
   const load = live.load;
   let lede = "";
-  if (load > ACTIVE_W) {
-    const bat = (live.discharge / load) * 100;
-    const grid = (live.gridImport / load) * 100;
-    const pv = clamp(100 - bat - grid, 0, 100);
-    lede = !m.config.showSolar
-      ? fill(t.paperSharesNoPv, { bat: `<em>${Math.round(bat)}</em>`, grid: `<em>${Math.round(grid)}</em>` })
-      : bat < 1 && grid < 1
-      ? t.paperSunOnly
-      : fill(t.paperShares, { pv: `<em>${Math.round(pv)}</em>`, bat: `<em>${Math.round(bat)}</em>`, grid: `<em>${Math.round(grid)}</em>` });
+  const sourcesNow = liveSources(m);
+  if (load > ACTIVE_W && sourcesNow.total > 0) {
+    const names = [t.paperSun, t.paperBattery, t.paperGrid];
+    const parts = sourcesNow.shares.map((pct, i) => [names[i], pct]).filter(([, pct]) => pct > 0);
+    lede = parts.length === 1
+      ? fill(t.paperOnly, { source: `<em>${parts[0][0]}</em>` })
+      : fill(t.paperMix, { parts: parts.map(([name, pct]) => `${name} <em>${pct}%</em>`).join(", ") });
   }
   const f = m.forecast;
   if (f.mode === "discharging") lede += ` ${fill(t.paperLasts, { time: `<em>${formatClock(f.at, locale)}</em>` })}`;
@@ -1824,12 +1850,13 @@ const BASE_CSS = `
     border-radius: var(--sfc-icon-radius, 10px); background: color-mix(in srgb, var(--sfc-c) 16%, transparent); }
   .sfc-tile-icon svg, .sfc-forecast-icon svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   .sfc-tile-copy { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-  .sfc-tile small, .sfc-summary-item small { color: var(--sfc-muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sfc-tile small, .sfc-summary-item small { color: var(--sfc-muted); font-size: 11px; line-height: 1.2; overflow: hidden;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
   .sfc-tile strong { color: var(--sfc-text); font-size: 15px; font-family: var(--sfc-num-font, inherit); white-space: nowrap; }
-  .sfc-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(98px, 1fr)); gap: 8px; margin-top: 10px; }
+  .sfc-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 8px; margin-top: 10px; }
   .sfc-summary-item { min-width: 0; padding: 8px 10px; border-radius: var(--sfc-tile-radius, 11px); border: 1px solid var(--sfc-border);
     background: color-mix(in srgb, var(--sfc-tile-bg) 85%, var(--sfc-c, var(--sfc-accent)) 15%); }
-  .sfc-summary-item small { display: block; font-size: 10px; }
+  .sfc-summary-item small { font-size: 10px; }
   .sfc-summary-item strong { display: block; margin-top: 2px; font-size: 14px; font-family: var(--sfc-num-font, inherit); white-space: nowrap; }
 
   /* Battery forecast */
@@ -2042,11 +2069,16 @@ const THEME_CSS = {
     .pap-ribbon { opacity: .5; } .pap-ribbon.pv { fill: var(--sfc-pv); } .pap-ribbon.battery { fill: var(--sfc-battery); } .pap-ribbon.grid { fill: var(--sfc-grid); }
     .pap-node.pv { fill: var(--sfc-pv); } .pap-node.battery { fill: var(--sfc-battery); } .pap-node.grid { fill: var(--sfc-grid); }
     .pap-node.sink.load { fill: var(--sfc-text); }
+    .pap-ribbon.other, .pap-node.other, .pap-node.loss { fill: #b9b0a2; }
+    .pap-label.loss, .pap-label.other { color: var(--sfc-muted); }
+    .pap-label.loss b, .pap-label.other b { color: var(--sfc-muted); font-size: 14px; }
+    .pap-cols { display: flex; justify-content: space-between; margin-top: 14px; font-size: 9px; letter-spacing: .16em; text-transform: uppercase; color: var(--sfc-muted); }
+    .pap-cols + .pap-sankey { margin-top: 6px; }
     .pap-label { position: absolute; padding: 0; border: 0; background: none; font-size: 11px; color: #5b5448; text-align: left; line-height: 1.2; }
     .pap-label.left { left: 4%; } .pap-label.right { right: 4%; text-align: right; }
     .pap-label b { display: block; font-family: var(--sfc-heading-font); font-size: clamp(15px, 4cqw, 20px); font-weight: 600; color: var(--sfc-text); }
     .pap-quiet { padding: 30px 0; text-align: center; font-family: var(--sfc-heading-font); font-style: italic; color: var(--sfc-muted); }
-    .pap-inverter { display: block; margin: 4px 0 14px auto; font-family: var(--sfc-heading-font); font-style: italic; font-weight: 400; color: var(--sfc-accent); }
+    .pap-inverter { display: block; margin: 22px 0 14px auto; font-family: var(--sfc-heading-font); font-style: italic; font-weight: 400; color: var(--sfc-accent); }
     .sfc-sections { padding: 0 0 16px; gap: 18px; }
     .sfc-section { padding: 14px 0 0; border: 0; border-top: 1px solid var(--sfc-border); }
     .sfc-head h3 { font-size: 18px; }
@@ -2057,7 +2089,7 @@ const THEME_CSS = {
     .sfc-tiles { gap: 0; border-top: 1px solid var(--sfc-border); }
     .sfc-tile { border: 0; border-bottom: 1px solid var(--sfc-border); padding: 10px 4px; }
     .sfc-tile-icon { display: none; }
-    .sfc-tile small, .sfc-summary-item small { text-transform: uppercase; letter-spacing: .12em; font-size: 9px; }
+    .sfc-tile small, .sfc-summary-item small { text-transform: uppercase; letter-spacing: .08em; font-size: 9px; }
     .sfc-tile strong { font-size: 20px; font-weight: 600; }
     .sfc-summary-item { background: none; border: 0; border-left: 1px solid var(--sfc-border); }
     .sfc-summary-item strong { font-size: 18px; font-weight: 600; }
@@ -2198,7 +2230,7 @@ const THEME_CSS = {
     .sfc-head h3 { font-weight: 300; letter-spacing: .26em; text-transform: uppercase; font-size: 13px; }
     .sfc-kicker { border-radius: 2px 10px 2px 10px; }
     .sfc-tab { letter-spacing: .03em; text-transform: uppercase; font-weight: 500; font-size: 10px; }
-    .sfc-tile small, .sfc-summary-item small, .sfc-forecast-copy small { letter-spacing: .2em; text-transform: uppercase; font-size: 9px; }
+    .sfc-tile small, .sfc-summary-item small, .sfc-forecast-copy small { letter-spacing: .06em; text-transform: uppercase; font-size: 9px; }
     .sfc-tile strong, .sfc-summary-item strong { font-weight: 300; font-size: 18px; }
     .sfc-section { position: relative; }
     .sfc-section::before { content: ""; position: absolute; left: -1px; top: 12px; width: 3px; height: 16px; background: #3fe0ff; box-shadow: 0 0 8px #3fe0ff; }

@@ -62,12 +62,13 @@ const BASE_CSS = `
     border-radius: var(--sfc-icon-radius, 10px); background: color-mix(in srgb, var(--sfc-c) 16%, transparent); }
   .sfc-tile-icon svg, .sfc-forecast-icon svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   .sfc-tile-copy { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-  .sfc-tile small, .sfc-summary-item small { color: var(--sfc-muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sfc-tile small, .sfc-summary-item small { color: var(--sfc-muted); font-size: 11px; line-height: 1.2; overflow: hidden;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
   .sfc-tile strong { color: var(--sfc-text); font-size: 15px; font-family: var(--sfc-num-font, inherit); white-space: nowrap; }
-  .sfc-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(98px, 1fr)); gap: 8px; margin-top: 10px; }
+  .sfc-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 8px; margin-top: 10px; }
   .sfc-summary-item { min-width: 0; padding: 8px 10px; border-radius: var(--sfc-tile-radius, 11px); border: 1px solid var(--sfc-border);
     background: color-mix(in srgb, var(--sfc-tile-bg) 85%, var(--sfc-c, var(--sfc-accent)) 15%); }
-  .sfc-summary-item small { display: block; font-size: 10px; }
+  .sfc-summary-item small { font-size: 10px; }
   .sfc-summary-item strong { display: block; margin-top: 2px; font-size: 14px; font-family: var(--sfc-num-font, inherit); white-space: nowrap; }
 
   /* Battery forecast */
@@ -280,11 +281,16 @@ const THEME_CSS = {
     .pap-ribbon { opacity: .5; } .pap-ribbon.pv { fill: var(--sfc-pv); } .pap-ribbon.battery { fill: var(--sfc-battery); } .pap-ribbon.grid { fill: var(--sfc-grid); }
     .pap-node.pv { fill: var(--sfc-pv); } .pap-node.battery { fill: var(--sfc-battery); } .pap-node.grid { fill: var(--sfc-grid); }
     .pap-node.sink.load { fill: var(--sfc-text); }
+    .pap-ribbon.other, .pap-node.other, .pap-node.loss { fill: #b9b0a2; }
+    .pap-label.loss, .pap-label.other { color: var(--sfc-muted); }
+    .pap-label.loss b, .pap-label.other b { color: var(--sfc-muted); font-size: 14px; }
+    .pap-cols { display: flex; justify-content: space-between; margin-top: 14px; font-size: 9px; letter-spacing: .16em; text-transform: uppercase; color: var(--sfc-muted); }
+    .pap-cols + .pap-sankey { margin-top: 6px; }
     .pap-label { position: absolute; padding: 0; border: 0; background: none; font-size: 11px; color: #5b5448; text-align: left; line-height: 1.2; }
     .pap-label.left { left: 4%; } .pap-label.right { right: 4%; text-align: right; }
     .pap-label b { display: block; font-family: var(--sfc-heading-font); font-size: clamp(15px, 4cqw, 20px); font-weight: 600; color: var(--sfc-text); }
     .pap-quiet { padding: 30px 0; text-align: center; font-family: var(--sfc-heading-font); font-style: italic; color: var(--sfc-muted); }
-    .pap-inverter { display: block; margin: 4px 0 14px auto; font-family: var(--sfc-heading-font); font-style: italic; font-weight: 400; color: var(--sfc-accent); }
+    .pap-inverter { display: block; margin: 22px 0 14px auto; font-family: var(--sfc-heading-font); font-style: italic; font-weight: 400; color: var(--sfc-accent); }
     .sfc-sections { padding: 0 0 16px; gap: 18px; }
     .sfc-section { padding: 14px 0 0; border: 0; border-top: 1px solid var(--sfc-border); }
     .sfc-head h3 { font-size: 18px; }
@@ -295,7 +301,7 @@ const THEME_CSS = {
     .sfc-tiles { gap: 0; border-top: 1px solid var(--sfc-border); }
     .sfc-tile { border: 0; border-bottom: 1px solid var(--sfc-border); padding: 10px 4px; }
     .sfc-tile-icon { display: none; }
-    .sfc-tile small, .sfc-summary-item small { text-transform: uppercase; letter-spacing: .12em; font-size: 9px; }
+    .sfc-tile small, .sfc-summary-item small { text-transform: uppercase; letter-spacing: .08em; font-size: 9px; }
     .sfc-tile strong { font-size: 20px; font-weight: 600; }
     .sfc-summary-item { background: none; border: 0; border-left: 1px solid var(--sfc-border); }
     .sfc-summary-item strong { font-size: 18px; font-weight: 600; }
@@ -436,7 +442,7 @@ const THEME_CSS = {
     .sfc-head h3 { font-weight: 300; letter-spacing: .26em; text-transform: uppercase; font-size: 13px; }
     .sfc-kicker { border-radius: 2px 10px 2px 10px; }
     .sfc-tab { letter-spacing: .03em; text-transform: uppercase; font-weight: 500; font-size: 10px; }
-    .sfc-tile small, .sfc-summary-item small, .sfc-forecast-copy small { letter-spacing: .2em; text-transform: uppercase; font-size: 9px; }
+    .sfc-tile small, .sfc-summary-item small, .sfc-forecast-copy small { letter-spacing: .06em; text-transform: uppercase; font-size: 9px; }
     .sfc-tile strong, .sfc-summary-item strong { font-weight: 300; font-size: 18px; }
     .sfc-section { position: relative; }
     .sfc-section::before { content: ""; position: absolute; left: -1px; top: 12px; width: 3px; height: 16px; background: #3fe0ff; box-shadow: 0 0 8px #3fe0ff; }
