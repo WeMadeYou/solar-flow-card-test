@@ -154,6 +154,26 @@ const BASE_CSS = `
   .sfc-chart-hint { margin: 2px 0 0; color: var(--sfc-muted); font-size: 10px; }
   .sfc-chart-empty { display: grid; place-items: center; height: 110px; border: 1px dashed var(--sfc-border); border-radius: 12px; color: var(--sfc-muted); font-size: 12px; }
 
+  /* Installation */
+  .sfc-phases { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .sfc-phase, .sfc-meter { position: relative; min-width: 0; display: grid; gap: 2px; padding: 9px 11px; text-align: left;
+    border: 1px solid var(--sfc-border); border-radius: var(--sfc-tile-radius, 11px); background: var(--sfc-tile-bg); }
+  .sfc-phase small, .sfc-meter small { color: var(--sfc-muted); font-size: 11px; font-weight: 700; line-height: 1.2; overflow: hidden;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .sfc-meter { align-content: start; }
+  .sfc-phase strong { font-size: 16px; font-family: var(--sfc-num-font, inherit); white-space: nowrap; }
+  .sfc-phase span, .sfc-meter span { color: var(--sfc-muted); font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sfc-phase i, .sfc-meter i { display: block; height: 4px; margin: 3px 0 1px; border-radius: 999px;
+    background: linear-gradient(90deg, var(--sfc-c, var(--sfc-load)) var(--p), var(--sfc-track) var(--p)); }
+  .sfc-meters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+  .sfc-meter.inverter, .sfc-meter.generator { grid-column: 1 / -1; }
+  .sfc-meter b { font-size: 14px; font-family: var(--sfc-num-font, inherit); white-space: nowrap; }
+  .sfc-meter.inverter { --sfc-c: var(--sfc-accent); } .sfc-meter.battery b { color: var(--sfc-battery); }
+  .sfc-meter.warn { border-color: var(--sfc-load); box-shadow: inset 0 0 0 1px var(--sfc-load); }
+  .sfc-meter.warn b { color: var(--sfc-load); }
+  .sfc-meter.generator b { color: var(--sfc-pv); }
+  .sfc-system .sfc-panels-note { margin-top: 8px; }
+
   /* Animated flows */
   .sfc-flow-base { fill: none; stroke: var(--sfc-flow-base); stroke-width: var(--sfc-flow-w, 4); stroke-linecap: round; }
   .sfc-flow { fill: none; stroke-width: var(--sfc-flow-w, 4); stroke-linecap: round; stroke-dasharray: var(--sfc-dash, 1 9);

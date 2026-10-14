@@ -7,7 +7,7 @@
  * Built from src/*.js by scripts/build.mjs. Edit the sources, not this file.
  */
 (() => {
-const CARD_VERSION = "0.1.6-beta";
+const CARD_VERSION = "0.1.7-beta";
 const CARD_TAG = "solar-flow-card";
 const EDITOR_TAG = "solar-flow-card-editor";
 const THEMES = ["diorama", "aurora", "paper", "lcars", "atlantis", "expanse", "foundation", "galaxy"];
@@ -141,6 +141,17 @@ const TRANSLATIONS = {
     "foundationSteady": "The battery holds steady; the plan stays on course.",
     "galaxyTitle": "Power systems",
     "galaxyQuiet": "All is quiet in this sector of the galaxy.",
+    "systemTitle": "Installation",
+    "phaseSpread": "Phase spread {power}",
+    "phaseGrid": "grid {power}",
+    "inverterLoad": "Inverter load",
+    "inverterOf": "{power} of {rated}",
+    "batteryTemperature": "Battery temperature",
+    "batteryVoltage": "Battery voltage",
+    "batteryCurrent": "Battery current",
+    "batteryCold": "The battery is cold: charging may be limited.",
+    "batteryHot": "The battery is hot: charging may be limited.",
+    "generatorRunning": "Generator running",
     "themeNames": {
       "diorama": "Diorama",
       "aurora": "Aurora",
@@ -160,6 +171,7 @@ const TRANSLATIONS = {
     "editorBatteryMinSoc": "Battery reserve (%)",
     "editorPvCapacity": "PV size (kWp)",
     "editorPvPanels": "Number of panels",
+    "editorInverterRating": "Inverter rated power (kW)",
     "editorPriceImport": "Import price per kWh",
     "editorPriceExport": "Export price per kWh",
     "editorCurrency": "Currency",
@@ -167,6 +179,7 @@ const TRANSLATIONS = {
     "editorShowEnergy": "Show energy",
     "editorShowChart": "Show chart",
     "editorShowForecast": "Show battery forecast",
+    "editorShowSystem": "Installation (phases, inverter load, battery)",
     "editorShowPanels": "Show panels (optimizers)",
     "editorSolar": "The installation has PV panels",
     "editorShowAutarky": "Show self-sufficiency",
@@ -302,6 +315,17 @@ const TRANSLATIONS = {
     "foundationSteady": "Magazyn trwa w równowadze; plan przebiega zgodnie z przewidywaniami.",
     "galaxyTitle": "Systemy zasilania",
     "galaxyQuiet": "W tym sektorze galaktyki panuje spokój.",
+    "systemTitle": "Instalacja",
+    "phaseSpread": "Różnica faz {power}",
+    "phaseGrid": "sieć {power}",
+    "inverterLoad": "Obciążenie falownika",
+    "inverterOf": "{power} z {rated}",
+    "batteryTemperature": "Temperatura baterii",
+    "batteryVoltage": "Napięcie baterii",
+    "batteryCurrent": "Prąd baterii",
+    "batteryCold": "Bateria jest zimna: ładowanie może być ograniczone.",
+    "batteryHot": "Bateria jest gorąca: ładowanie może być ograniczone.",
+    "generatorRunning": "Agregat pracuje",
     "themeNames": {
       "diorama": "Diorama",
       "aurora": "Aurora",
@@ -321,6 +345,7 @@ const TRANSLATIONS = {
     "editorBatteryMinSoc": "Rezerwa magazynu (%)",
     "editorPvCapacity": "Moc instalacji PV (kWp)",
     "editorPvPanels": "Liczba paneli",
+    "editorInverterRating": "Moc znamionowa falownika (kW)",
     "editorPriceImport": "Cena zakupu za kWh",
     "editorPriceExport": "Cena sprzedaży za kWh",
     "editorCurrency": "Waluta",
@@ -328,6 +353,7 @@ const TRANSLATIONS = {
     "editorShowEnergy": "Pokaż energię",
     "editorShowChart": "Pokaż wykres",
     "editorShowForecast": "Pokaż prognozę magazynu",
+    "editorShowSystem": "Instalacja (fazy, obciążenie falownika, bateria)",
     "editorShowPanels": "Pokaż panele (optymalizatory)",
     "editorSolar": "Instalacja ma panele PV",
     "editorShowAutarky": "Pokaż samowystarczalność",
@@ -919,12 +945,104 @@ function panelData(hass, resolved, config) {
   };
 }
 
+// Installation details: power per phase, inverter load, battery (BMS) and
+// generator. `key` is the option under `entities:`, `deye` the DeyeCloud
+// device keys tried in order (an inverter's device sensors).
+const SYSTEM_METRICS = {
+  loadL1: { key: "load_power_l1", deye: ["LoadPowerL1", "LoadPhasePowerA"] },
+  loadL2: { key: "load_power_l2", deye: ["LoadPowerL2", "LoadPhasePowerB"] },
+  loadL3: { key: "load_power_l3", deye: ["LoadPowerL3", "LoadPhasePowerC"] },
+  gridL1: { key: "grid_power_l1", deye: ["GridPowerL1"] },
+  gridL2: { key: "grid_power_l2", deye: ["GridPowerL2"] },
+  gridL3: { key: "grid_power_l3", deye: ["GridPowerL3"] },
+  voltL1: { key: "grid_voltage_l1", deye: ["GridVoltageL1", "LoadVoltageL1", "ACVoltageRUA"] },
+  voltL2: { key: "grid_voltage_l2", deye: ["GridVoltageL2", "LoadVoltageL2", "ACVoltageSVB"] },
+  voltL3: { key: "grid_voltage_l3", deye: ["GridVoltageL3", "LoadVoltageL3", "ACVoltageTWC"] },
+  batteryTemp: { key: "battery_temperature", deye: ["Temperature- Battery", "BatteryTemperature", "BMSTemperature"] },
+  batteryVoltage: { key: "battery_voltage", deye: ["BatteryVoltage", "BMSVoltage"] },
+  batteryCurrent: { key: "battery_current", deye: ["BatteryTotalCurrent", "BatteryCurrent", "BMSCurrent", "BatteryCurrent1"] },
+  inverterPower: { key: "inverter_power", deye: ["TotalInverterOutputPower"] },
+  ratedPower: { key: "inverter_rated_power", deye: ["RatedPower"] },
+  generator: { key: "generator_power", deye: ["TotalGeneratorPower", "GeneratorActivePower"] },
+};
+// Battery temperatures outside this range limit charging on most LiFePO4 packs.
+const BATTERY_COLD = 10;
+const BATTERY_HOT = 45;
+
+function normalizeKey(key) {
+  return String(key).toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+// Power in W from a sensor in W or kW.
+function wattsOf(stateObj) {
+  const value = stateNumber(stateObj);
+  if (value === null) return null;
+  return /^kW$/i.test(stateUnit(stateObj)) ? value * 1000 : value;
+}
+
+function systemData(hass, resolved, config) {
+  const states = hass?.states || {};
+  const configured = config.entities || {};
+  // Device sensors of the first inverter, by normalized key.
+  const devices = resolved.candidates.filter(([, s]) => s.attributes?.sensor_type === "device"
+    && String(s.attributes?.device_type || "").includes("INVERTER"));
+  const serial = devices.length ? String(devices[0][1].attributes?.device_sn || "") : "";
+  const byKey = new Map();
+  for (const [entityId, stateObj] of devices) {
+    if (String(stateObj.attributes?.device_sn || "") !== serial) continue;
+    const key = deviceKey(stateObj);
+    if (key) byKey.set(normalizeKey(key), { entityId, stateObj });
+  }
+  const found = {};
+  for (const [name, def] of Object.entries(SYSTEM_METRICS)) {
+    const id = configured[def.key];
+    if (id && states[id]) found[name] = { entityId: id, stateObj: states[id] };
+    else found[name] = def.deye.map((key) => byKey.get(normalizeKey(key))).find((entry) => entry && stateNumber(entry.stateObj) !== null) || null;
+  }
+  const watts = (name) => (found[name] ? wattsOf(found[name].stateObj) : null);
+  const number = (name) => (found[name] ? stateNumber(found[name].stateObj) : null);
+  const gridSign = config.invert_grid ? -1 : 1;
+  const phases = [1, 2, 3].map((n) => ({
+    name: `L${n}`,
+    load: watts(`loadL${n}`),
+    grid: isNum(watts(`gridL${n}`)) ? watts(`gridL${n}`) * gridSign : null,
+    voltage: number(`voltL${n}`),
+    entityId: found[`loadL${n}`]?.entityId || found[`gridL${n}`]?.entityId || found[`voltL${n}`]?.entityId || null,
+  }));
+  const hasPhases = phases.filter((p) => isNum(p.load) || isNum(p.grid)).length >= 2;
+  const loads = phases.map((p) => p.load).filter(isNum);
+  const rated = positiveNumber(config.inverter_power_rating) ? positiveNumber(config.inverter_power_rating) * 1000 : watts("ratedPower");
+  const inverterPower = watts("inverterPower");
+  const batteryTemp = number("batteryTemp");
+  const generator = watts("generator");
+  const data = {
+    phases: hasPhases ? phases : null,
+    phaseMax: Math.max(1, ...loads),
+    phaseSpread: loads.length >= 2 ? Math.max(...loads) - Math.min(...loads) : null,
+    inverter: isNum(inverterPower) ? {
+      power: inverterPower,
+      rated: isNum(rated) && rated > 0 ? rated : null,
+      share: isNum(rated) && rated > 0 ? clamp((Math.abs(inverterPower) / rated) * 100, 0, 100) : null,
+      entityId: found.inverterPower.entityId,
+    } : null,
+    battery: [
+      ["temperature", found.batteryTemp, batteryTemp, "°C"],
+      ["voltage", found.batteryVoltage, number("batteryVoltage"), "V"],
+      ["current", found.batteryCurrent, isNum(number("batteryCurrent")) ? Math.abs(number("batteryCurrent")) : null, "A"],
+    ].filter(([, entry, value]) => entry && isNum(value)).map(([kind, entry, value, unit]) => ({ kind, entityId: entry.entityId, value, unit })),
+    batteryTemp,
+    batteryWarn: isNum(batteryTemp) ? (batteryTemp < BATTERY_COLD ? "cold" : batteryTemp > BATTERY_HOT ? "hot" : null) : null,
+    generator: isNum(generator) && generator > ACTIVE_W ? { power: generator, entityId: found.generator.entityId } : null,
+  };
+  return data.phases || data.inverter || data.battery.length || data.generator ? data : null;
+}
+
 // Status used by themes that show one (LCARS): alert when offline or the
-// battery reached its reserve, caution when delayed, close to the reserve
-// or a panel is underperforming.
-function systemStatus(status, forecast, panels) {
+// battery reached its reserve, caution when delayed, close to the reserve,
+// a panel is underperforming or the battery is too cold or hot.
+function systemStatus(status, forecast, panels, system) {
   if (status.state === "offline" || (isNum(forecast.soc) && forecast.soc <= forecast.minSoc + 1)) return "alert";
-  if (status.state === "delayed" || (isNum(forecast.soc) && forecast.soc < forecast.minSoc + 15) || panels?.weakest) return "warn";
+  if (status.state === "delayed" || (isNum(forecast.soc) && forecast.soc < forecast.minSoc + 15) || panels?.weakest || system?.batteryWarn) return "warn";
   return "nominal";
 }
 
@@ -938,6 +1056,7 @@ const MINI_ICONS = {
   discharge: '<svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="3"/><path d="M9 2h6M8 12h8"/></svg>',
   bolt: '<svg viewBox="0 0 24 24"><path d="m13 2-8 12h6l-1 8 9-13h-6z"/></svg>',
   chip: '<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg>',
+  phase: '<svg viewBox="0 0 24 24"><path d="M2 12c2.5-6 5-6 7.5 0s5 6 7.5 0 3.5-4 5-2"/></svg>',
   panel: '<svg viewBox="0 0 24 24"><path d="M4 5h16l-2 10H2z"/><path d="M8 5 6.5 15M14 5l-1 10M3 10h16M11 15v4M7 19h8"/></svg>',
 };
 
@@ -1119,8 +1238,56 @@ function panelsHtml(m) {
 }
 
 // Sections every theme shows below its main view.
+// Installation: power per phase, inverter load, battery (BMS) and generator.
+function systemHtml(m) {
+  const data = m.system;
+  if (!m.config.showSystem || !data) return "";
+  const { t, locale } = m;
+  const attr = (entityId) => (entityId ? `data-entity="${escapeHtml(entityId)}"` : "");
+  const phases = data.phases ? `
+    <div class="sfc-phases">
+      ${data.phases.map((p) => `
+        <button class="sfc-phase" ${attr(p.entityId)}>
+          <small>${escapeHtml(p.name)}</small>
+          <strong>${escapeHtml(formatPower(p.load, locale))}</strong>
+          <i style="--p:${isNum(p.load) ? ((p.load / data.phaseMax) * 100).toFixed(0) : 0}%"></i>
+          <span>${escapeHtml([isNum(p.grid) && fill(t.phaseGrid, { power: formatPower(p.grid, locale) }), isNum(p.voltage) && `${formatNumber(p.voltage, locale, 0)} V`].filter(Boolean).join(" · "))}</span>
+        </button>`).join("")}
+    </div>` : "";
+  const labels = { temperature: t.batteryTemperature, voltage: t.batteryVoltage, current: t.batteryCurrent };
+  const meters = [
+    data.inverter && `
+      <button class="sfc-meter inverter" ${attr(data.inverter.entityId)}>
+        <small>${escapeHtml(t.inverterLoad)}</small>
+        <b>${escapeHtml(isNum(data.inverter.share) ? formatPercent(data.inverter.share, locale) : formatPower(data.inverter.power, locale))}</b>
+        ${isNum(data.inverter.share) ? `<i style="--p:${data.inverter.share.toFixed(0)}%"></i><span>${escapeHtml(fill(t.inverterOf, { power: formatPower(data.inverter.power, locale), rated: formatPower(data.inverter.rated, locale) }))}</span>` : ""}
+      </button>`,
+    ...data.battery.map((r) => `
+      <button class="sfc-meter battery ${r.kind === "temperature" && data.batteryWarn ? "warn" : ""}" ${attr(r.entityId)}>
+        <small>${escapeHtml(labels[r.kind])}</small>
+        <b>${escapeHtml(`${formatNumber(r.value, locale, 1)} ${r.unit}`)}</b>
+      </button>`),
+    data.generator && `
+      <button class="sfc-meter generator on" ${attr(data.generator.entityId)}>
+        <small>${escapeHtml(t.generatorRunning)}</small>
+        <b>${escapeHtml(formatPower(data.generator.power, locale))}</b>
+      </button>`,
+  ].filter(Boolean).join("");
+  const warn = data.batteryWarn ? `<p class="sfc-panels-note warn">${escapeHtml(data.batteryWarn === "cold" ? t.batteryCold : t.batteryHot)}</p>` : "";
+  return `
+    <section class="sfc-section sfc-system">
+      <div class="sfc-head">
+        <div><span class="sfc-kicker">${MINI_ICONS.phase}</span><h3>${escapeHtml(t.systemTitle)}</h3></div>
+        ${isNum(data.phaseSpread) && data.phases ? `<span class="sfc-hint">${escapeHtml(fill(t.phaseSpread, { power: formatPower(data.phaseSpread, locale) }))}</span>` : ""}
+      </div>
+      ${phases}
+      ${meters ? `<div class="sfc-meters">${meters}</div>` : ""}
+      ${warn}
+    </section>`;
+}
+
 function standardSections(m) {
-  return `${inverterHtml(m)}${forecastHtml(m)}${energySectionHtml(m)}${panelsHtml(m)}`;
+  return `${inverterHtml(m)}${forecastHtml(m)}${systemHtml(m)}${energySectionHtml(m)}${panelsHtml(m)}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -2220,6 +2387,26 @@ const BASE_CSS = `
   .sfc-chart-hint { margin: 2px 0 0; color: var(--sfc-muted); font-size: 10px; }
   .sfc-chart-empty { display: grid; place-items: center; height: 110px; border: 1px dashed var(--sfc-border); border-radius: 12px; color: var(--sfc-muted); font-size: 12px; }
 
+  /* Installation */
+  .sfc-phases { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .sfc-phase, .sfc-meter { position: relative; min-width: 0; display: grid; gap: 2px; padding: 9px 11px; text-align: left;
+    border: 1px solid var(--sfc-border); border-radius: var(--sfc-tile-radius, 11px); background: var(--sfc-tile-bg); }
+  .sfc-phase small, .sfc-meter small { color: var(--sfc-muted); font-size: 11px; font-weight: 700; line-height: 1.2; overflow: hidden;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .sfc-meter { align-content: start; }
+  .sfc-phase strong { font-size: 16px; font-family: var(--sfc-num-font, inherit); white-space: nowrap; }
+  .sfc-phase span, .sfc-meter span { color: var(--sfc-muted); font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sfc-phase i, .sfc-meter i { display: block; height: 4px; margin: 3px 0 1px; border-radius: 999px;
+    background: linear-gradient(90deg, var(--sfc-c, var(--sfc-load)) var(--p), var(--sfc-track) var(--p)); }
+  .sfc-meters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+  .sfc-meter.inverter, .sfc-meter.generator { grid-column: 1 / -1; }
+  .sfc-meter b { font-size: 14px; font-family: var(--sfc-num-font, inherit); white-space: nowrap; }
+  .sfc-meter.inverter { --sfc-c: var(--sfc-accent); } .sfc-meter.battery b { color: var(--sfc-battery); }
+  .sfc-meter.warn { border-color: var(--sfc-load); box-shadow: inset 0 0 0 1px var(--sfc-load); }
+  .sfc-meter.warn b { color: var(--sfc-load); }
+  .sfc-meter.generator b { color: var(--sfc-pv); }
+  .sfc-system .sfc-panels-note { margin-top: 8px; }
+
   /* Animated flows */
   .sfc-flow-base { fill: none; stroke: var(--sfc-flow-base); stroke-width: var(--sfc-flow-w, 4); stroke-linecap: round; }
   .sfc-flow { fill: none; stroke-width: var(--sfc-flow-w, 4); stroke-linecap: round; stroke-dasharray: var(--sfc-dash, 1 9);
@@ -2769,7 +2956,7 @@ class SolarFlowCard extends HTMLElement {
   }
 
   getCardSize() {
-    return 8 + (this._config.show_energy !== false ? 5 : 0) + (this._config.show_panels !== false ? 2 : 0);
+    return 8 + (this._config.show_system !== false ? 2 : 0) + (this._config.show_energy !== false ? 5 : 0) + (this._config.show_panels !== false ? 2 : 0);
   }
 
   getGridOptions() {
@@ -2887,6 +3074,7 @@ class SolarFlowCard extends HTMLElement {
       const forecast = batteryForecast(live, config);
       const panels = showSolar ? panelData(this._hass, resolved, config) : null;
       const inverter = this._inverterOpen ? inverterReadings(resolved) : null;
+      const system = config.show_system !== false ? systemData(this._hass, resolved, config) : null;
       const since = period === "all" && energy.buckets?.length
         ? energy.buckets[0].start.toLocaleDateString(locale, { month: "short", year: "numeric" })
         : null;
@@ -2898,7 +3086,7 @@ class SolarFlowCard extends HTMLElement {
       const signature = JSON.stringify([
         language, config, period, [...this._hiddenSeries], live, status.state, today, energy.totals, Boolean(energy.loading),
         chart && [Boolean(chart.loading), Boolean(chart.error), chart.at], forecast.mode, Math.round(forecast.hours * 60 || 0),
-        panels?.panels.map((p) => [p.today, p.power]), this._inverterOpen,
+        panels?.panels.map((p) => [p.today, p.power]), system, this._inverterOpen,
         inverter?.map((d) => [[...d.strings.values()].map((s) => Object.values(s).map((r) => r.value)), d.temperatures.map((r) => r.value), d.battery.map((r) => r.value), d.grid.map((r) => r.value)]),
         Math.floor(now.getTime() / 60000),
       ]);
@@ -2919,6 +3107,7 @@ class SolarFlowCard extends HTMLElement {
           showForecast: config.show_forecast !== false,
           showPanels: config.show_panels !== false,
           showSolar,
+          showSystem: config.show_system !== false,
         },
         ids,
         live,
@@ -2933,10 +3122,11 @@ class SolarFlowCard extends HTMLElement {
         forecast,
         panels,
         inverter,
+        system,
         inverterOpen: this._inverterOpen,
         hiddenSeries: this._hiddenSeries,
       };
-      model.systemStatus = systemStatus(status, forecast, panels);
+      model.systemStatus = systemStatus(status, forecast, panels, system);
 
       this.shadowRoot.innerHTML = `
         <style>${BASE_CSS}${THEME_CSS[theme]}</style>
@@ -3000,6 +3190,7 @@ const EDITOR_NUMBERS = [
   ["battery_min_soc", "editorBatteryMinSoc", "1"],
   ["pv_capacity", "editorPvCapacity", "0.1"],
   ["pv_panels", "editorPvPanels", "1"],
+  ["inverter_power_rating", "editorInverterRating", "0.1"],
   ["price_import", "editorPriceImport", "0.01"],
   ["price_export", "editorPriceExport", "0.01"],
   ["co2_factor", "editorCo2", "0.01"],
@@ -3009,6 +3200,7 @@ const EDITOR_SWITCHES = [
   ["show_energy", "editorShowEnergy"],
   ["show_chart", "editorShowChart"],
   ["show_forecast", "editorShowForecast"],
+  ["show_system", "editorShowSystem"],
   ["show_panels", "editorShowPanels"],
   ["show_autarky", "editorShowAutarky"],
   ["show_self_use", "editorShowSelfUse"],
