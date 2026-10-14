@@ -55,7 +55,7 @@ class SolarFlowCard extends HTMLElement {
     // Never throw: Home Assistant can pass an incomplete config while the
     // editor initializes, and a throw replaces the card with an error card.
     const normalized = config && typeof config === "object" && !Array.isArray(config) ? config : {};
-    this._config = { ...DEFAULT_CONFIG, ...normalized };
+    this._config = { ...DEFAULT_CONFIG, ...migrateConfig(normalized) };
     if (!THEMES.includes(this._config.theme)) this._config.theme = "diorama";
     this._signature = "";
     this._render();

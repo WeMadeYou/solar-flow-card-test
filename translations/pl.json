@@ -163,7 +163,7 @@
   "editorShowSystem": "Instalacja (fazy, obciążenie falownika, bateria)",
   "editorShowPanels": "Pokaż panele (optymalizatory)",
   "editorSolar": "Instalacja ma panele PV",
-  "editorShowAutarky": "Pokaż samowystarczalność",
+  "editorShowSelfSufficiency": "Pokaż samowystarczalność",
   "editorShowSelfUse": "Pokaż autokonsumpcję",
   "editorShowSavings": "Pokaż oszczędność",
   "editorShowCo2": "Pokaż uniknięte CO₂",
