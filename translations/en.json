@@ -116,12 +116,21 @@
   "noData": "No energy sensors found",
   "noDataHelp": "Install the DeyeCloud integration or set the entities in the card configuration.",
   "editorTheme": "Theme",
+  "expanseTitle": "Power distribution",
+  "foundationTitle": "Prime Radiant",
+  "foundationForecast": "Forecast",
+  "foundationSteady": "The battery holds steady; the plan stays on course.",
+  "galaxyTitle": "Power systems",
+  "galaxyQuiet": "All is quiet in this sector of the galaxy.",
   "themeNames": {
     "diorama": "Diorama",
     "aurora": "Aurora",
     "paper": "Paper",
     "lcars": "LCARS",
-    "atlantis": "Atlantis"
+    "atlantis": "Atlantis",
+    "expanse": "Expanse",
+    "foundation": "Foundation",
+    "galaxy": "Far galaxy"
   },
   "editorTitle": "Title",
   "editorLanguage": "Language",

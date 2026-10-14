@@ -345,12 +345,13 @@ function sankeyHtml(m) {
     </div>`;
 }
 
-function renderPaper(m) {
+// One or two sentences about the moment, as HTML with <em> highlights.
+// Used by Paper and by the crawl of the Galaxy theme.
+function liveSentence(m) {
   const { t, locale, live } = m;
-  const load = live.load;
   let lede = "";
   const sourcesNow = liveSources(m);
-  if (load > ACTIVE_W && sourcesNow.total > 0) {
+  if (live.load > ACTIVE_W && sourcesNow.total > 0) {
     const names = [t.paperSun, t.paperBattery, t.paperGrid];
     const parts = sourcesNow.shares.map((pct, i) => [names[i], pct]).filter(([, pct]) => pct > 0);
     lede = parts.length === 1
@@ -361,11 +362,18 @@ function renderPaper(m) {
   if (f.mode === "discharging") lede += ` ${fill(t.paperLasts, { time: `<em>${formatClock(f.at, locale)}</em>` })}`;
   if (f.mode === "charging") lede += ` ${fill(t.paperFull, { time: `<em>${formatClock(f.at, locale)}</em>` })}`;
   if (live.exportActive) lede += ` ${fill(t.paperExport, { power: `<em>${formatPower(live.gridExport, locale)}</em>` })}`;
+  return lede.trim().replace(/<(?!\/?em>)/g, "&lt;");
+}
+
+function renderPaper(m) {
+  const { t, locale, live } = m;
+  const load = live.load;
+  const lede = liveSentence(m);
   const date = m.now.toLocaleDateString(locale, { weekday: "short", day: "numeric", month: "short" });
   return `
     <div class="pap-eyebrow"><span>${escapeHtml(m.name)}</span><span>${escapeHtml(date)} · ${escapeHtml(clockText(m))} ${liveBadge(m)}</span></div>
     <h1 class="pap-headline" ${entityAttr(m.ids.live.load)}>${escapeHtml(fill(t.paperHeadline, { power: formatPower(load, locale) }))}</h1>
-    ${lede ? `<p class="pap-lede">${lede.replace(/<(?!\/?em>)/g, "&lt;")}</p>` : ""}
+    ${lede ? `<p class="pap-lede">${lede}</p>` : ""}
     <hr>
     ${sankeyHtml(m)}
     <button type="button" class="sfc-link pap-inverter" data-action="inverter">${escapeHtml(t.inverterDetails)} →</button>
@@ -494,10 +502,194 @@ function renderAtlantis(m) {
     <div class="sfc-sections">${standardSections(m)}</div>`;
 }
 
+// --------------------------------------------------------------------------
+// Expanse: a ship's power distribution display with orbital trajectories.
+// --------------------------------------------------------------------------
+
+function renderExpanse(m) {
+  const { t, locale, live } = m;
+  const W = 480;
+  const H = 330;
+  const pos = (x, y) => `left:${((x / W) * 100).toFixed(2)}%;top:${((y / H) * 100).toFixed(2)}%`;
+  const batteryFlow = live.dischargeActive ? live.discharge : live.charge;
+  const gridValue = live.importActive ? live.gridImport : live.exportActive ? live.gridExport : Math.abs(live.grid);
+  const box = (cls, x, y, code, label, value, note, attr) => `
+    <button class="exp-box ${cls}" style="${pos(x, y)}" ${attr}>
+      <span class="exp-code">${escapeHtml(code)}</span><small>${escapeHtml(label)}</small>
+      <b>${escapeHtml(value)}</b>${note ? `<em>${escapeHtml(note)}</em>` : ""}
+    </button>`;
+  const soc = isNum(live.soc) ? clamp(live.soc, 0, 100) : 0;
+  const minSoc = clamp(m.forecast.minSoc ?? 10, 0, 100);
+  const segments = Array.from({ length: 25 }, (_, i) => {
+    const from = i * 4;
+    return `<i class="${from < soc ? "on" : ""} ${from < minSoc ? "reserve" : ""}"></i>`;
+  }).join("");
+  const f = m.forecast;
+  const code = String(m.station || "").replace(/\D/g, "").slice(-4).padStart(4, "0");
+  return `
+    <div class="exp-grid"></div>
+    <header class="exp-header">
+      <div class="exp-tag">${escapeHtml(code)}</div>
+      <div class="exp-title"><h1>${escapeHtml(m.name)}</h1><span>${escapeHtml(t.expanseTitle)}</span></div>
+      <div class="exp-clock ${m.status.state}"><small>${escapeHtml(m.t[m.status.state])}</small><b>${escapeHtml(clockText(m))}</b></div>
+    </header>
+    <div class="exp-stage">
+      <svg viewBox="0 0 ${W} ${H}" aria-hidden="true">
+        <g class="exp-orbits" fill="none">
+          <ellipse cx="240" cy="165" rx="210" ry="128"/><ellipse cx="240" cy="165" rx="150" ry="92"/>
+          <line x1="20" y1="165" x2="460" y2="165"/><line x1="240" y1="22" x2="240" y2="308"/>
+        </g>
+        <g fill="none" stroke-linecap="round">
+          ${m.config.showSolar ? flowPath("M150 72 Q218 72 222 140", live.solarActive, false, "pv") : ""}
+          ${flowPath("M330 72 Q262 72 258 140", live.importActive || live.exportActive, live.exportActive, "grid")}
+          ${flowPath("M150 258 Q218 258 222 190", live.chargeActive || live.dischargeActive, live.chargeActive, "battery")}
+          ${flowPath("M330 258 Q262 258 258 190", live.loadActive, true, "load")}
+        </g>
+        <g transform="translate(240 165)" fill="none">
+          <circle r="34" class="exp-ring"/>
+          <circle r="27" class="exp-spin"/>
+          <path d="M-8 0 H8 M0 -8 V8" class="exp-cross"/>
+        </g>
+      </svg>
+      <button class="exp-core" style="${pos(240, 165)}" data-action="inverter" title="${escapeHtml(t.inverterDetails)}"></button>
+      ${m.config.showSolar ? box("pv", 92, 72, "SOL-01", t.solar, formatPower(live.solar, locale), live.solarActive ? "" : t.idle, entityAttr(m.ids.live.solar)) : ""}
+      ${box("grid", 388, 72, "GRD-02", t.grid, formatPower(gridValue, locale), gridStatus(m), entityAttr(gridEntityId(m)))}
+      ${box("battery", 92, 258, "BAT-03", t.battery, formatPower(batteryFlow, locale), batteryStatus(m), entityAttr(batteryEntityId(m)))}
+      ${box("load", 388, 258, "HAB-04", t.home, formatPower(live.load, locale), "", entityAttr(m.ids.live.load))}
+    </div>
+    <button class="exp-soc" ${entityAttr(batteryEntityId(m))}>
+      <span class="exp-soc-head"><small>${escapeHtml(t.stateOfCharge)}</small><b>${escapeHtml(formatPercent(live.soc, locale))}</b>
+        <em>${escapeHtml(f.at ? `${f.mode === "charging" ? t.chipFull : t.chipLasts} ${formatClock(f.at, locale)}` : isNum(f.stored) ? formatEnergy(f.stored, locale) : "")}</em></span>
+      <span class="exp-soc-bar">${segments}</span>
+    </button>
+    <div class="sfc-sections">${standardSections(m)}</div>`;
+}
+
+// --------------------------------------------------------------------------
+// Foundation: a radiant of slowly turning orbits that forecasts the battery.
+// --------------------------------------------------------------------------
+
+function renderFoundation(m) {
+  const { t, locale, live } = m;
+  const W = 480;
+  const H = 340;
+  const pos = (x, y) => `left:${((x / W) * 100).toFixed(2)}%;top:${((y / H) * 100).toFixed(2)}%`;
+  const batteryFlow = live.dischargeActive ? live.discharge : live.charge;
+  const gridValue = live.importActive ? live.gridImport : live.exportActive ? live.gridExport : Math.abs(live.grid);
+  const node = (cls, x, y, label, value, note, attr) => `
+    <button class="fnd-node ${cls}" style="${pos(x, y)}" ${attr}>
+      <small>${escapeHtml(label)}</small><b>${escapeHtml(value)}</b>${note ? `<em>${escapeHtml(note)}</em>` : ""}
+    </button>`;
+  // Points on the orbits; a fixed pattern so the picture is stable between renders.
+  const stars = Array.from({ length: 46 }, (_, i) => {
+    const a = i * 2.39996;
+    const r = 30 + ((i * 37) % 120);
+    return `<circle cx="${(Math.cos(a) * r).toFixed(1)}" cy="${(Math.sin(a) * r * 0.62).toFixed(1)}" r="${i % 7 ? 0.8 : 1.6}"/>`;
+  }).join("");
+  const f = m.forecast;
+  const forecast = f.mode === "discharging"
+    ? fill(t.paperLasts, { time: `<em>${formatClock(f.at, locale)}</em>` })
+    : f.mode === "charging"
+      ? fill(t.paperFull, { time: `<em>${formatClock(f.at, locale)}</em>` })
+      : escapeHtml(t.foundationSteady);
+  return `
+    <div class="fnd-dust"></div>
+    <header class="fnd-header">
+      <small>${escapeHtml(t.foundationTitle)}</small>
+      <h1>${escapeHtml(m.name)}</h1>
+      <span>${escapeHtml(m.now.toLocaleDateString(locale, { day: "numeric", month: "long" }))} · ${escapeHtml(clockText(m))} ${liveBadge(m)}</span>
+    </header>
+    <div class="fnd-stage">
+      <svg viewBox="0 0 ${W} ${H}" aria-hidden="true">
+        <defs>
+          <radialGradient id="fnd-sphere" cx="50%" cy="45%" r="50%"><stop offset="0" stop-color="#fff4d6"/><stop offset=".35" stop-color="#e8c47a" stop-opacity=".7"/><stop offset="1" stop-color="#b8862e" stop-opacity="0"/></radialGradient>
+          <filter id="fnd-glow"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <g transform="translate(240 170)" fill="none">
+          <g class="fnd-orbit o1"><ellipse rx="150" ry="58"/><circle cx="150" r="2.5"/></g>
+          <g class="fnd-orbit o2"><ellipse rx="128" ry="74" transform="rotate(32)"/><circle cx="108" cy="68" r="2"/></g>
+          <g class="fnd-orbit o3"><ellipse rx="128" ry="74" transform="rotate(-32)"/><circle cx="-108" cy="68" r="2"/></g>
+          <g class="fnd-stars">${stars}</g>
+          <circle r="62" fill="url(#fnd-sphere)" class="fnd-sphere"/>
+          <circle r="44" class="fnd-ring"/>
+        </g>
+        <g fill="none" stroke-linecap="round" filter="url(#fnd-glow)">
+          ${m.config.showSolar ? flowPath("M240 48 L240 120", live.solarActive, false, "pv") : ""}
+          ${flowPath("M108 170 L190 170", live.chargeActive || live.dischargeActive, live.chargeActive, "battery")}
+          ${flowPath("M372 170 L290 170", live.importActive || live.exportActive, live.exportActive, "grid")}
+          ${flowPath("M240 292 L240 220", live.loadActive, true, "load")}
+        </g>
+      </svg>
+      <button class="fnd-center" style="${pos(240, 170)}" data-action="inverter" title="${escapeHtml(t.inverterDetails)}">
+        <b>${escapeHtml(formatPercent(live.soc, locale))}</b><small>${escapeHtml(t.battery)}</small>
+      </button>
+      ${m.config.showSolar ? node("pv", 240, 22, t.sun, formatPower(live.solar, locale), "", entityAttr(m.ids.live.solar)) : ""}
+      ${node("battery", 60, 170, t.battery, formatPower(batteryFlow, locale), batteryStatus(m), entityAttr(batteryEntityId(m)))}
+      ${node("grid", 420, 170, t.grid, formatPower(gridValue, locale), gridStatus(m), entityAttr(gridEntityId(m)))}
+      ${node("load", 240, 318, t.home, formatPower(live.load, locale), "", entityAttr(m.ids.live.load))}
+    </div>
+    <p class="fnd-forecast"><small>${escapeHtml(t.foundationForecast)}</small>${forecast.replace(/<(?!\/?em>)/g, "&lt;")}</p>
+    <div class="sfc-sections">${standardSections(m)}</div>`;
+}
+
+// --------------------------------------------------------------------------
+// Galaxy: a targeting computer flying down a trench, with an opening crawl.
+// --------------------------------------------------------------------------
+
+function renderGalaxy(m) {
+  const { t, locale, live } = m;
+  const W = 480;
+  const H = 300;
+  const pos = (x, y) => `left:${((x / W) * 100).toFixed(2)}%;top:${((y / H) * 100).toFixed(2)}%`;
+  const batteryFlow = live.dischargeActive ? live.discharge : live.charge;
+  const gridValue = live.importActive ? live.gridImport : live.exportActive ? live.gridExport : Math.abs(live.grid);
+  const readout = (cls, x, y, label, value, note, attr) => `
+    <button class="gal-readout ${cls}" style="${pos(x, y)}" ${attr}>
+      <small>${escapeHtml(label)}</small><b>${escapeHtml(value)}</b>${note ? `<em>${escapeHtml(note)}</em>` : ""}
+    </button>`;
+  const crawl = liveSentence(m) || escapeHtml(t.galaxyQuiet);
+  const soc = isNum(live.soc) ? clamp(live.soc, 0, 100) : 0;
+  const lock = soc <= (m.forecast.minSoc ?? 10) + 1 ? "low" : "";
+  return `
+    <div class="gal-stars"></div>
+    <header class="gal-header">
+      <small>${escapeHtml(t.galaxyTitle)}</small>
+      <h1>${escapeHtml(m.name)}</h1>
+      <div class="gal-crawl"><p>${crawl}</p></div>
+    </header>
+    <div class="gal-scope">
+      <svg viewBox="0 0 ${W} ${H}" aria-hidden="true">
+        <g class="gal-trench" fill="none">
+          ${[0, 1, 2, 3].map((i) => `<rect class="gal-warp" style="--d:${i}" x="190" y="115" width="100" height="70"/>`).join("")}
+          <rect x="190" y="115" width="100" height="70" class="gal-target ${lock}"/>
+          <path d="M240 100 V125 M240 175 V200 M175 150 H200 M280 150 H305" class="gal-cross ${lock}"/>
+        </g>
+        <g fill="none" stroke-linecap="round">
+          ${m.config.showSolar ? flowPath("M14 12 L190 115", live.solarActive, false, "pv") : ""}
+          ${flowPath("M466 12 L290 115", live.importActive || live.exportActive, live.exportActive, "grid")}
+          ${flowPath("M14 288 L190 185", live.chargeActive || live.dischargeActive, live.chargeActive, "battery")}
+          ${flowPath("M466 288 L290 185", live.loadActive, true, "load")}
+        </g>
+      </svg>
+      <button class="gal-center ${lock}" style="${pos(240, 150)}" data-action="inverter" title="${escapeHtml(t.inverterDetails)}">
+        <b>${escapeHtml(formatPercent(live.soc, locale))}</b>
+      </button>
+      ${m.config.showSolar ? readout("pv", 62, 118, t.solar, formatPower(live.solar, locale), "", entityAttr(m.ids.live.solar)) : ""}
+      ${readout("battery", 62, 182, t.battery, formatPower(batteryFlow, locale), batteryStatus(m), entityAttr(batteryEntityId(m)))}
+      ${readout("grid", 418, 118, t.grid, formatPower(gridValue, locale), gridStatus(m), entityAttr(gridEntityId(m)))}
+      ${readout("load", 418, 182, t.home, formatPower(live.load, locale), "", entityAttr(m.ids.live.load))}
+      <div class="gal-hud"><span>${escapeHtml(clockText(m))}</span><span class="${m.status.state}">${escapeHtml(m.t[m.status.state])}</span></div>
+    </div>
+    <div class="sfc-sections">${standardSections(m)}</div>`;
+}
+
 const THEME_RENDER = {
   diorama: renderDiorama,
   aurora: renderAurora,
   paper: renderPaper,
   lcars: renderLcars,
   atlantis: renderAtlantis,
+  expanse: renderExpanse,
+  foundation: renderFoundation,
+  galaxy: renderGalaxy,
 };

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.6-beta
+
+- Three new themes:
+  - `expanse`: a ship's power distribution display with orbital trajectories and a segmented charge bar.
+  - `foundation`: a radiant of turning golden orbits around the battery, with a written forecast.
+  - `galaxy`: a targeting computer in a trench, with an opening crawl telling where the power comes from.
+
 ## 0.1.5-beta
 
 - Chart legend entries are buttons: a click hides or shows that series (PV, home, battery, grid, SOC; PV, consumption, grid import on the bar charts). The scale follows the visible series, the tooltip drops hidden ones, and the choice is remembered in the browser.

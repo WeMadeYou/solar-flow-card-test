@@ -16,7 +16,7 @@
 <body>
   <div class="bar">
     <strong>Solar Flow Card</strong>
-    <label>Theme <select id="theme"><option>all</option><option>diorama</option><option>aurora</option><option>paper</option><option>lcars</option><option>atlantis</option></select></label>
+    <label>Theme <select id="theme"><option>all</option><option>diorama</option><option>aurora</option><option>paper</option><option>lcars</option><option>atlantis</option><option>expanse</option><option>foundation</option><option>galaxy</option></select></label>
     <label>Scenario <select id="scenario"></select></label>
     <label>Language <select id="language"><option>pl</option><option>en</option></select></label>
     <label>PV <select id="solar"><option value="1">yes</option><option value="0">no (EMS)</option></select></label>
@@ -41,7 +41,7 @@
     }
 
     function render() {
-      const themes = $("theme").value === "all" ? ["diorama", "aurora", "paper", "lcars", "atlantis"] : [$("theme").value];
+      const themes = $("theme").value === "all" ? ["diorama", "aurora", "paper", "lcars", "atlantis", "expanse", "foundation", "galaxy"] : [$("theme").value];
       const hass = createHass({ scenario: $("scenario").value, language: $("language").value });
       const cards = $("cards");
       cards.style.setProperty("--w", `${$("width").value}px`);
