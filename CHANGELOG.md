@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.0
+
+First stable release: everything from the 0.1 betas, tested on a live DeyeCloud installation.
+
+- `show_autarky` is now `show_self_sufficiency`, matching the label. The old name keeps working, and the visual editor switches to the new one on the next change.
+- Releases are regular releases, so HACS offers updates without "Show beta versions".
+- A live demo runs on GitHub Pages, and the README shows an animated preview of all themes.
+- HACS validation runs in GitHub Actions.
+
 ## 0.1.8-beta
 
 - Installation: phases are shown only when at least two have voltage or carry power. Single-phase inverters that report L2/L3 as 0 W / 0 V no longer get empty phase tiles; the rest of the section stays.

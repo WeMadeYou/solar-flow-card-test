@@ -202,12 +202,26 @@ function sumBuckets(buckets) {
   return totals;
 }
 
+// Options renamed before 1.0; the old names keep working.
+const OPTION_ALIASES = { show_autarky: "show_self_sufficiency" };
+
+function migrateConfig(config) {
+  const next = { ...config };
+  for (const [old, current] of Object.entries(OPTION_ALIASES)) {
+    if (old in next) {
+      if (!(current in next)) next[current] = next[old];
+      delete next[old];
+    }
+  }
+  return next;
+}
+
 function periodSummary(totals, config, t, locale) {
   const { solar, load, gridImport, gridExport } = totals;
   const items = [];
   const show = (key) => config[key] !== false;
   const hasSolar = show("show_solar");
-  if (show("show_autarky") && isNum(load) && isNum(gridImport) && load > 0.05) {
+  if (show("show_self_sufficiency") && isNum(load) && isNum(gridImport) && load > 0.05) {
     items.push(["autarky", t.autarky, formatPercent(clamp(((load - gridImport) / load) * 100, 0, 100), locale)]);
   }
   if (hasSolar && show("show_self_use") && isNum(solar) && isNum(gridExport) && solar > 0.05) {

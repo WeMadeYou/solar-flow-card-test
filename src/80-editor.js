@@ -17,7 +17,7 @@ const EDITOR_SWITCHES = [
   ["show_forecast", "editorShowForecast"],
   ["show_system", "editorShowSystem"],
   ["show_panels", "editorShowPanels"],
-  ["show_autarky", "editorShowAutarky"],
+  ["show_self_sufficiency", "editorShowSelfSufficiency"],
   ["show_self_use", "editorShowSelfUse"],
   ["show_savings", "editorShowSavings"],
   ["show_co2", "editorShowCo2"],
@@ -41,7 +41,9 @@ class SolarFlowCardEditor extends HTMLElement {
   }
 
   setConfig(config) {
-    this._config = { ...config };
+    // The editor writes the current option names; an old name is replaced on
+    // the next change.
+    this._config = migrateConfig(config || {});
     this._render();
   }
 

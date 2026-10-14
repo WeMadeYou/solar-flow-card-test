@@ -1,12 +1,14 @@
 # Solar Flow Card
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/docs/faq/custom_repositories/)
-[![Release](https://img.shields.io/github/v/release/gratak/solar-flow-card?include_prereleases&label=version)](https://github.com/gratak/solar-flow-card/releases)
+[![Release](https://img.shields.io/github/v/release/gratak/solar-flow-card?label=version)](https://github.com/gratak/solar-flow-card/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 [![Open your Home Assistant instance and open this repository in the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=gratak&repository=solar-flow-card&category=plugin)
 
-> **Beta.** Things may still change between versions; please report problems in the issues.
+**[Try it in your browser](https://gratak.github.io/solar-flow-card/demo/)**: all themes, scenarios and languages on demo data, no installation needed.
+
+![Solar Flow Card themes](docs/themes.gif)
 
 A Home Assistant dashboard card for solar installations with a battery: live power flow, charts, a battery forecast, inverter details and per-panel production, in eight themes.
 
@@ -61,8 +63,6 @@ Or add it by hand:
 1. HACS → ⋮ → **Custom repositories** → add `https://github.com/gratak/solar-flow-card`, type **Dashboard**.
 2. Search for **Solar Flow Card**, **Download**.
 3. Reload the browser. HACS adds the dashboard resource for you.
-
-While the card is in beta its releases are marked as pre-releases: in HACS open the card, ⋮ → **Redownload** and turn on **Show beta versions** to pick one.
 
 ### Manual
 
@@ -126,7 +126,7 @@ co2_factor: 0.7
 
 | Option | Default | Description |
 |---|---|---|
-| `show_autarky` | `true` | Self-sufficiency: share of consumption not taken from the grid. |
+| `show_self_sufficiency` | `true` | Self-sufficiency: share of consumption not taken from the grid. (`show_autarky` from the beta versions still works.) |
 | `show_self_use` | `true` | Self-consumption: share of PV production used on site. |
 | `show_savings` | `true` | Savings (needs `price_import`). |
 | `show_co2` | `true` | Avoided CO₂. |
@@ -191,7 +191,7 @@ The card is built from `src/*.js` and `translations/*.json` into `solar-flow-car
 node scripts/build.mjs
 ```
 
-`demo/index.html` runs the card against a stand-in Home Assistant (`demo/mock-hass.js`) with DeyeCloud-style data; serve the repository root and open it to try themes, scenarios and languages. `node scripts/screenshots.mjs` (needs Playwright) renders the screenshots in `docs/`.
+`demo/index.html` (also [online](https://gratak.github.io/solar-flow-card/demo/)) runs the card against a stand-in Home Assistant (`demo/mock-hass.js`) with DeyeCloud-style data; serve the repository root and open it to try themes, scenarios and languages. `node scripts/screenshots.mjs` (needs Playwright) renders the screenshots in `docs/`.
 
 ## License
 

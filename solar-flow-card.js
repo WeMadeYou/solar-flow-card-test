@@ -7,7 +7,7 @@
  * Built from src/*.js by scripts/build.mjs. Edit the sources, not this file.
  */
 (() => {
-const CARD_VERSION = "0.1.8-beta";
+const CARD_VERSION = "1.0.0";
 const CARD_TAG = "solar-flow-card";
 const EDITOR_TAG = "solar-flow-card-editor";
 const THEMES = ["diorama", "aurora", "paper", "lcars", "atlantis", "expanse", "foundation", "galaxy"];
@@ -182,7 +182,7 @@ const TRANSLATIONS = {
     "editorShowSystem": "Installation (phases, inverter load, battery)",
     "editorShowPanels": "Show panels (optimizers)",
     "editorSolar": "The installation has PV panels",
-    "editorShowAutarky": "Show self-sufficiency",
+    "editorShowSelfSufficiency": "Show self-sufficiency",
     "editorShowSelfUse": "Show self-consumption",
     "editorShowSavings": "Show savings",
     "editorShowCo2": "Show CO₂ avoided",
@@ -356,7 +356,7 @@ const TRANSLATIONS = {
     "editorShowSystem": "Instalacja (fazy, obciążenie falownika, bateria)",
     "editorShowPanels": "Pokaż panele (optymalizatory)",
     "editorSolar": "Instalacja ma panele PV",
-    "editorShowAutarky": "Pokaż samowystarczalność",
+    "editorShowSelfSufficiency": "Pokaż samowystarczalność",
     "editorShowSelfUse": "Pokaż autokonsumpcję",
     "editorShowSavings": "Pokaż oszczędność",
     "editorShowCo2": "Pokaż uniknięte CO₂",
@@ -794,12 +794,26 @@ function sumBuckets(buckets) {
   return totals;
 }
 
+// Options renamed before 1.0; the old names keep working.
+const OPTION_ALIASES = { show_autarky: "show_self_sufficiency" };
+
+function migrateConfig(config) {
+  const next = { ...config };
+  for (const [old, current] of Object.entries(OPTION_ALIASES)) {
+    if (old in next) {
+      if (!(current in next)) next[current] = next[old];
+      delete next[old];
+    }
+  }
+  return next;
+}
+
 function periodSummary(totals, config, t, locale) {
   const { solar, load, gridImport, gridExport } = totals;
   const items = [];
   const show = (key) => config[key] !== false;
   const hasSolar = show("show_solar");
-  if (show("show_autarky") && isNum(load) && isNum(gridImport) && load > 0.05) {
+  if (show("show_self_sufficiency") && isNum(load) && isNum(gridImport) && load > 0.05) {
     items.push(["autarky", t.autarky, formatPercent(clamp(((load - gridImport) / load) * 100, 0, 100), locale)]);
   }
   if (hasSolar && show("show_self_use") && isNum(solar) && isNum(gridExport) && solar > 0.05) {
@@ -2951,7 +2965,7 @@ class SolarFlowCard extends HTMLElement {
     // Never throw: Home Assistant can pass an incomplete config while the
     // editor initializes, and a throw replaces the card with an error card.
     const normalized = config && typeof config === "object" && !Array.isArray(config) ? config : {};
-    this._config = { ...DEFAULT_CONFIG, ...normalized };
+    this._config = { ...DEFAULT_CONFIG, ...migrateConfig(normalized) };
     if (!THEMES.includes(this._config.theme)) this._config.theme = "diorama";
     this._signature = "";
     this._render();
@@ -3209,7 +3223,7 @@ const EDITOR_SWITCHES = [
   ["show_forecast", "editorShowForecast"],
   ["show_system", "editorShowSystem"],
   ["show_panels", "editorShowPanels"],
-  ["show_autarky", "editorShowAutarky"],
+  ["show_self_sufficiency", "editorShowSelfSufficiency"],
   ["show_self_use", "editorShowSelfUse"],
   ["show_savings", "editorShowSavings"],
   ["show_co2", "editorShowCo2"],
@@ -3233,7 +3247,9 @@ class SolarFlowCardEditor extends HTMLElement {
   }
 
   setConfig(config) {
-    this._config = { ...config };
+    // The editor writes the current option names; an old name is replaced on
+    // the next change.
+    this._config = migrateConfig(config || {});
     this._render();
   }
 
