@@ -1,5 +1,7 @@
 # Solar Flow Card
 
+> **Beta.** Things may still change between versions; please report problems in the issues.
+
 A Home Assistant dashboard card for solar installations with a battery: live power flow, charts, a battery forecast, inverter details and per-panel production, in five themes.
 
 DeyeCloud sensors are found automatically; any other inverter works by pointing the card at its entities.
@@ -39,6 +41,8 @@ History comes from Home Assistant itself (recorder history and long-term statist
 1. HACS → ⋮ → **Custom repositories** → add `https://github.com/gratak/solar-flow-card`, type **Dashboard**.
 2. Search for **Solar Flow Card**, **Download**.
 3. Reload the browser. HACS adds the dashboard resource for you.
+
+While the card is in beta its releases are marked as pre-releases: in HACS open the card, ⋮ → **Redownload** and turn on **Show beta versions** to pick one.
 
 ### Manual
 
