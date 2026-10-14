@@ -1,7 +1,4 @@
 
-// Each language in its own name, so it can be found whatever is shown.
-const LANGUAGE_NAMES = { en: "English", pl: "Polski" };
-
 // [config key, label key, input step]
 const EDITOR_NUMBERS = [
   ["battery_capacity", "editorBatteryCapacity", "0.1"],
