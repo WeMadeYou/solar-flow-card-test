@@ -7,7 +7,7 @@
  * Built from src/*.js by scripts/build.mjs. Edit the sources, not this file.
  */
 (() => {
-const CARD_VERSION = "0.1.7-beta";
+const CARD_VERSION = "0.1.8-beta";
 const CARD_TAG = "solar-flow-card";
 const EDITOR_TAG = "solar-flow-card-editor";
 const THEMES = ["diorama", "aurora", "paper", "lcars", "atlantis", "expanse", "foundation", "galaxy"];
@@ -1009,14 +1009,21 @@ function systemData(hass, resolved, config) {
     voltage: number(`voltL${n}`),
     entityId: found[`loadL${n}`]?.entityId || found[`gridL${n}`]?.entityId || found[`voltL${n}`]?.entityId || null,
   }));
-  const hasPhases = phases.filter((p) => isNum(p.load) || isNum(p.grid)).length >= 2;
-  const loads = phases.map((p) => p.load).filter(isNum);
+  // A single-phase inverter may still report L2/L3 as 0 W / 0 V: a phase
+  // counts when it has voltage or carries power. Without voltage sensors,
+  // any phase with a power sensor counts.
+  const hasVoltage = phases.some((p) => isNum(p.voltage) && p.voltage > 50);
+  const present = phases.filter((p) => (hasVoltage
+    ? (isNum(p.voltage) && p.voltage > 50) || Math.abs(p.load || 0) > ACTIVE_W || Math.abs(p.grid || 0) > ACTIVE_W
+    : isNum(p.load) || isNum(p.grid)));
+  const hasPhases = present.length >= 2;
+  const loads = present.map((p) => p.load).filter(isNum);
   const rated = positiveNumber(config.inverter_power_rating) ? positiveNumber(config.inverter_power_rating) * 1000 : watts("ratedPower");
   const inverterPower = watts("inverterPower");
   const batteryTemp = number("batteryTemp");
   const generator = watts("generator");
   const data = {
-    phases: hasPhases ? phases : null,
+    phases: hasPhases ? present : null,
     phaseMax: Math.max(1, ...loads),
     phaseSpread: loads.length >= 2 ? Math.max(...loads) - Math.min(...loads) : null,
     inverter: isNum(inverterPower) ? {
@@ -1245,7 +1252,7 @@ function systemHtml(m) {
   const { t, locale } = m;
   const attr = (entityId) => (entityId ? `data-entity="${escapeHtml(entityId)}"` : "");
   const phases = data.phases ? `
-    <div class="sfc-phases">
+    <div class="sfc-phases" style="--n:${data.phases.length}">
       ${data.phases.map((p) => `
         <button class="sfc-phase" ${attr(p.entityId)}>
           <small>${escapeHtml(p.name)}</small>
@@ -2388,7 +2395,7 @@ const BASE_CSS = `
   .sfc-chart-empty { display: grid; place-items: center; height: 110px; border: 1px dashed var(--sfc-border); border-radius: 12px; color: var(--sfc-muted); font-size: 12px; }
 
   /* Installation */
-  .sfc-phases { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .sfc-phases { display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); gap: 8px; }
   .sfc-phase, .sfc-meter { position: relative; min-width: 0; display: grid; gap: 2px; padding: 9px 11px; text-align: left;
     border: 1px solid var(--sfc-border); border-radius: var(--sfc-tile-radius, 11px); background: var(--sfc-tile-bg); }
   .sfc-phase small, .sfc-meter small { color: var(--sfc-muted); font-size: 11px; font-weight: 700; line-height: 1.2; overflow: hidden;
