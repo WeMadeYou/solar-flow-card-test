@@ -152,13 +152,20 @@ const BASE_CSS = `
   /* Animated flows */
   .sfc-flow-base { fill: none; stroke: var(--sfc-flow-base); stroke-width: var(--sfc-flow-w, 4); stroke-linecap: round; }
   .sfc-flow { fill: none; stroke-width: var(--sfc-flow-w, 4); stroke-linecap: round; stroke-dasharray: var(--sfc-dash, 1 9);
-    animation: sfc-dash var(--sfc-dash-speed, 1s) linear infinite; }
+    animation: sfc-dash var(--sfc-dash-time, 18s) linear infinite; }
   .sfc-flow.rev { animation-direction: reverse; }
   .sfc-flow.pv { stroke: var(--sfc-pv); } .sfc-flow.load { stroke: var(--sfc-load); }
   .sfc-flow.battery { stroke: var(--sfc-battery); } .sfc-flow.grid { stroke: var(--sfc-grid); }
-  @keyframes sfc-dash { to { stroke-dashoffset: calc(-1 * var(--sfc-dash-len, 10)); } }
-  .no-anim .sfc-flow, .no-anim .atl-pulse, .no-anim .aur-ring { animation: none !important; }
-  @media (prefers-reduced-motion: reduce) { .sfc-flow, .atl-pulse, .aur-ring { animation: none !important; } }
+  /* A fixed distance (no var() inside keyframes, which Chromium does not
+     interpolate). 180 is a whole number of dash periods for every theme's
+     pattern (10, 12, 18); --sfc-dash-time sets the speed. */
+  @keyframes sfc-dash { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -180; } }
+  .no-anim .sfc-flow, .no-anim .atl-pulse, .no-anim .aur-ring, .no-anim .lc-track i { animation: none !important; }
+  /* Reduced motion: flows keep moving, slower; decorative effects stop. */
+  @media (prefers-reduced-motion: reduce) {
+    .sfc-flow { animation-duration: calc(var(--sfc-dash-time, 18s) * 3); }
+    .atl-pulse, .aur-ring, .lc-track i, .lc-status { animation: none !important; }
+  }
 
   .sfc-empty { padding: 28px; text-align: center; }
   .sfc-empty h2 { margin: 0 0 6px; font-size: 18px; }
@@ -216,7 +223,7 @@ const THEME_CSS = {
       --sfc-accent: #4dffd2; --sfc-accent-soft: rgba(77,255,210,.12); --sfc-tile-bg: rgba(255,255,255,.03); --sfc-track: rgba(255,255,255,.08);
       --sfc-tab-bg: rgba(255,255,255,.04); --sfc-tab-on-bg: #4dffd2; --sfc-tab-on: #0a0d1a; --sfc-tab-shadow: 0 0 14px rgba(77,255,210,.55);
       --sfc-tip-bg: #121731; --sfc-badge-bg: rgba(255,255,255,.06);
-      --sfc-flow-base: rgba(255,255,255,.07); --sfc-flow-w: 3; --sfc-dash: 2 16; --sfc-dash-len: 18;
+      --sfc-flow-base: rgba(255,255,255,.07); --sfc-flow-w: 3; --sfc-dash: 2 16; --sfc-dash-time: 10s;
       --sfc-radius: 28px; --sfc-shadow: 0 30px 80px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06);
       background: var(--sfc-bg);
     }
@@ -308,7 +315,7 @@ const THEME_CSS = {
     .sfc-forecast { padding-top: 14px; }
     .sfc-forecast-icon { display: none; }
     .sfc-forecast-copy strong { font-family: var(--sfc-heading-font); font-size: 18px; font-weight: 600; }
-    .sfc-flow { display: none; }
+    .pap-flow { stroke: rgba(42, 39, 34, .45); stroke-width: 2.5; --sfc-dash: 1 9; vector-effect: non-scaling-stroke; }
     .sfc-panel { border-radius: 0; }
   `,
   // ------------------------------------------------------------------ LCARS
@@ -354,6 +361,10 @@ const THEME_CSS = {
     .lc-track i { flex: 1; background: #222; }
     .lc-row.pv .lc-track i.on { background: var(--orange); } .lc-row.battery .lc-track i.on { background: var(--sky); }
     .lc-row.grid .lc-track i.on { background: var(--lav); } .lc-row.home .lc-track i.on { background: var(--red); }
+    /* A light wave runs over the lit segments in the direction of flow. */
+    .lc-track i.on { animation: lc-chase 1.6s linear infinite; animation-delay: calc(var(--i) * .12s - 3.2s); }
+    .lc-row.rev .lc-track i.on { animation-delay: calc((var(--n) - var(--i)) * .12s - 3.2s); }
+    @keyframes lc-chase { 0%, 30%, 100% { filter: none; } 12% { filter: brightness(1.7) saturate(.8); } }
     .lc-soc { display: flex; gap: 12px; margin-top: 12px; }
     .lc-cells { display: flex; flex-direction: column-reverse; gap: 3px; width: 44px; flex: 0 0 44px; }
     .lc-cells i { height: 8px; border-radius: 4px; background: #222; }
@@ -405,7 +416,7 @@ const THEME_CSS = {
       --sfc-accent: #3fe0ff; --sfc-accent-soft: rgba(63,224,255,.12); --sfc-tile-bg: rgba(0,140,190,.06); --sfc-track: rgba(63,224,255,.12);
       --sfc-tab-bg: rgba(0,140,190,.08); --sfc-tab-on-bg: rgba(63,224,255,.2); --sfc-tab-on: #e8fdff; --sfc-tab-shadow: inset 0 0 0 1px #3fe0ff, 0 0 12px rgba(63,224,255,.35);
       --sfc-tip-bg: #062635; --sfc-badge-bg: rgba(63,224,255,.1);
-      --sfc-flow-base: rgba(63,224,255,.12); --sfc-flow-w: 2; --sfc-dash: 2 10; --sfc-dash-len: 12;
+      --sfc-flow-base: rgba(63,224,255,.12); --sfc-flow-w: 2; --sfc-dash: 2 10; --sfc-dash-time: 15s;
       --sfc-radius: 22px; --sfc-section-radius: 4px 16px 4px 16px; --sfc-tile-radius: 3px 12px 3px 12px;
       --sfc-shadow: 0 0 40px rgba(0,180,255,.18), inset 0 0 60px rgba(0,160,220,.12);
       background: var(--sfc-bg);
