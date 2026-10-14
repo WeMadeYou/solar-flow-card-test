@@ -1,10 +1,7 @@
 MIT License
 
 Copyright (c) 2026 gratak
-
-Portions derived from the Energy Flow card of hass-deyecloud
-(https://github.com/heavenknows1978/hass-deyecloud):
-Copyright (c) 2024 Trần Công Tuấn Anh
+Copyright (c) 2024 Trần Công Tuấn Anh (Energy Flow card of hass-deyecloud, https://github.com/heavenknows1978/hass-deyecloud)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
