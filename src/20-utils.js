@@ -177,6 +177,9 @@ const THEME_FONTS = {
   paper: "Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600",
   lcars: "Antonio:wght@400;600;700",
   atlantis: "Exo+2:wght@200;300;500;700",
+  expanse: "Rajdhani:wght@500;600;700&family=Share+Tech+Mono",
+  foundation: "Cinzel:wght@400;600&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500",
+  galaxy: "Orbitron:wght@500;700&family=Share+Tech+Mono&family=Oswald:wght@500",
 };
 
 // Fonts declared inside a shadow root are ignored, so add the theme's font

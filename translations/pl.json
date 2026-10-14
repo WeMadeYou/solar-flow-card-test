@@ -116,12 +116,21 @@
   "noData": "Nie znaleziono czujników energii",
   "noDataHelp": "Zainstaluj integrację DeyeCloud albo wskaż encje w konfiguracji karty.",
   "editorTheme": "Motyw",
+  "expanseTitle": "Rozdział mocy",
+  "foundationTitle": "Pierwszy Radiant",
+  "foundationForecast": "Prognoza",
+  "foundationSteady": "Magazyn trwa w równowadze; plan przebiega zgodnie z przewidywaniami.",
+  "galaxyTitle": "Systemy zasilania",
+  "galaxyQuiet": "W tym sektorze galaktyki panuje spokój.",
   "themeNames": {
     "diorama": "Diorama",
     "aurora": "Aurora",
     "paper": "Papier",
     "lcars": "LCARS",
-    "atlantis": "Atlantis"
+    "atlantis": "Atlantis",
+    "expanse": "Expanse",
+    "foundation": "Fundacja",
+    "galaxy": "Odległa galaktyka"
   },
   "editorTitle": "Tytuł",
   "editorLanguage": "Język",

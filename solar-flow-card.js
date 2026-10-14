@@ -7,10 +7,10 @@
  * Built from src/*.js by scripts/build.mjs. Edit the sources, not this file.
  */
 (() => {
-const CARD_VERSION = "0.1.5-beta";
+const CARD_VERSION = "0.1.6-beta";
 const CARD_TAG = "solar-flow-card";
 const EDITOR_TAG = "solar-flow-card-editor";
-const THEMES = ["diorama", "aurora", "paper", "lcars", "atlantis"];
+const THEMES = ["diorama", "aurora", "paper", "lcars", "atlantis", "expanse", "foundation", "galaxy"];
 const PERIODS = ["today", "3d", "7d", "month", "all"];
 // A flow below this many watts counts as idle.
 const ACTIVE_W = 5;
@@ -135,12 +135,21 @@ const TRANSLATIONS = {
     "noData": "No energy sensors found",
     "noDataHelp": "Install the DeyeCloud integration or set the entities in the card configuration.",
     "editorTheme": "Theme",
+    "expanseTitle": "Power distribution",
+    "foundationTitle": "Prime Radiant",
+    "foundationForecast": "Forecast",
+    "foundationSteady": "The battery holds steady; the plan stays on course.",
+    "galaxyTitle": "Power systems",
+    "galaxyQuiet": "All is quiet in this sector of the galaxy.",
     "themeNames": {
       "diorama": "Diorama",
       "aurora": "Aurora",
       "paper": "Paper",
       "lcars": "LCARS",
-      "atlantis": "Atlantis"
+      "atlantis": "Atlantis",
+      "expanse": "Expanse",
+      "foundation": "Foundation",
+      "galaxy": "Far galaxy"
     },
     "editorTitle": "Title",
     "editorLanguage": "Language",
@@ -287,12 +296,21 @@ const TRANSLATIONS = {
     "noData": "Nie znaleziono czujników energii",
     "noDataHelp": "Zainstaluj integrację DeyeCloud albo wskaż encje w konfiguracji karty.",
     "editorTheme": "Motyw",
+    "expanseTitle": "Rozdział mocy",
+    "foundationTitle": "Pierwszy Radiant",
+    "foundationForecast": "Prognoza",
+    "foundationSteady": "Magazyn trwa w równowadze; plan przebiega zgodnie z przewidywaniami.",
+    "galaxyTitle": "Systemy zasilania",
+    "galaxyQuiet": "W tym sektorze galaktyki panuje spokój.",
     "themeNames": {
       "diorama": "Diorama",
       "aurora": "Aurora",
       "paper": "Papier",
       "lcars": "LCARS",
-      "atlantis": "Atlantis"
+      "atlantis": "Atlantis",
+      "expanse": "Expanse",
+      "foundation": "Fundacja",
+      "galaxy": "Odległa galaktyka"
     },
     "editorTitle": "Tytuł",
     "editorLanguage": "Język",
@@ -529,6 +547,9 @@ const THEME_FONTS = {
   paper: "Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600",
   lcars: "Antonio:wght@400;600;700",
   atlantis: "Exo+2:wght@200;300;500;700",
+  expanse: "Rajdhani:wght@500;600;700&family=Share+Tech+Mono",
+  foundation: "Cinzel:wght@400;600&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500",
+  galaxy: "Orbitron:wght@500;700&family=Share+Tech+Mono&family=Oswald:wght@500",
 };
 
 // Fonts declared inside a shadow root are ignored, so add the theme's font
@@ -1694,12 +1715,13 @@ function sankeyHtml(m) {
     </div>`;
 }
 
-function renderPaper(m) {
+// One or two sentences about the moment, as HTML with <em> highlights.
+// Used by Paper and by the crawl of the Galaxy theme.
+function liveSentence(m) {
   const { t, locale, live } = m;
-  const load = live.load;
   let lede = "";
   const sourcesNow = liveSources(m);
-  if (load > ACTIVE_W && sourcesNow.total > 0) {
+  if (live.load > ACTIVE_W && sourcesNow.total > 0) {
     const names = [t.paperSun, t.paperBattery, t.paperGrid];
     const parts = sourcesNow.shares.map((pct, i) => [names[i], pct]).filter(([, pct]) => pct > 0);
     lede = parts.length === 1
@@ -1710,11 +1732,18 @@ function renderPaper(m) {
   if (f.mode === "discharging") lede += ` ${fill(t.paperLasts, { time: `<em>${formatClock(f.at, locale)}</em>` })}`;
   if (f.mode === "charging") lede += ` ${fill(t.paperFull, { time: `<em>${formatClock(f.at, locale)}</em>` })}`;
   if (live.exportActive) lede += ` ${fill(t.paperExport, { power: `<em>${formatPower(live.gridExport, locale)}</em>` })}`;
+  return lede.trim().replace(/<(?!\/?em>)/g, "&lt;");
+}
+
+function renderPaper(m) {
+  const { t, locale, live } = m;
+  const load = live.load;
+  const lede = liveSentence(m);
   const date = m.now.toLocaleDateString(locale, { weekday: "short", day: "numeric", month: "short" });
   return `
     <div class="pap-eyebrow"><span>${escapeHtml(m.name)}</span><span>${escapeHtml(date)} · ${escapeHtml(clockText(m))} ${liveBadge(m)}</span></div>
     <h1 class="pap-headline" ${entityAttr(m.ids.live.load)}>${escapeHtml(fill(t.paperHeadline, { power: formatPower(load, locale) }))}</h1>
-    ${lede ? `<p class="pap-lede">${lede.replace(/<(?!\/?em>)/g, "&lt;")}</p>` : ""}
+    ${lede ? `<p class="pap-lede">${lede}</p>` : ""}
     <hr>
     ${sankeyHtml(m)}
     <button type="button" class="sfc-link pap-inverter" data-action="inverter">${escapeHtml(t.inverterDetails)} →</button>
@@ -1843,12 +1872,196 @@ function renderAtlantis(m) {
     <div class="sfc-sections">${standardSections(m)}</div>`;
 }
 
+// --------------------------------------------------------------------------
+// Expanse: a ship's power distribution display with orbital trajectories.
+// --------------------------------------------------------------------------
+
+function renderExpanse(m) {
+  const { t, locale, live } = m;
+  const W = 480;
+  const H = 330;
+  const pos = (x, y) => `left:${((x / W) * 100).toFixed(2)}%;top:${((y / H) * 100).toFixed(2)}%`;
+  const batteryFlow = live.dischargeActive ? live.discharge : live.charge;
+  const gridValue = live.importActive ? live.gridImport : live.exportActive ? live.gridExport : Math.abs(live.grid);
+  const box = (cls, x, y, code, label, value, note, attr) => `
+    <button class="exp-box ${cls}" style="${pos(x, y)}" ${attr}>
+      <span class="exp-code">${escapeHtml(code)}</span><small>${escapeHtml(label)}</small>
+      <b>${escapeHtml(value)}</b>${note ? `<em>${escapeHtml(note)}</em>` : ""}
+    </button>`;
+  const soc = isNum(live.soc) ? clamp(live.soc, 0, 100) : 0;
+  const minSoc = clamp(m.forecast.minSoc ?? 10, 0, 100);
+  const segments = Array.from({ length: 25 }, (_, i) => {
+    const from = i * 4;
+    return `<i class="${from < soc ? "on" : ""} ${from < minSoc ? "reserve" : ""}"></i>`;
+  }).join("");
+  const f = m.forecast;
+  const code = String(m.station || "").replace(/\D/g, "").slice(-4).padStart(4, "0");
+  return `
+    <div class="exp-grid"></div>
+    <header class="exp-header">
+      <div class="exp-tag">${escapeHtml(code)}</div>
+      <div class="exp-title"><h1>${escapeHtml(m.name)}</h1><span>${escapeHtml(t.expanseTitle)}</span></div>
+      <div class="exp-clock ${m.status.state}"><small>${escapeHtml(m.t[m.status.state])}</small><b>${escapeHtml(clockText(m))}</b></div>
+    </header>
+    <div class="exp-stage">
+      <svg viewBox="0 0 ${W} ${H}" aria-hidden="true">
+        <g class="exp-orbits" fill="none">
+          <ellipse cx="240" cy="165" rx="210" ry="128"/><ellipse cx="240" cy="165" rx="150" ry="92"/>
+          <line x1="20" y1="165" x2="460" y2="165"/><line x1="240" y1="22" x2="240" y2="308"/>
+        </g>
+        <g fill="none" stroke-linecap="round">
+          ${m.config.showSolar ? flowPath("M150 72 Q218 72 222 140", live.solarActive, false, "pv") : ""}
+          ${flowPath("M330 72 Q262 72 258 140", live.importActive || live.exportActive, live.exportActive, "grid")}
+          ${flowPath("M150 258 Q218 258 222 190", live.chargeActive || live.dischargeActive, live.chargeActive, "battery")}
+          ${flowPath("M330 258 Q262 258 258 190", live.loadActive, true, "load")}
+        </g>
+        <g transform="translate(240 165)" fill="none">
+          <circle r="34" class="exp-ring"/>
+          <circle r="27" class="exp-spin"/>
+          <path d="M-8 0 H8 M0 -8 V8" class="exp-cross"/>
+        </g>
+      </svg>
+      <button class="exp-core" style="${pos(240, 165)}" data-action="inverter" title="${escapeHtml(t.inverterDetails)}"></button>
+      ${m.config.showSolar ? box("pv", 92, 72, "SOL-01", t.solar, formatPower(live.solar, locale), live.solarActive ? "" : t.idle, entityAttr(m.ids.live.solar)) : ""}
+      ${box("grid", 388, 72, "GRD-02", t.grid, formatPower(gridValue, locale), gridStatus(m), entityAttr(gridEntityId(m)))}
+      ${box("battery", 92, 258, "BAT-03", t.battery, formatPower(batteryFlow, locale), batteryStatus(m), entityAttr(batteryEntityId(m)))}
+      ${box("load", 388, 258, "HAB-04", t.home, formatPower(live.load, locale), "", entityAttr(m.ids.live.load))}
+    </div>
+    <button class="exp-soc" ${entityAttr(batteryEntityId(m))}>
+      <span class="exp-soc-head"><small>${escapeHtml(t.stateOfCharge)}</small><b>${escapeHtml(formatPercent(live.soc, locale))}</b>
+        <em>${escapeHtml(f.at ? `${f.mode === "charging" ? t.chipFull : t.chipLasts} ${formatClock(f.at, locale)}` : isNum(f.stored) ? formatEnergy(f.stored, locale) : "")}</em></span>
+      <span class="exp-soc-bar">${segments}</span>
+    </button>
+    <div class="sfc-sections">${standardSections(m)}</div>`;
+}
+
+// --------------------------------------------------------------------------
+// Foundation: a radiant of slowly turning orbits that forecasts the battery.
+// --------------------------------------------------------------------------
+
+function renderFoundation(m) {
+  const { t, locale, live } = m;
+  const W = 480;
+  const H = 340;
+  const pos = (x, y) => `left:${((x / W) * 100).toFixed(2)}%;top:${((y / H) * 100).toFixed(2)}%`;
+  const batteryFlow = live.dischargeActive ? live.discharge : live.charge;
+  const gridValue = live.importActive ? live.gridImport : live.exportActive ? live.gridExport : Math.abs(live.grid);
+  const node = (cls, x, y, label, value, note, attr) => `
+    <button class="fnd-node ${cls}" style="${pos(x, y)}" ${attr}>
+      <small>${escapeHtml(label)}</small><b>${escapeHtml(value)}</b>${note ? `<em>${escapeHtml(note)}</em>` : ""}
+    </button>`;
+  // Points on the orbits; a fixed pattern so the picture is stable between renders.
+  const stars = Array.from({ length: 46 }, (_, i) => {
+    const a = i * 2.39996;
+    const r = 30 + ((i * 37) % 120);
+    return `<circle cx="${(Math.cos(a) * r).toFixed(1)}" cy="${(Math.sin(a) * r * 0.62).toFixed(1)}" r="${i % 7 ? 0.8 : 1.6}"/>`;
+  }).join("");
+  const f = m.forecast;
+  const forecast = f.mode === "discharging"
+    ? fill(t.paperLasts, { time: `<em>${formatClock(f.at, locale)}</em>` })
+    : f.mode === "charging"
+      ? fill(t.paperFull, { time: `<em>${formatClock(f.at, locale)}</em>` })
+      : escapeHtml(t.foundationSteady);
+  return `
+    <div class="fnd-dust"></div>
+    <header class="fnd-header">
+      <small>${escapeHtml(t.foundationTitle)}</small>
+      <h1>${escapeHtml(m.name)}</h1>
+      <span>${escapeHtml(m.now.toLocaleDateString(locale, { day: "numeric", month: "long" }))} · ${escapeHtml(clockText(m))} ${liveBadge(m)}</span>
+    </header>
+    <div class="fnd-stage">
+      <svg viewBox="0 0 ${W} ${H}" aria-hidden="true">
+        <defs>
+          <radialGradient id="fnd-sphere" cx="50%" cy="45%" r="50%"><stop offset="0" stop-color="#fff4d6"/><stop offset=".35" stop-color="#e8c47a" stop-opacity=".7"/><stop offset="1" stop-color="#b8862e" stop-opacity="0"/></radialGradient>
+          <filter id="fnd-glow"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <g transform="translate(240 170)" fill="none">
+          <g class="fnd-orbit o1"><ellipse rx="150" ry="58"/><circle cx="150" r="2.5"/></g>
+          <g class="fnd-orbit o2"><ellipse rx="128" ry="74" transform="rotate(32)"/><circle cx="108" cy="68" r="2"/></g>
+          <g class="fnd-orbit o3"><ellipse rx="128" ry="74" transform="rotate(-32)"/><circle cx="-108" cy="68" r="2"/></g>
+          <g class="fnd-stars">${stars}</g>
+          <circle r="62" fill="url(#fnd-sphere)" class="fnd-sphere"/>
+          <circle r="44" class="fnd-ring"/>
+        </g>
+        <g fill="none" stroke-linecap="round" filter="url(#fnd-glow)">
+          ${m.config.showSolar ? flowPath("M240 48 L240 120", live.solarActive, false, "pv") : ""}
+          ${flowPath("M108 170 L190 170", live.chargeActive || live.dischargeActive, live.chargeActive, "battery")}
+          ${flowPath("M372 170 L290 170", live.importActive || live.exportActive, live.exportActive, "grid")}
+          ${flowPath("M240 292 L240 220", live.loadActive, true, "load")}
+        </g>
+      </svg>
+      <button class="fnd-center" style="${pos(240, 170)}" data-action="inverter" title="${escapeHtml(t.inverterDetails)}">
+        <b>${escapeHtml(formatPercent(live.soc, locale))}</b><small>${escapeHtml(t.battery)}</small>
+      </button>
+      ${m.config.showSolar ? node("pv", 240, 22, t.sun, formatPower(live.solar, locale), "", entityAttr(m.ids.live.solar)) : ""}
+      ${node("battery", 60, 170, t.battery, formatPower(batteryFlow, locale), batteryStatus(m), entityAttr(batteryEntityId(m)))}
+      ${node("grid", 420, 170, t.grid, formatPower(gridValue, locale), gridStatus(m), entityAttr(gridEntityId(m)))}
+      ${node("load", 240, 318, t.home, formatPower(live.load, locale), "", entityAttr(m.ids.live.load))}
+    </div>
+    <p class="fnd-forecast"><small>${escapeHtml(t.foundationForecast)}</small>${forecast.replace(/<(?!\/?em>)/g, "&lt;")}</p>
+    <div class="sfc-sections">${standardSections(m)}</div>`;
+}
+
+// --------------------------------------------------------------------------
+// Galaxy: a targeting computer flying down a trench, with an opening crawl.
+// --------------------------------------------------------------------------
+
+function renderGalaxy(m) {
+  const { t, locale, live } = m;
+  const W = 480;
+  const H = 300;
+  const pos = (x, y) => `left:${((x / W) * 100).toFixed(2)}%;top:${((y / H) * 100).toFixed(2)}%`;
+  const batteryFlow = live.dischargeActive ? live.discharge : live.charge;
+  const gridValue = live.importActive ? live.gridImport : live.exportActive ? live.gridExport : Math.abs(live.grid);
+  const readout = (cls, x, y, label, value, note, attr) => `
+    <button class="gal-readout ${cls}" style="${pos(x, y)}" ${attr}>
+      <small>${escapeHtml(label)}</small><b>${escapeHtml(value)}</b>${note ? `<em>${escapeHtml(note)}</em>` : ""}
+    </button>`;
+  const crawl = liveSentence(m) || escapeHtml(t.galaxyQuiet);
+  const soc = isNum(live.soc) ? clamp(live.soc, 0, 100) : 0;
+  const lock = soc <= (m.forecast.minSoc ?? 10) + 1 ? "low" : "";
+  return `
+    <div class="gal-stars"></div>
+    <header class="gal-header">
+      <small>${escapeHtml(t.galaxyTitle)}</small>
+      <h1>${escapeHtml(m.name)}</h1>
+      <div class="gal-crawl"><p>${crawl}</p></div>
+    </header>
+    <div class="gal-scope">
+      <svg viewBox="0 0 ${W} ${H}" aria-hidden="true">
+        <g class="gal-trench" fill="none">
+          ${[0, 1, 2, 3].map((i) => `<rect class="gal-warp" style="--d:${i}" x="190" y="115" width="100" height="70"/>`).join("")}
+          <rect x="190" y="115" width="100" height="70" class="gal-target ${lock}"/>
+          <path d="M240 100 V125 M240 175 V200 M175 150 H200 M280 150 H305" class="gal-cross ${lock}"/>
+        </g>
+        <g fill="none" stroke-linecap="round">
+          ${m.config.showSolar ? flowPath("M14 12 L190 115", live.solarActive, false, "pv") : ""}
+          ${flowPath("M466 12 L290 115", live.importActive || live.exportActive, live.exportActive, "grid")}
+          ${flowPath("M14 288 L190 185", live.chargeActive || live.dischargeActive, live.chargeActive, "battery")}
+          ${flowPath("M466 288 L290 185", live.loadActive, true, "load")}
+        </g>
+      </svg>
+      <button class="gal-center ${lock}" style="${pos(240, 150)}" data-action="inverter" title="${escapeHtml(t.inverterDetails)}">
+        <b>${escapeHtml(formatPercent(live.soc, locale))}</b>
+      </button>
+      ${m.config.showSolar ? readout("pv", 62, 118, t.solar, formatPower(live.solar, locale), "", entityAttr(m.ids.live.solar)) : ""}
+      ${readout("battery", 62, 182, t.battery, formatPower(batteryFlow, locale), batteryStatus(m), entityAttr(batteryEntityId(m)))}
+      ${readout("grid", 418, 118, t.grid, formatPower(gridValue, locale), gridStatus(m), entityAttr(gridEntityId(m)))}
+      ${readout("load", 418, 182, t.home, formatPower(live.load, locale), "", entityAttr(m.ids.live.load))}
+      <div class="gal-hud"><span>${escapeHtml(clockText(m))}</span><span class="${m.status.state}">${escapeHtml(m.t[m.status.state])}</span></div>
+    </div>
+    <div class="sfc-sections">${standardSections(m)}</div>`;
+}
+
 const THEME_RENDER = {
   diorama: renderDiorama,
   aurora: renderAurora,
   paper: renderPaper,
   lcars: renderLcars,
   atlantis: renderAtlantis,
+  expanse: renderExpanse,
+  foundation: renderFoundation,
+  galaxy: renderGalaxy,
 };
 
 
@@ -2018,11 +2231,12 @@ const BASE_CSS = `
      interpolate). 180 is a whole number of dash periods for every theme's
      pattern (10, 12, 18); --sfc-dash-time sets the speed. */
   @keyframes sfc-dash { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -180; } }
-  .no-anim .sfc-flow, .no-anim .atl-pulse, .no-anim .aur-ring, .no-anim .lc-track i { animation: none !important; }
+  .no-anim .sfc-flow, .no-anim .atl-pulse, .no-anim .aur-ring, .no-anim .lc-track i,
+    .no-anim .exp-spin, .no-anim .fnd-orbit, .no-anim .fnd-sphere, .no-anim .gal-warp, .no-anim .gal-target, .no-anim .gal-cross { animation: none !important; }
   /* Reduced motion: flows keep moving, slower; decorative effects stop. */
   @media (prefers-reduced-motion: reduce) {
     .sfc-flow { animation-duration: calc(var(--sfc-dash-time, 18s) * 3); }
-    .atl-pulse, .aur-ring, .lc-track i, .lc-status { animation: none !important; }
+    .atl-pulse, .aur-ring, .lc-track i, .lc-status, .exp-spin, .fnd-orbit, .fnd-sphere, .gal-warp, .gal-target, .gal-cross { animation: none !important; }
   }
 
   .sfc-empty { padding: 28px; text-align: center; }
@@ -2323,6 +2537,166 @@ const THEME_CSS = {
     .sfc-panel.weak { background: linear-gradient(180deg, rgba(255,170,60,.7), rgba(200,90,30,.45)); box-shadow: none; }
     .sfc-panel small { font-size: 9px; }
     .sfc-panel span { display: none; }
+  `,
+  expanse: `
+    .sfc {
+      --sfc-font: "Rajdhani", "Arial Narrow", sans-serif; --sfc-num-font: "Share Tech Mono", ui-monospace, monospace;
+      --sfc-bg: radial-gradient(80% 60% at 50% 30%, rgba(80,170,200,.10), transparent 70%), linear-gradient(180deg, #0d1218, #070a0e);
+      --sfc-surface: rgba(140,190,210,.04); --sfc-border: rgba(170,210,225,.18); --sfc-text: #e4edf1; --sfc-muted: #7f99a6;
+      --sfc-pv: #ffb347; --sfc-load: #e8eef2; --sfc-battery: #57d6c4; --sfc-grid: #ff6a3d;
+      --sfc-accent: #ff8a2a; --sfc-accent-soft: rgba(255,138,42,.14); --sfc-tile-bg: rgba(140,190,210,.035); --sfc-track: rgba(170,210,225,.12);
+      --sfc-tab-bg: rgba(140,190,210,.05); --sfc-tab-on-bg: #ff8a2a; --sfc-tab-on: #0b0f14;
+      --sfc-tip-bg: #10171e; --sfc-badge-bg: rgba(255,138,42,.12);
+      --sfc-flow-base: rgba(170,210,225,.10); --sfc-flow-w: 1.6; --sfc-dash: 3 9; --sfc-dash-time: 12s;
+      --sfc-radius: 6px; --sfc-section-radius: 2px; --sfc-tile-radius: 2px; --sfc-tabs-radius: 2px; --sfc-tab-radius: 1px; --sfc-icon-radius: 2px;
+      --sfc-heading-weight: 600;
+      background: var(--sfc-bg);
+    }
+    .exp-grid { position: absolute; inset: 0; pointer-events: none; opacity: .5;
+      background: linear-gradient(rgba(170,210,225,.05) 1px, transparent 1px) 0 0 / 24px 24px, linear-gradient(90deg, rgba(170,210,225,.05) 1px, transparent 1px) 0 0 / 24px 24px; }
+    .exp-header { position: relative; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; padding: 16px 18px 0; }
+    .exp-tag { padding: 4px 8px; background: #ff8a2a; color: #0b0f14; font: 700 11px/1 var(--sfc-num-font); letter-spacing: .08em; }
+    .exp-title { min-width: 0; }
+    .exp-title h1 { margin: 0; font-size: clamp(17px, 4.6cqw, 23px); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .exp-title span { display: block; color: var(--sfc-muted); font: 11px var(--sfc-num-font); letter-spacing: .12em; text-transform: uppercase; }
+    .exp-clock { display: grid; justify-items: end; font-family: var(--sfc-num-font); }
+    .exp-clock small { color: #57d6c4; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
+    .exp-clock.delayed small { color: #ffb347; } .exp-clock.offline small { color: #ff6a3d; }
+    .exp-clock b { font-size: 18px; font-weight: 400; }
+    .exp-stage { position: relative; aspect-ratio: 480 / 330; margin: 8px 10px 0; }
+    .exp-stage svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .exp-orbits ellipse, .exp-orbits line { stroke: rgba(170,210,225,.13); stroke-width: 1; stroke-dasharray: 2 5; }
+    .exp-ring { stroke: #ff8a2a; stroke-width: 1.5; }
+    .exp-spin { stroke: rgba(228,237,241,.7); stroke-width: 3; stroke-dasharray: 4 6; transform-box: fill-box; transform-origin: center; animation: exp-spin 14s linear infinite; }
+    .exp-cross { stroke: #ff8a2a; stroke-width: 1.5; }
+    @keyframes exp-spin { to { transform: rotate(360deg); } }
+    .exp-core { position: absolute; width: 16%; aspect-ratio: 1; transform: translate(-50%, -50%); border: 0; border-radius: 50%; background: none; }
+    .exp-box { position: absolute; transform: translate(-50%, -50%); width: 34%; display: grid; justify-items: start; gap: 0; padding: 7px 10px;
+      border: 0; background: rgba(13,18,24,.82); text-align: left; --c: var(--sfc-text);
+      box-shadow: inset 2px 0 0 var(--c); }
+    .exp-box::before, .exp-box::after { content: ""; position: absolute; width: 9px; height: 9px; border: 1px solid var(--c); }
+    .exp-box::before { right: 0; top: 0; border-left: 0; border-bottom: 0; }
+    .exp-box::after { right: 0; bottom: 0; border-left: 0; border-top: 0; }
+    .exp-box.pv { --c: var(--sfc-pv); } .exp-box.battery { --c: var(--sfc-battery); } .exp-box.grid { --c: var(--sfc-grid); } .exp-box.load { --c: var(--sfc-load); }
+    .exp-code { color: var(--c); font: 10px var(--sfc-num-font); letter-spacing: .14em; }
+    .exp-box small { color: var(--sfc-muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
+    .exp-box b { font: 400 clamp(17px, 4.6cqw, 23px)/1.1 var(--sfc-num-font); color: var(--sfc-text); white-space: nowrap; }
+    .exp-box em { color: var(--c); font-size: 11px; font-style: normal; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+    .exp-soc { position: relative; display: grid; gap: 6px; width: calc(100% - 36px); margin: 4px 18px 16px; padding: 0; border: 0; background: none; text-align: left; }
+    .exp-soc-head { display: flex; align-items: baseline; gap: 10px; }
+    .exp-soc-head small { color: var(--sfc-muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; }
+    .exp-soc-head b { font: 400 20px var(--sfc-num-font); color: #57d6c4; }
+    .exp-soc-head em { margin-left: auto; color: var(--sfc-muted); font: 12px var(--sfc-num-font); font-style: normal; }
+    .exp-soc-bar { display: grid; grid-template-columns: repeat(25, 1fr); gap: 3px; }
+    .exp-soc-bar i { height: 12px; background: rgba(170,210,225,.10); transform: skewX(-20deg); }
+    .exp-soc-bar i.on { background: #57d6c4; box-shadow: 0 0 6px rgba(87,214,196,.5); }
+    .exp-soc-bar i.reserve { background: rgba(255,106,61,.25); } .exp-soc-bar i.reserve.on { background: #ff6a3d; box-shadow: 0 0 6px rgba(255,106,61,.5); }
+    .sfc-head h3 { font-size: 14px; letter-spacing: .1em; text-transform: uppercase; }
+    .sfc-section { border-left: 2px solid #ff8a2a; }
+    .sfc-tab { font-family: var(--sfc-num-font); font-size: 11px; }
+    .sfc-tile small, .sfc-summary-item small { text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
+  `,
+  foundation: `
+    .sfc {
+      --sfc-font: "Cormorant Garamond", Georgia, serif; --sfc-heading-font: "Cinzel", Georgia, serif; --sfc-num-font: "Cinzel", Georgia, serif;
+      --sfc-bg: radial-gradient(60% 45% at 50% 32%, rgba(232,196,122,.13), transparent 70%), radial-gradient(120% 80% at 50% 120%, #1a1408, transparent 60%), #07070a;
+      --sfc-surface: rgba(232,196,122,.035); --sfc-border: rgba(232,196,122,.2); --sfc-text: #f1e6cf; --sfc-muted: #a8946c;
+      --sfc-pv: #f3cf7a; --sfc-load: #f1e6cf; --sfc-battery: #c99a4a; --sfc-grid: #8fa6c8;
+      --sfc-accent: #e8c47a; --sfc-accent-soft: rgba(232,196,122,.12); --sfc-tile-bg: rgba(232,196,122,.03); --sfc-track: rgba(232,196,122,.12);
+      --sfc-tab-bg: transparent; --sfc-tab-on-bg: rgba(232,196,122,.14); --sfc-tab-on: #f8edd4; --sfc-tab-shadow: inset 0 -1px 0 #e8c47a;
+      --sfc-tip-bg: #121009; --sfc-badge-bg: rgba(232,196,122,.1);
+      --sfc-flow-base: rgba(232,196,122,.1); --sfc-flow-w: 1.4; --sfc-dash: 1 5; --sfc-dash-time: 20s;
+      --sfc-radius: 2px; --sfc-section-radius: 0; --sfc-tile-radius: 0; --sfc-tabs-radius: 0; --sfc-tab-radius: 0; --sfc-icon-radius: 50%;
+      --sfc-heading-weight: 400; --sfc-frame: rgba(232,196,122,.35);
+      background: var(--sfc-bg);
+    }
+    .fnd-dust { position: absolute; inset: 0; pointer-events: none; opacity: .55;
+      background-image: radial-gradient(1px 1px at 12% 18%, #e8c47a, transparent), radial-gradient(1px 1px at 82% 12%, #f1e6cf, transparent),
+        radial-gradient(1px 1px at 68% 44%, #e8c47a, transparent), radial-gradient(1px 1px at 24% 62%, #f1e6cf, transparent),
+        radial-gradient(1px 1px at 90% 70%, #e8c47a, transparent), radial-gradient(1px 1px at 6% 86%, #e8c47a, transparent); }
+    .fnd-header { position: relative; display: grid; justify-items: center; gap: 2px; padding: 22px 20px 0; text-align: center; }
+    .fnd-header small { color: #e8c47a; font: 400 11px var(--sfc-heading-font); letter-spacing: .5em; text-transform: uppercase; }
+    .fnd-header h1 { margin: 0; font: 400 clamp(20px, 5.6cqw, 28px) var(--sfc-heading-font); letter-spacing: .14em; text-transform: uppercase; }
+    .fnd-header span { color: var(--sfc-muted); font-size: 14px; font-style: italic; }
+    .fnd-stage { position: relative; aspect-ratio: 480 / 340; margin: 6px 12px 0; }
+    .fnd-stage svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+    .fnd-orbit ellipse { stroke: rgba(232,196,122,.35); stroke-width: .8; }
+    .fnd-orbit circle { fill: #f3cf7a; }
+    .fnd-orbit { transform-box: view-box; transform-origin: 240px 170px; }
+    .fnd-orbit.o1 { animation: fnd-turn 60s linear infinite; }
+    .fnd-orbit.o2 { animation: fnd-turn 90s linear infinite reverse; }
+    .fnd-orbit.o3 { animation: fnd-turn 120s linear infinite; }
+    @keyframes fnd-turn { to { transform: rotate(360deg); } }
+    .fnd-stars circle { fill: rgba(241,230,207,.55); }
+    .fnd-sphere { animation: fnd-breathe 6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+    @keyframes fnd-breathe { 50% { opacity: .7; transform: scale(.94); } }
+    .fnd-ring { stroke: rgba(243,207,122,.6); stroke-width: .8; stroke-dasharray: 1 3; }
+    .fnd-center { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; padding: 0; border: 0; background: none; }
+    .fnd-center b { font: 400 clamp(22px, 6.4cqw, 32px)/1 var(--sfc-heading-font); color: #1a1206; text-shadow: 0 0 10px rgba(255,244,214,.9); }
+    .fnd-center small { color: #3b2a0e; font: 600 10px var(--sfc-heading-font); letter-spacing: .2em; text-transform: uppercase; }
+    .fnd-node { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; padding: 2px 6px; border: 0; background: none; white-space: nowrap; }
+    .fnd-node small { color: var(--sfc-muted); font: 400 10px var(--sfc-heading-font); letter-spacing: .24em; text-transform: uppercase; }
+    .fnd-node b { font: 400 clamp(15px, 4cqw, 20px) var(--sfc-heading-font); color: var(--sfc-text); }
+    .fnd-node em { color: var(--sfc-muted); font-size: 13px; }
+    .fnd-node.pv b { color: #f3cf7a; } .fnd-node.grid b { color: #b9c9e0; }
+    .fnd-forecast { position: relative; margin: 6px 28px 18px; padding-top: 12px; border-top: 1px solid rgba(232,196,122,.25); text-align: center; font-size: 18px; font-style: italic; line-height: 1.35; }
+    .fnd-forecast small { display: block; margin-bottom: 2px; color: #e8c47a; font: 400 10px var(--sfc-heading-font); font-style: normal; letter-spacing: .4em; text-transform: uppercase; }
+    .fnd-forecast em { color: #f3cf7a; font-style: normal; font-family: var(--sfc-heading-font); font-size: 16px; }
+    .sfc-head h3 { font-size: 13px; letter-spacing: .2em; text-transform: uppercase; }
+    .sfc-section { border-width: 1px 0 0; background: none; padding: 14px 4px; }
+    .sfc-tab { font-family: var(--sfc-heading-font); font-size: 11px; letter-spacing: .08em; }
+    .sfc-tile small, .sfc-summary-item small { font-size: 13px; }
+  `,
+  galaxy: `
+    .sfc {
+      --sfc-font: "Share Tech Mono", ui-monospace, monospace; --sfc-heading-font: "Orbitron", sans-serif; --sfc-num-font: "Share Tech Mono", ui-monospace, monospace;
+      --sfc-bg: #020203; --sfc-surface: rgba(255,200,40,.03); --sfc-border: rgba(255,190,40,.22); --sfc-text: #ffe8a8; --sfc-muted: #b08a3a;
+      --sfc-pv: #ffe81f; --sfc-load: #ff9d2e; --sfc-battery: #4fe3ff; --sfc-grid: #ff4b3a;
+      --sfc-accent: #ffe81f; --sfc-accent-soft: rgba(255,232,31,.12); --sfc-tile-bg: rgba(255,200,40,.025); --sfc-track: rgba(255,190,40,.12);
+      --sfc-tab-bg: rgba(255,200,40,.04); --sfc-tab-on-bg: #ffe81f; --sfc-tab-on: #020203;
+      --sfc-tip-bg: #0b0904; --sfc-badge-bg: rgba(255,232,31,.1);
+      --sfc-flow-base: rgba(255,190,40,.12); --sfc-flow-w: 1.6; --sfc-dash: 6 12; --sfc-dash-time: 8s;
+      --sfc-radius: 4px; --sfc-section-radius: 2px; --sfc-tile-radius: 2px; --sfc-tabs-radius: 2px; --sfc-tab-radius: 1px; --sfc-icon-radius: 2px;
+      --sfc-heading-weight: 700;
+      background: var(--sfc-bg);
+    }
+    .gal-stars { position: absolute; inset: 0; pointer-events: none;
+      background-image: radial-gradient(1px 1px at 8% 12%, #fff, transparent), radial-gradient(1px 1px at 22% 40%, #cfd8ff, transparent),
+        radial-gradient(1.5px 1.5px at 37% 8%, #fff, transparent), radial-gradient(1px 1px at 55% 30%, #fff, transparent),
+        radial-gradient(1px 1px at 71% 14%, #fff, transparent), radial-gradient(1.5px 1.5px at 88% 34%, #fff, transparent),
+        radial-gradient(1px 1px at 93% 6%, #cfd8ff, transparent), radial-gradient(1px 1px at 14% 70%, #fff, transparent),
+        radial-gradient(1px 1px at 46% 88%, #fff, transparent), radial-gradient(1.5px 1.5px at 80% 78%, #fff, transparent); }
+    .gal-header { position: relative; display: grid; justify-items: center; padding: 18px 18px 0; text-align: center; }
+    .gal-header small { color: #4fe3ff; font-size: 11px; letter-spacing: .3em; text-transform: uppercase; }
+    .gal-header h1 { margin: 2px 0 0; color: #ffe81f; font: 700 clamp(18px, 5cqw, 26px) var(--sfc-heading-font); letter-spacing: .12em; text-transform: uppercase; }
+    .gal-crawl { width: 100%; height: 66px; margin-top: 6px; overflow: hidden; perspective: 220px; perspective-origin: 50% 0%;
+      mask-image: linear-gradient(180deg, transparent, #000 30%, #000); -webkit-mask-image: linear-gradient(180deg, transparent, #000 30%, #000); }
+    .gal-crawl p { margin: 0 auto; max-width: 92%; transform: rotateX(28deg); transform-origin: 50% 100%;
+      color: #ffe81f; font: 500 clamp(13px, 3.4cqw, 16px)/1.3 "Oswald", "Arial Narrow", sans-serif; text-align: justify; text-align-last: center; }
+    .gal-crawl em { font-style: normal; color: #fff6b0; }
+    .gal-scope { position: relative; aspect-ratio: 480 / 300; margin: 4px 10px 12px; border: 1px solid rgba(255,190,40,.25); background: radial-gradient(closest-side, rgba(255,120,0,.06), transparent); }
+    .gal-scope svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .gal-trench rect { stroke: rgba(255,170,30,.55); stroke-width: 1; vector-effect: non-scaling-stroke; }
+    .gal-warp { transform-box: view-box; transform-origin: 240px 150px; opacity: 0; animation: gal-warp 4s linear infinite; animation-delay: calc(var(--d) * -1s); }
+    @keyframes gal-warp { from { transform: scale(1); opacity: .9; } to { transform: scale(4.6); opacity: 0; } }
+    .gal-target { stroke: #ffe81f !important; stroke-width: 2 !important; }
+    .gal-target.low, .gal-cross.low { stroke: #ff4b3a !important; animation: gal-blink 1s steps(2) infinite; }
+    .gal-cross { stroke: #ff4b3a; stroke-width: 1.5; }
+    @keyframes gal-blink { 50% { opacity: .3; } }
+    .gal-center { position: absolute; transform: translate(-50%, -50%); padding: 0; border: 0; background: none; }
+    .gal-center b { color: #ffe81f; font: 700 clamp(18px, 5cqw, 26px) var(--sfc-heading-font); text-shadow: 0 0 8px rgba(255,232,31,.6); }
+    .gal-center.low b { color: #ff4b3a; text-shadow: 0 0 8px rgba(255,75,58,.6); }
+    .gal-readout { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 0; padding: 3px 6px; border: 0;
+      background: rgba(2,2,3,.75); white-space: nowrap; --c: var(--sfc-text); }
+    .gal-readout.pv { --c: var(--sfc-pv); } .gal-readout.battery { --c: var(--sfc-battery); } .gal-readout.grid { --c: var(--sfc-grid); } .gal-readout.load { --c: var(--sfc-load); }
+    .gal-readout small { color: var(--c); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; }
+    .gal-readout b { color: var(--sfc-text); font-size: clamp(14px, 3.8cqw, 19px); font-weight: 400; }
+    .gal-readout em { color: var(--sfc-muted); font-size: 10px; font-style: normal; text-transform: uppercase; }
+    .gal-hud { position: absolute; left: 0; right: 0; bottom: 4px; display: flex; justify-content: space-between; padding: 0 8px; color: var(--sfc-muted); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
+    .gal-hud .live { color: #4fe3ff; } .gal-hud .delayed { color: #ffb347; } .gal-hud .offline { color: #ff4b3a; }
+    .sfc-head h3 { font-family: var(--sfc-heading-font); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: #ffe81f; }
+    .sfc-tab { font-size: 11px; }
+    .sfc-tile small, .sfc-summary-item small { text-transform: uppercase; letter-spacing: .04em; font-size: 10px; }
   `,
 };
 

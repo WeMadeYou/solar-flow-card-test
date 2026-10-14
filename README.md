@@ -8,13 +8,17 @@
 
 > **Beta.** Things may still change between versions; please report problems in the issues.
 
-A Home Assistant dashboard card for solar installations with a battery: live power flow, charts, a battery forecast, inverter details and per-panel production, in five themes.
+A Home Assistant dashboard card for solar installations with a battery: live power flow, charts, a battery forecast, inverter details and per-panel production, in eight themes.
 
 DeyeCloud sensors are found automatically; any other inverter works by pointing the card at its entities.
 
-| Diorama | Aurora | Paper | LCARS | Atlantis |
-|---|---|---|---|---|
-| ![Diorama](docs/diorama.png) | ![Aurora](docs/aurora.png) | ![Paper](docs/paper.png) | ![LCARS](docs/lcars.png) | ![Atlantis](docs/atlantis.png) |
+| Diorama | Aurora | Paper | LCARS |
+|---|---|---|---|
+| ![Diorama](docs/diorama.png) | ![Aurora](docs/aurora.png) | ![Paper](docs/paper.png) | ![LCARS](docs/lcars.png) |
+
+| Atlantis | Expanse | Foundation | Far galaxy |
+|---|---|---|---|
+| ![Atlantis](docs/atlantis.png) | ![Expanse](docs/expanse.png) | ![Foundation](docs/foundation.png) | ![Far galaxy](docs/galaxy.png) |
 
 ## Features
 
@@ -39,6 +43,9 @@ History comes from Home Assistant itself (recorder history and long-term statist
 | `paper` | An editorial page: a sentence that explains the moment and a Sankey diagram of where the power goes. |
 | `lcars` | A starship operations panel with segment bars, a battery cell gauge and a status line. |
 | `atlantis` | A holographic power core with the battery in a crystal and hexagonal panels. |
+| `expanse` | A ship's power distribution display: bracketed readouts, orbital trajectories and a segmented charge bar with the reserve in red. |
+| `foundation` | A radiant of slowly turning golden orbits around the battery, with a forecast written below. |
+| `galaxy` | A targeting computer flying down a trench, with the moment told as an opening crawl; the target turns red at the battery reserve. |
 
 ## Installation
 
@@ -80,7 +87,7 @@ co2_factor: 0.7
 
 | Option | Default | Description |
 |---|---|---|
-| `theme` | `diorama` | `diorama`, `aurora`, `paper`, `lcars` or `atlantis`. |
+| `theme` | `diorama` | `diorama`, `aurora`, `paper`, `lcars`, `atlantis`, `expanse`, `foundation` or `galaxy`. |
 | `title` | station name | Card title. |
 | `language` | Home Assistant language | `en` or `pl`; also in the visual editor. |
 | `period` | `today` | Tab shown when the dashboard opens: `today`, `3d`, `7d`, `month` or `all`. |
