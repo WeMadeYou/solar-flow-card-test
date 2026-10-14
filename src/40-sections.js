@@ -197,7 +197,7 @@ function systemHtml(m) {
   const { t, locale } = m;
   const attr = (entityId) => (entityId ? `data-entity="${escapeHtml(entityId)}"` : "");
   const phases = data.phases ? `
-    <div class="sfc-phases">
+    <div class="sfc-phases" style="--n:${data.phases.length}">
       ${data.phases.map((p) => `
         <button class="sfc-phase" ${attr(p.entityId)}>
           <small>${escapeHtml(p.name)}</small>

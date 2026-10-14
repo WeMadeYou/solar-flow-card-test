@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.8-beta
+
+- Installation: phases are shown only when at least two have voltage or carry power. Single-phase inverters that report L2/L3 as 0 W / 0 V no longer get empty phase tiles; the rest of the section stays.
+
 ## 0.1.7-beta
 
 - New **Installation** section in every theme:
