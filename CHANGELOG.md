@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.1
+
+- LICENSE uses the plain MIT layout, so GitHub and HACS recognize it; both copyright holders are kept.
+- Smaller animated preview in the README (2.9 MB).
+
 ## 1.0.0
 
 First stable release: everything from the 0.1 betas, tested on a live DeyeCloud installation.
