@@ -7,7 +7,7 @@
  * Built from src/*.js by scripts/build.mjs. Edit the sources, not this file.
  */
 (() => {
-const CARD_VERSION = "0.1.4-beta";
+const CARD_VERSION = "0.1.5-beta";
 const CARD_TAG = "solar-flow-card";
 const EDITOR_TAG = "solar-flow-card-editor";
 const THEMES = ["diorama", "aurora", "paper", "lcars", "atlantis"];
@@ -1112,9 +1112,9 @@ function chartHtml(m) {
   if (!chart) return "";
   let body;
   if (chart.data?.kind === "power" && ["solar", "load", "battery", "grid"].some((k) => chart.data[k]?.some((v) => v !== null))) {
-    body = powerChartHtml(chart.data, m.t, m.locale);
+    body = powerChartHtml(chart.data, m.t, m.locale, m.hiddenSeries);
   } else if (chart.data?.kind === "energy" && chart.data.buckets?.some((b) => b.solar || b.load)) {
-    body = energyChartHtml(chart.data, m.t, m.locale);
+    body = energyChartHtml(chart.data, m.t, m.locale, m.hiddenSeries);
   } else {
     const message = chart.loading ? m.t.chartLoading : chart.error ? m.t.chartError : m.t.chartEmpty;
     body = `<div class="sfc-chart-empty">${escapeHtml(message)}</div>`;
@@ -1122,9 +1122,11 @@ function chartHtml(m) {
   return `<div class="sfc-chart ${chart.loading ? "loading" : ""}">${body}</div>`;
 }
 
-function chartFrame(legend, svg, yLabels, xLabels, hint) {
+// Legend entries are buttons: a click hides or shows that series.
+function chartFrame(legend, svg, yLabels, xLabels, hint, hidden) {
   return `
-    <div class="sfc-legend">${legend.map(([kind, label]) => `<span class="${kind}"><i></i>${escapeHtml(label)}</span>`).join("")}</div>
+    <div class="sfc-legend">${legend.map(([kind, label]) => `
+      <button type="button" class="${kind} ${hidden.has(kind) ? "off" : ""}" data-series="${kind}" aria-pressed="${!hidden.has(kind)}"><i></i>${escapeHtml(label)}</button>`).join("")}</div>
     <div class="sfc-plot">
       ${svg}
       ${yLabels}
@@ -1135,8 +1137,17 @@ function chartFrame(legend, svg, yLabels, xLabels, hint) {
     ${hint ? `<p class="sfc-chart-hint">${escapeHtml(hint)}</p>` : ""}`;
 }
 
-function powerChartHtml(data, t, locale) {
-  const { spec } = data;
+function powerChartHtml(source, t, locale, hidden) {
+  const { spec } = source;
+  // Hidden series are left out of the drawing and of the scale.
+  const show = (kind, series) => (series && !hidden.has(kind) ? series : null);
+  const data = {
+    solar: show("pv", source.solar),
+    load: show("load", source.load),
+    battery: show("battery", source.battery),
+    grid: show("grid", source.grid),
+    soc: show("soc", source.soc),
+  };
   const W = 1000;
   const H = 300;
   const signed = [data.battery, data.grid].filter(Boolean).flat().filter((v) => v !== null);
@@ -1162,11 +1173,11 @@ function powerChartHtml(data, t, locale) {
   }
   const socY = (v) => H - (clamp(v, 0, 100) / 100) * H;
   const legend = [
-    ["pv", t.legendPv, data.solar],
-    ["load", t.legendLoad, data.load],
-    ["battery", t.legendBattery, data.battery],
-    ["grid", t.legendGrid, data.grid],
-    ["soc", t.legendSoc, data.soc],
+    ["pv", t.legendPv, source.solar],
+    ["load", t.legendLoad, source.load],
+    ["battery", t.legendBattery, source.battery],
+    ["grid", t.legendGrid, source.grid],
+    ["soc", t.legendSoc, source.soc],
   ].filter(([, , series]) => series);
   const svg = `
     <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
@@ -1184,21 +1195,23 @@ function powerChartHtml(data, t, locale) {
     svg,
     ticks.map((v) => `<span class="sfc-ylabel" style="top:${((y(v) / H) * 100).toFixed(2)}%">${escapeHtml(formatPower(v, locale))}</span>`).join(""),
     xLabels.map(([pos, label]) => `<span style="left:${(pos * 100).toFixed(2)}%">${escapeHtml(label)}</span>`).join(""),
-    t.chartPowerHint
+    t.chartPowerHint,
+    hidden
   );
 }
 
-function energyChartHtml(data, t, locale) {
+function energyChartHtml(data, t, locale, hidden) {
   const { buckets, spec } = data;
   const W = 1000;
   const H = 300;
-  const kinds = [["solar", "pv"], ["load", "load"], ["gridImport", "grid"]].filter(([key]) => !data.noSolar || key !== "solar");
+  const available = [["solar", "pv"], ["load", "load"], ["gridImport", "grid"]].filter(([key]) => !data.noSolar || key !== "solar");
+  const kinds = available.filter(([, cls]) => !hidden.has(cls));
   const maxValue = Math.max(0.1, ...buckets.flatMap((b) => kinds.map(([k]) => b[k] || 0)));
   const step = niceStep(maxValue, 4);
   const top = Math.ceil(maxValue / step) * step;
   const y = (v) => H - (v / top) * H;
   const groupWidth = W / buckets.length;
-  const barWidth = Math.max(1, (groupWidth * 0.78) / kinds.length);
+  const barWidth = Math.max(1, (groupWidth * 0.78) / Math.max(1, kinds.length));
   const ticks = [];
   for (let v = 0; v <= top + step / 2; v += step) ticks.push(v);
   const label = (start, i) => {
@@ -1233,11 +1246,12 @@ function energyChartHtml(data, t, locale) {
       const text = label(bucket.start, i);
       return text ? `<span style="left:${(((i + 0.5) / buckets.length) * 100).toFixed(2)}%">${escapeHtml(text)}</span>` : "";
     }).join(""),
-    ""
+    "",
+    hidden
   );
 }
 
-function chartTipHtml(data, index, t, locale) {
+function chartTipHtml(data, index, t, locale, hidden) {
   if (data.kind === "power") {
     const { spec } = data;
     if (index < 0 || index >= spec.count) return null;
@@ -1247,12 +1261,12 @@ function chartTipHtml(data, index, t, locale) {
       ["load", t.legendLoad, data.load],
       ["battery", t.legendBattery, data.battery],
       ["grid", t.legendGrid, data.grid],
-    ].filter(([, , series]) => series && series[index] !== null);
+    ].filter(([kind, , series]) => series && !hidden.has(kind) && series[index] !== null);
     if (!rows.length) return null;
     const time = spec.period === "today"
       ? formatClock(at, locale)
       : `${at.toLocaleDateString(locale, { weekday: "short" })} ${formatClock(at, locale)}`;
-    const soc = data.soc?.[index];
+    const soc = hidden.has("soc") ? null : data.soc?.[index];
     return `<strong>${escapeHtml(time)}</strong>
       ${rows.map(([kind, label, series]) => `<span class="${kind}"><i></i>${escapeHtml(label)}<b>${escapeHtml(formatPower(series[index], locale))}</b></span>`).join("")}
       ${isNum(soc) ? `<span class="soc"><i></i>${escapeHtml(t.legendSoc)}<b>${escapeHtml(formatPercent(soc, locale))}</b></span>` : ""}`;
@@ -1269,12 +1283,12 @@ function chartTipHtml(data, index, t, locale) {
     ["export", t.gridExport, bucket.gridExport],
     ["battery", t.batteryCharge, bucket.charge],
     ["battery", t.batteryDischarge, bucket.discharge],
-  ].filter(([, , value]) => value !== undefined);
+  ].filter(([kind, , value]) => value !== undefined && !hidden.has(kind));
   return `<strong>${escapeHtml(title)}</strong>
     ${rows.map(([kind, label, value]) => `<span class="${kind}"><i></i>${escapeHtml(label)}<b>${escapeHtml(formatEnergy(value, locale))}</b></span>`).join("")}`;
 }
 
-function wireChart(root, data, t, locale) {
+function wireChart(root, data, t, locale, hidden) {
   const plot = root.querySelector(".sfc-plot");
   if (!plot || !data) return;
   const cursor = plot.querySelector(".sfc-cursor");
@@ -1287,7 +1301,7 @@ function wireChart(root, data, t, locale) {
   const show = (event) => {
     const box = plot.getBoundingClientRect();
     const index = Math.floor(clamp((event.clientX - box.left) / box.width, 0, 0.9999) * count);
-    const html = chartTipHtml(data, index, t, locale);
+    const html = chartTipHtml(data, index, t, locale, hidden);
     if (!html) return hide();
     const left = ((index + 0.5) / count) * 100;
     cursor.hidden = false;
@@ -1957,9 +1971,14 @@ const BASE_CSS = `
   .sfc-chart { margin-bottom: 12px; }
   .sfc-chart.loading .sfc-plot { opacity: .55; }
   .sfc-legend { display: flex; flex-wrap: wrap; gap: 5px 12px; margin-bottom: 8px; }
-  .sfc-legend span { display: inline-flex; align-items: center; gap: 5px; color: var(--sfc-muted); font-size: 11px; font-weight: 650; }
+  .sfc-legend button { display: inline-flex; align-items: center; gap: 5px; padding: 2px 4px; margin: -2px -4px; border: 0; border-radius: 6px;
+    background: none; color: var(--sfc-muted); font-size: 11px; font-weight: 650; cursor: pointer; transition: opacity .15s; }
+  .sfc-legend button:hover { background: color-mix(in srgb, var(--sfc-muted) 12%, transparent); }
+  .sfc-legend button.off { opacity: .45; text-decoration: line-through; }
+  .sfc-legend button.off i { background: transparent; box-shadow: inset 0 0 0 1.5px currentColor; }
   .sfc-legend i, .sfc-tip i { display: inline-block; width: 9px; height: 9px; border-radius: 3px; background: currentColor; }
-  .pv > i { color: var(--sfc-pv); } .load > i { color: var(--sfc-load); } .battery > i { color: var(--sfc-battery); }
+  .pv > i { color: var(--sfc-pv); }
+  .sfc-legend button.soc i { height: 2px; } .load > i { color: var(--sfc-load); } .battery > i { color: var(--sfc-battery); }
   .grid > i { color: var(--sfc-grid); } .export > i { color: color-mix(in srgb, var(--sfc-grid) 55%, var(--sfc-muted)); }
   .soc > i { color: color-mix(in srgb, var(--sfc-battery) 55%, var(--sfc-muted)); height: 2px; }
   .sfc-plot { position: relative; height: 180px; margin-left: 46px; touch-action: pan-y; cursor: crosshair; }
@@ -2243,7 +2262,7 @@ const THEME_CSS = {
     .sfc-panel small, .sfc-panel span { color: #000; opacity: .7; }
     .sfc-panel.weak { background: linear-gradient(0deg, #ff3355 var(--share), #222 var(--share)); box-shadow: none; }
     .sfc-string, .sfc-reading { border: 0; border-left: 6px solid var(--lav); }
-    .sfc-ylabel, .sfc-xaxis span, .sfc-legend span { color: var(--blue); }
+    .sfc-ylabel, .sfc-xaxis span, .sfc-legend button { color: var(--blue); }
   `,
   // --------------------------------------------------------------- Atlantis
   atlantis: `
@@ -2318,6 +2337,27 @@ const DEFAULT_CONFIG = {
   load_fonts: true,
 };
 
+// Chart series the viewer switched off by clicking the legend; remembered in
+// this browser for every card. Storage can be unavailable (private mode).
+const HIDDEN_SERIES_KEY = "solar-flow-card:hidden-series";
+
+function loadHiddenSeries() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(HIDDEN_SERIES_KEY) || "[]");
+    return new Set(Array.isArray(saved) ? saved.filter((kind) => typeof kind === "string") : []);
+  } catch (error) {
+    return new Set();
+  }
+}
+
+function saveHiddenSeries(hidden) {
+  try {
+    localStorage.setItem(HIDDEN_SERIES_KEY, JSON.stringify([...hidden]));
+  } catch (error) {
+    // Not persisted; the choice still applies until the page reloads.
+  }
+}
+
 class SolarFlowCard extends HTMLElement {
   constructor() {
     super();
@@ -2327,6 +2367,7 @@ class SolarFlowCard extends HTMLElement {
     this._period = null;
     this._inverterOpen = false;
     this._cache = new Map();
+    this._hiddenSeries = loadHiddenSeries();
     this._signature = "";
   }
 
@@ -2481,7 +2522,7 @@ class SolarFlowCard extends HTMLElement {
       };
       const now = new Date();
       const signature = JSON.stringify([
-        language, config, period, live, status.state, today, energy.totals, Boolean(energy.loading),
+        language, config, period, [...this._hiddenSeries], live, status.state, today, energy.totals, Boolean(energy.loading),
         chart && [Boolean(chart.loading), Boolean(chart.error), chart.at], forecast.mode, Math.round(forecast.hours * 60 || 0),
         panels?.panels.map((p) => [p.today, p.power]), this._inverterOpen,
         inverter?.map((d) => [[...d.strings.values()].map((s) => Object.values(s).map((r) => r.value)), d.temperatures.map((r) => r.value), d.battery.map((r) => r.value), d.grid.map((r) => r.value)]),
@@ -2519,6 +2560,7 @@ class SolarFlowCard extends HTMLElement {
         panels,
         inverter,
         inverterOpen: this._inverterOpen,
+        hiddenSeries: this._hiddenSeries,
       };
       model.systemStatus = systemStatus(status, forecast, panels);
 
@@ -2563,7 +2605,17 @@ class SolarFlowCard extends HTMLElement {
         this._render();
       });
     });
-    wireChart(root, model.chart?.data, model.t, model.locale);
+    root.querySelectorAll("[data-series]").forEach((element) => {
+      element.addEventListener("click", () => {
+        const kind = element.dataset.series;
+        if (this._hiddenSeries.has(kind)) this._hiddenSeries.delete(kind);
+        else this._hiddenSeries.add(kind);
+        saveHiddenSeries(this._hiddenSeries);
+        this._signature = "";
+        this._render();
+      });
+    });
+    wireChart(root, model.chart?.data, model.t, model.locale, model.hiddenSeries);
   }
 }
 

@@ -9,6 +9,27 @@ const DEFAULT_CONFIG = {
   load_fonts: true,
 };
 
+// Chart series the viewer switched off by clicking the legend; remembered in
+// this browser for every card. Storage can be unavailable (private mode).
+const HIDDEN_SERIES_KEY = "solar-flow-card:hidden-series";
+
+function loadHiddenSeries() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(HIDDEN_SERIES_KEY) || "[]");
+    return new Set(Array.isArray(saved) ? saved.filter((kind) => typeof kind === "string") : []);
+  } catch (error) {
+    return new Set();
+  }
+}
+
+function saveHiddenSeries(hidden) {
+  try {
+    localStorage.setItem(HIDDEN_SERIES_KEY, JSON.stringify([...hidden]));
+  } catch (error) {
+    // Not persisted; the choice still applies until the page reloads.
+  }
+}
+
 class SolarFlowCard extends HTMLElement {
   constructor() {
     super();
@@ -18,6 +39,7 @@ class SolarFlowCard extends HTMLElement {
     this._period = null;
     this._inverterOpen = false;
     this._cache = new Map();
+    this._hiddenSeries = loadHiddenSeries();
     this._signature = "";
   }
 
@@ -172,7 +194,7 @@ class SolarFlowCard extends HTMLElement {
       };
       const now = new Date();
       const signature = JSON.stringify([
-        language, config, period, live, status.state, today, energy.totals, Boolean(energy.loading),
+        language, config, period, [...this._hiddenSeries], live, status.state, today, energy.totals, Boolean(energy.loading),
         chart && [Boolean(chart.loading), Boolean(chart.error), chart.at], forecast.mode, Math.round(forecast.hours * 60 || 0),
         panels?.panels.map((p) => [p.today, p.power]), this._inverterOpen,
         inverter?.map((d) => [[...d.strings.values()].map((s) => Object.values(s).map((r) => r.value)), d.temperatures.map((r) => r.value), d.battery.map((r) => r.value), d.grid.map((r) => r.value)]),
@@ -210,6 +232,7 @@ class SolarFlowCard extends HTMLElement {
         panels,
         inverter,
         inverterOpen: this._inverterOpen,
+        hiddenSeries: this._hiddenSeries,
       };
       model.systemStatus = systemStatus(status, forecast, panels);
 
@@ -254,6 +277,16 @@ class SolarFlowCard extends HTMLElement {
         this._render();
       });
     });
-    wireChart(root, model.chart?.data, model.t, model.locale);
+    root.querySelectorAll("[data-series]").forEach((element) => {
+      element.addEventListener("click", () => {
+        const kind = element.dataset.series;
+        if (this._hiddenSeries.has(kind)) this._hiddenSeries.delete(kind);
+        else this._hiddenSeries.add(kind);
+        saveHiddenSeries(this._hiddenSeries);
+        this._signature = "";
+        this._render();
+      });
+    });
+    wireChart(root, model.chart?.data, model.t, model.locale, model.hiddenSeries);
   }
 }
