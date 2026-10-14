@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.4-beta
+
+- Flow dots move smoothly in the direction of the flow in every theme. The animation used a CSS variable inside its keyframes, which Chromium does not interpolate, so the dots stood still or jumped.
+- Paper: dots run along the Sankey ribbons, between the label columns.
+- LCARS: a light wave runs over the lit segments, backwards for battery charging and grid export.
+- With "reduce motion" switched on in the system the dots move three times slower instead of stopping; only decorative effects (pulsing, breathing, the LCARS wave) stop. `animation: false` still turns everything off.
+
 ## 0.1.3-beta
 
 - Translations moved to `translations/<language>.json`, one file per language; the build embeds them and the editor lists every language automatically.

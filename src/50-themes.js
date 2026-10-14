@@ -303,6 +303,7 @@ function sankeyHtml(m) {
   const left = stack(sources);
   const right = stack(sinks);
   let ribbons = "";
+  let flows = "";
   // Each source feeds every use in proportion to the use's share.
   for (const s of left) {
     for (const k of right) {
@@ -313,6 +314,12 @@ function sankeyHtml(m) {
       s.used += h;
       k.used += h;
       ribbons += `<path class="pap-ribbon ${s.kind}" d="M10 ${y0.toFixed(1)} C${W / 2} ${y0.toFixed(1)} ${W / 2} ${y1.toFixed(1)} ${W - 10} ${y1.toFixed(1)} L${W - 10} ${(y1 + h).toFixed(1)} C${W / 2} ${(y1 + h).toFixed(1)} ${W / 2} ${(y0 + h).toFixed(1)} 10 ${(y0 + h).toFixed(1)} Z"/>`;
+      // Dots running along the middle of the ribbon, source to use.
+      if (h >= 3) {
+        const a = y0 + h / 2;
+        const b = y1 + h / 2;
+        flows += `<path class="sfc-flow pap-flow" d="M14 ${a.toFixed(1)} C${W / 2} ${a.toFixed(1)} ${W / 2} ${b.toFixed(1)} ${W - 14} ${b.toFixed(1)}"/>`;
+      }
     }
   }
   const bars = left.map((s) => `<rect class="pap-node ${s.kind}" x="0" y="${s.y.toFixed(1)}" width="10" height="${s.h.toFixed(1)}"/>`).join("")
@@ -324,7 +331,15 @@ function sankeyHtml(m) {
   return `
     <div class="pap-cols"><span>${escapeHtml(t.sankeyFrom)}</span><span>${escapeHtml(t.sankeyTo)}</span></div>
     <div class="pap-sankey">
-      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">${ribbons}${bars}</svg>
+      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="pap-fade" x1="0" x2="1" y1="0" y2="0">
+            <stop offset=".3" stop-color="#fff" stop-opacity="0"/><stop offset=".4" stop-color="#fff"/>
+            <stop offset=".6" stop-color="#fff"/><stop offset=".7" stop-color="#fff" stop-opacity="0"/>
+          </linearGradient>
+          <mask id="pap-mask" maskContentUnits="objectBoundingBox"><rect width="1" height="1" fill="url(#pap-fade)"/></mask>
+        </defs>
+        ${ribbons}<g mask="url(#pap-mask)">${flows}</g>${bars}</svg>
       ${left.map((n) => label(n, "left")).join("")}
       ${right.map((n) => label(n, "right")).join("")}
     </div>`;
@@ -363,7 +378,7 @@ function renderPaper(m) {
 
 function lcarsSegments(value, max, count = 16) {
   const on = isNum(value) && value > ACTIVE_W ? clamp(Math.ceil((value / max) * count), 1, count) : 0;
-  return Array.from({ length: count }, (_, i) => `<i class="${i < on ? "on" : ""}"></i>`).join("");
+  return Array.from({ length: count }, (_, i) => (i < on ? `<i class="on" style="--i:${i};--n:${on - 1}"></i>` : "<i></i>")).join("");
 }
 
 function renderLcars(m) {
@@ -398,8 +413,8 @@ function renderLcars(m) {
       </nav>
       <div class="lc-main">
         ${m.config.showSolar ? row("pv", t.lcarsPvIn, live.solar, m.ids.live.solar) : ""}
-        ${row("battery", live.chargeActive ? t.lcarsBatIn : t.lcarsBatOut, live.chargeActive ? live.charge : live.discharge, batteryEntityId(m))}
-        ${row("grid", live.exportActive ? t.lcarsGridOut : t.lcarsGridIn, live.exportActive ? live.gridExport : live.gridImport, gridEntityId(m))}
+        ${row(live.chargeActive ? "battery rev" : "battery", live.chargeActive ? t.lcarsBatIn : t.lcarsBatOut, live.chargeActive ? live.charge : live.discharge, batteryEntityId(m))}
+        ${row(live.exportActive ? "grid rev" : "grid", live.exportActive ? t.lcarsGridOut : t.lcarsGridIn, live.exportActive ? live.gridExport : live.gridImport, gridEntityId(m))}
         ${row("home", t.lcarsHome, live.load, m.ids.live.load)}
         <div class="lc-soc">
           <div class="lc-cells">${Array.from({ length: 10 }, (_, i) => `<i class="${i < cellsOn ? "on" : ""}"></i>`).join("")}</div>
