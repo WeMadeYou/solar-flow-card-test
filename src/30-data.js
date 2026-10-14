@@ -205,25 +205,27 @@ function sumBuckets(buckets) {
 function periodSummary(totals, config, t, locale) {
   const { solar, load, gridImport, gridExport } = totals;
   const items = [];
-  if (isNum(load) && isNum(gridImport) && load > 0.05) {
+  const show = (key) => config[key] !== false;
+  const hasSolar = show("show_solar");
+  if (show("show_autarky") && isNum(load) && isNum(gridImport) && load > 0.05) {
     items.push(["autarky", t.autarky, formatPercent(clamp(((load - gridImport) / load) * 100, 0, 100), locale)]);
   }
-  if (isNum(solar) && isNum(gridExport) && solar > 0.05) {
+  if (hasSolar && show("show_self_use") && isNum(solar) && isNum(gridExport) && solar > 0.05) {
     items.push(["selfuse", t.selfUse, formatPercent(clamp(((solar - gridExport) / solar) * 100, 0, 100), locale)]);
   }
   const priceImport = positiveNumber(config.price_import);
-  if (priceImport !== null && isNum(load) && isNum(gridImport)) {
+  if (show("show_savings") && priceImport !== null && isNum(load) && isNum(gridImport)) {
     const priceExport = positiveNumber(config.price_export) || 0;
     const saved = Math.max(0, load - gridImport) * priceImport + (isNum(gridExport) ? gridExport : 0) * priceExport;
     items.push(["money", t.savings, `${formatNumber(saved, locale, 2)} ${config.currency ?? t.currency}`.trim()]);
   }
-  if (isNum(solar)) {
+  if (hasSolar && show("show_co2") && isNum(solar)) {
     const factor = Number.parseFloat(config.co2_factor);
     const kg = solar * (Number.isFinite(factor) && factor >= 0 ? factor : 0.5);
     items.push(["co2", t.co2, kg >= 1000 ? `${formatNumber(kg / 1000, locale, 2)} t` : `${formatNumber(kg, locale, kg < 10 ? 1 : 0)} kg`]);
   }
   const pvCapacity = positiveNumber(config.pv_capacity);
-  if (pvCapacity !== null && isNum(solar)) {
+  if (hasSolar && show("show_yield") && pvCapacity !== null && isNum(solar)) {
     const yieldValue = solar / pvCapacity;
     items.push(["yield", t.specificYield, `${formatNumber(yieldValue, locale, yieldValue < 10 ? 2 : 0)} kWh/kWp`]);
   }

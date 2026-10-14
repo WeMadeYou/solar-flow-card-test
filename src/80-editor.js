@@ -10,10 +10,16 @@ const EDITOR_NUMBERS = [
   ["co2_factor", "editorCo2", "0.01"],
 ];
 const EDITOR_SWITCHES = [
+  ["show_solar", "editorSolar"],
   ["show_energy", "editorShowEnergy"],
   ["show_chart", "editorShowChart"],
   ["show_forecast", "editorShowForecast"],
   ["show_panels", "editorShowPanels"],
+  ["show_autarky", "editorShowAutarky"],
+  ["show_self_use", "editorShowSelfUse"],
+  ["show_savings", "editorShowSavings"],
+  ["show_co2", "editorShowCo2"],
+  ["show_yield", "editorShowYield"],
   ["animation", "editorAnimation"],
   ["load_fonts", "editorFonts"],
 ];

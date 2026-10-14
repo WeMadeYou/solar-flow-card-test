@@ -105,7 +105,7 @@ class SolarFlowCard extends HTMLElement {
       loading: energy.loading,
       error: energy.error,
       at: energy.buckets ? energy.buckets.length : 0,
-      data: energy.buckets ? { kind: "energy", spec: energy.spec, buckets: energy.buckets } : null,
+      data: energy.buckets ? { kind: "energy", spec: energy.spec, buckets: energy.buckets, noSolar: this._config.show_solar === false } : null,
     };
   }
 
@@ -128,7 +128,7 @@ class SolarFlowCard extends HTMLElement {
     } else if (series.gridImport) {
       grid = series.gridImport;
     }
-    return { kind: "power", spec, solar: series.solar || null, load: series.load || null, battery, grid, soc: series.soc || null };
+    return { kind: "power", spec, solar: this._config.show_solar === false ? null : series.solar || null, load: series.load || null, battery, grid, soc: series.soc || null };
   }
 
   _render() {
@@ -150,13 +150,18 @@ class SolarFlowCard extends HTMLElement {
         return;
       }
       const period = PERIODS.includes(this._period) ? this._period : PERIODS.includes(config.period) ? config.period : "today";
+      const showSolar = config.show_solar !== false;
       const live = liveValues(resolved, config);
+      if (!showSolar) {
+        live.solar = 0;
+        live.solarActive = false;
+      }
       const status = liveStatus(resolved);
       const today = todayEnergy(resolved);
       const energy = this._periodEnergy(resolved, period, today);
       const chart = this._chartState(resolved, period, energy);
       const forecast = batteryForecast(live, config);
-      const panels = panelData(this._hass, resolved, config);
+      const panels = showSolar ? panelData(this._hass, resolved, config) : null;
       const inverter = this._inverterOpen ? inverterReadings(resolved) : null;
       const since = period === "all" && energy.buckets?.length
         ? energy.buckets[0].start.toLocaleDateString(locale, { month: "short", year: "numeric" })
@@ -189,6 +194,7 @@ class SolarFlowCard extends HTMLElement {
           showChart: config.show_chart !== false,
           showForecast: config.show_forecast !== false,
           showPanels: config.show_panels !== false,
+          showSolar,
         },
         ids,
         live,

@@ -194,7 +194,7 @@ const THEME_CSS = {
     .dio-bottom { padding: 16px; }
     .dio-chips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
     .dio-chip { min-width: 0; padding: 12px; border: 0; border-radius: 18px; text-align: left; background: #f3f7fb; }
-    .dio-chip.sun { background: #fff6dc; } .dio-chip.bat { background: #e3f7ee; } .dio-chip.home { background: #fde9e4; }
+    .dio-chip.sun { background: #fff6dc; } .dio-chip.grid { background: #e6eefc; } .dio-chip.bat { background: #e3f7ee; } .dio-chip.home { background: #fde9e4; }
     .dio-chip small { display: block; font-size: 11px; font-weight: 700; color: #6a7d92; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .dio-chip b { display: block; margin-top: 2px; font-size: clamp(15px, 3.8cqw, 20px); font-weight: 800; }
     .dio-share { margin-top: 14px; }
