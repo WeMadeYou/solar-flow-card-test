@@ -1,4 +1,7 @@
 
+// Each language in its own name, so it can be found whatever is shown.
+const LANGUAGE_NAMES = { en: "English", pl: "Polski" };
+
 // [config key, label key, input step]
 const EDITOR_NUMBERS = [
   ["battery_capacity", "editorBatteryCapacity", "0.1"],
@@ -83,6 +86,12 @@ class SolarFlowCardEditor extends HTMLElement {
         </label>
         <div class="grid">
           <label><span>${escapeHtml(t.editorTitle)}</span><input id="title" type="text" value="${value("title")}" /></label>
+          <label><span>${escapeHtml(t.editorLanguage)}</span>
+            <select id="language">
+              <option value="">${escapeHtml(t.languageAuto)}</option>
+              ${Object.entries(LANGUAGE_NAMES).map(([code, name]) => `<option value="${code}" ${this._config.language === code ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}
+            </select>
+          </label>
           ${stations.length > 1 ? `
             <label><span>${escapeHtml(t.editorStation)}</span>
               <select id="station_id"><option value="">${escapeHtml(t.auto)}</option>
@@ -105,6 +114,10 @@ class SolarFlowCardEditor extends HTMLElement {
       this._set("theme", button.dataset.theme);
       this._render();
     }));
+    root.getElementById("language")?.addEventListener("change", (e) => {
+      this._set("language", e.target.value || undefined);
+      this._render();
+    });
     root.getElementById("title")?.addEventListener("change", (e) => this._set("title", e.target.value.trim() || undefined));
     root.getElementById("currency")?.addEventListener("change", (e) => this._set("currency", e.target.value.trim() || undefined));
     root.getElementById("station_id")?.addEventListener("change", (e) => this._set("station_id", e.target.value || undefined));

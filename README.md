@@ -62,7 +62,7 @@ Copy `solar-flow-card.js` to `config/www/` and add a dashboard resource `/local/
 
 ## Configuration
 
-The visual editor covers the theme, title, your installation, sections and the summary items. `language`, `period`, `panel_strings` and the sensor options are YAML only.
+The visual editor covers the theme, title, language, your installation, sections and the summary items. `period`, `panel_strings` and the sensor options are YAML only.
 
 ```yaml
 type: custom:solar-flow-card
@@ -82,7 +82,7 @@ co2_factor: 0.7
 |---|---|---|
 | `theme` | `diorama` | `diorama`, `aurora`, `paper`, `lcars` or `atlantis`. |
 | `title` | station name | Card title. |
-| `language` | Home Assistant language | `en` or `pl`. |
+| `language` | Home Assistant language | `en` or `pl`; also in the visual editor. |
 | `period` | `today` | Tab shown when the dashboard opens: `today`, `3d`, `7d`, `month` or `all`. |
 | `station_id` | first station | DeyeCloud station, when the account has several. |
 | `animation` | `true` | Animated flows. |
