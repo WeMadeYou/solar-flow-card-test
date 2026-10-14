@@ -20,7 +20,7 @@ DeyeCloud sensors are found automatically; any other inverter works by pointing 
 
 - **Live power flow** between solar, battery, grid and home, animated in the direction energy moves.
 - **Periods** 24H, 3D, 7D, month and all time for production, consumption, grid import/export and battery charge/discharge.
-- **Charts** following the selected period: power over the day (24H, 3D) and daily or monthly energy bars (7D, month, all). Hover or tap for values.
+- **Charts** following the selected period: power over the day (24H, 3D) and daily or monthly energy bars (7D, month, all). Hover or tap for values; click a legend entry to hide or show that series (remembered in the browser).
 - **Period summary**: self-sufficiency, self-consumption, savings, avoided CO₂ and yield per kWp (energy produced per kW of installed panels; compare days and installations). Each item can be switched off.
 - **Installations without PV** (battery with an EMS): `show_solar: false`.
 - **Battery forecast**: time until full while charging, time until the reserve while discharging.

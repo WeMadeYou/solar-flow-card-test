@@ -118,9 +118,14 @@ const BASE_CSS = `
   .sfc-chart { margin-bottom: 12px; }
   .sfc-chart.loading .sfc-plot { opacity: .55; }
   .sfc-legend { display: flex; flex-wrap: wrap; gap: 5px 12px; margin-bottom: 8px; }
-  .sfc-legend span { display: inline-flex; align-items: center; gap: 5px; color: var(--sfc-muted); font-size: 11px; font-weight: 650; }
+  .sfc-legend button { display: inline-flex; align-items: center; gap: 5px; padding: 2px 4px; margin: -2px -4px; border: 0; border-radius: 6px;
+    background: none; color: var(--sfc-muted); font-size: 11px; font-weight: 650; cursor: pointer; transition: opacity .15s; }
+  .sfc-legend button:hover { background: color-mix(in srgb, var(--sfc-muted) 12%, transparent); }
+  .sfc-legend button.off { opacity: .45; text-decoration: line-through; }
+  .sfc-legend button.off i { background: transparent; box-shadow: inset 0 0 0 1.5px currentColor; }
   .sfc-legend i, .sfc-tip i { display: inline-block; width: 9px; height: 9px; border-radius: 3px; background: currentColor; }
-  .pv > i { color: var(--sfc-pv); } .load > i { color: var(--sfc-load); } .battery > i { color: var(--sfc-battery); }
+  .pv > i { color: var(--sfc-pv); }
+  .sfc-legend button.soc i { height: 2px; } .load > i { color: var(--sfc-load); } .battery > i { color: var(--sfc-battery); }
   .grid > i { color: var(--sfc-grid); } .export > i { color: color-mix(in srgb, var(--sfc-grid) 55%, var(--sfc-muted)); }
   .soc > i { color: color-mix(in srgb, var(--sfc-battery) 55%, var(--sfc-muted)); height: 2px; }
   .sfc-plot { position: relative; height: 180px; margin-left: 46px; touch-action: pan-y; cursor: crosshair; }
@@ -404,7 +409,7 @@ const THEME_CSS = {
     .sfc-panel small, .sfc-panel span { color: #000; opacity: .7; }
     .sfc-panel.weak { background: linear-gradient(0deg, #ff3355 var(--share), #222 var(--share)); box-shadow: none; }
     .sfc-string, .sfc-reading { border: 0; border-left: 6px solid var(--lav); }
-    .sfc-ylabel, .sfc-xaxis span, .sfc-legend span { color: var(--blue); }
+    .sfc-ylabel, .sfc-xaxis span, .sfc-legend button { color: var(--blue); }
   `,
   // --------------------------------------------------------------- Atlantis
   atlantis: `
