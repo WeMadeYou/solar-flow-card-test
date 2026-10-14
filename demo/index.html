@@ -32,7 +32,11 @@
     const $ = (id) => document.getElementById(id);
     $("scenario").innerHTML = Object.entries(SCENARIOS).map(([key, s]) => `<option value="${key}">${s.label}</option>`).join("");
     for (const id of ["theme", "scenario", "language", "width", "solar"]) {
-      if (params.get(id)) $(id).value = params.get(id);
+      if (params.get(id)) {
+        // Lets ?language=de show a new translation before the demo lists it.
+        if (![...$(id).options].some((o) => o.value === params.get(id))) $(id).add(new Option(params.get(id)));
+        $(id).value = params.get(id);
+      }
       $(id).addEventListener("change", render);
     }
 

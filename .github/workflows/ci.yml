@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check translations
+        run: node scripts/check-translations.mjs
+      - name: Build
+        run: node scripts/build.mjs
+      - name: Syntax check
+        run: node --check solar-flow-card.js
+
+  # Contributors only edit translations/ and src/; after a merge the card
+  # file is rebuilt here, so nobody has to run the build by hand.
+  rebuild:
+    needs: check
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/build.mjs
+      - name: Commit the rebuilt card
+        run: |
+          if git diff --quiet solar-flow-card.js; then
+            echo "solar-flow-card.js is up to date"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Rebuild solar-flow-card.js" solar-flow-card.js
+          git push

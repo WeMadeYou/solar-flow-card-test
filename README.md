@@ -26,7 +26,7 @@ DeyeCloud sensors are found automatically; any other inverter works by pointing 
 - **Battery forecast**: time until full while charging, time until the reserve while discharging.
 - **Inverter details** (tap the inverter or the house): PV strings, temperatures, battery and grid readings.
 - **Panels**: one tile per optimizer with today's production; the weakest panel is highlighted when it falls below 85% of the median.
-- English and Polish, with a visual editor.
+- English and Polish, with a visual editor; [more languages welcome](CONTRIBUTING.md#add-or-improve-a-translation).
 
 History comes from Home Assistant itself (recorder history and long-term statistics), so the card adds no requests to your inverter's cloud.
 
@@ -159,9 +159,13 @@ panels:                                        # optional, energy today per pane
 
 The 3D, 7D, month and all-time totals and bars come from the long-term statistics of the daily energy sensors, so those need `state_class: total_increasing`. Statistics are compiled hourly; today's part always uses the live sensor.
 
+## Translations
+
+The card speaks English and Polish. Every language is one JSON file in [`translations/`](translations/); adding yours takes a copy of `en.json` and no programming. See [CONTRIBUTING.md](CONTRIBUTING.md#add-or-improve-a-translation).
+
 ## Development
 
-The card is built from `src/*.js` into `solar-flow-card.js`:
+The card is built from `src/*.js` and `translations/*.json` into `solar-flow-card.js` (after a merge into `main` a GitHub Action does this automatically):
 
 ```sh
 node scripts/build.mjs
