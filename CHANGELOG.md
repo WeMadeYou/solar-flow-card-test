@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2-beta
+
+- Language picker in the visual editor (Home Assistant language, English, Polski). The `language` option already worked in YAML.
+
 ## 0.1.1-beta
 
 - Tiles and summary labels wrap to two lines instead of being cut off ("Rozładowanie magazynu", "Samowystarczalność").
