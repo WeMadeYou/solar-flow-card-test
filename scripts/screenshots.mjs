@@ -26,7 +26,7 @@ for (const theme of ["diorama", "aurora", "paper", "lcars", "atlantis"]) {
   const page = await browser.newPage({ viewport: { width: 600, height: 1200 }, deviceScaleFactor: 2 });
   page.on("pageerror", (e) => errors.push(`${theme}: ${e.message}`));
   page.on("console", (m) => { if (m.type() === "error") errors.push(`${theme}: ${m.text()}`); });
-  await page.goto(`http://localhost:${port}/demo/index.html?theme=${theme}&scenario=${scenario}&language=${language}&period=${period}`);
+  await page.goto(`http://localhost:${port}/demo/index.html?theme=${theme}&scenario=${scenario}&language=${language}&period=${period}&solar=${process.env.SOLAR ?? "1"}`);
   await page.waitForFunction(() => window.demoReady);
   await page.waitForTimeout(1500);
   const card = page.locator("solar-flow-card").first();

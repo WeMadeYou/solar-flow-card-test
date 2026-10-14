@@ -100,9 +100,9 @@ function dioramaScene(m) {
   g += poly("#e8e0d2", [4.2, -0.2, 2.2], [4.2, 3.2, 2.2], [4.2, 1.5, 3.5]);
   // PV modules on the front slope, one per optimizer when known.
   const panelList = m.panels?.panels || [];
-  const count = clamp(panelList.length || Math.round(positiveNumber(m.config.pv_panels) || 8), 1, 24);
+  const count = m.config.showSolar ? clamp(panelList.length || Math.round(positiveNumber(m.config.pv_panels) || 8), 1, 24) : 0;
   const rows = count > 16 ? 3 : count > 8 ? 2 : 1;
-  const cols = Math.ceil(count / rows);
+  const cols = Math.max(1, Math.ceil(count / rows));
   const slope = (s) => [3.0 - 1.25 * s, 2.32 + 0.96 * s];
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
@@ -174,14 +174,16 @@ function renderDiorama(m) {
       <svg viewBox="0 0 520 360" aria-hidden="true">${svg}</svg>
       <div class="dio-title"><h1>${escapeHtml(m.name)}</h1>${liveBadge(m)}</div>
       <div class="dio-clock">${escapeHtml(clockText(m))}</div>
-      ${pill(288, 78, "pv", formatPower(live.solar, locale), t.fromRoof, m.ids.live.solar)}
+      ${m.config.showSolar ? pill(288, 78, "pv", formatPower(live.solar, locale), t.fromRoof, m.ids.live.solar) : ""}
       ${pill(22, 208, "battery", formatPercent(live.soc, locale), batteryNote, batteryEntityId(m))}
       ${pill(378, 240, "grid", formatPower(gridValue, locale), t.grid.toLowerCase(), gridEntityId(m))}
       ${pill(120, 296, "load", formatPower(live.load, locale), t.inHome, m.ids.live.load)}
     </div>
     <div class="dio-bottom">
       <div class="dio-chips">
-        <button class="dio-chip sun" ${entityAttr(m.ids.energy.solar)}><small>${escapeHtml(t.chipRoof)}</small><b>${escapeHtml(formatEnergy(today.solar, locale))}</b></button>
+        ${m.config.showSolar
+          ? `<button class="dio-chip sun" ${entityAttr(m.ids.energy.solar)}><small>${escapeHtml(t.chipRoof)}</small><b>${escapeHtml(formatEnergy(today.solar, locale))}</b></button>`
+          : `<button class="dio-chip grid" ${entityAttr(m.ids.energy.gridImport)}><small>${escapeHtml(t.gridImport)}</small><b>${escapeHtml(formatEnergy(today.gridImport, locale))}</b></button>`}
         <button class="dio-chip bat" ${entityAttr(batteryEntityId(m))}><small>${escapeHtml(when.label)}</small><b>${escapeHtml(when.value)}</b></button>
         <button class="dio-chip home" ${entityAttr(m.ids.energy.load)}><small>${escapeHtml(t.chipHome)}</small><b>${escapeHtml(formatEnergy(today.load, locale))}</b></button>
       </div>
@@ -219,7 +221,7 @@ function renderAurora(m) {
   const gridValue = live.importActive ? live.gridImport : live.exportActive ? live.gridExport : Math.abs(live.grid);
   const flowLabel = (x, y, cls, active, value) => active
     ? `<text class="aur-flow-label ${cls}" x="${x}" y="${y}">${escapeHtml(formatPower(value, locale))}</text>` : "";
-  const sub = [positiveNumber(m.config.pv_capacity) && `${formatNumber(positiveNumber(m.config.pv_capacity), locale, 1)} kWp`,
+  const sub = [m.config.showSolar && positiveNumber(m.config.pv_capacity) && `${formatNumber(positiveNumber(m.config.pv_capacity), locale, 1)} kWp`,
     f.capacity && formatEnergy(f.capacity, locale)].filter(Boolean).join(" · ");
   return `
     <div class="aur-grain"></div>
@@ -231,7 +233,7 @@ function renderAurora(m) {
       <svg viewBox="0 0 ${W} ${H}" aria-hidden="true">
         <defs><filter id="aur-glow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
         <g fill="none" stroke-linecap="round">
-          ${flowPath("M238 104 L238 147", live.solarActive, false, "pv", 'filter="url(#aur-glow)"')}
+          ${m.config.showSolar ? flowPath("M238 104 L238 147", live.solarActive, false, "pv", 'filter="url(#aur-glow)"') : ""}
           ${flowPath("M108 165 Q165 148 220 165", live.chargeActive || live.dischargeActive, live.chargeActive, "battery", 'filter="url(#aur-glow)"')}
           ${flowPath("M256 165 Q311 148 368 165", live.importActive || live.exportActive, live.importActive, "grid", 'filter="url(#aur-glow)"')}
           ${flowPath("M238 183 L238 236", live.loadActive, false, "load", 'filter="url(#aur-glow)"')}
@@ -240,7 +242,7 @@ function renderAurora(m) {
         ${flowLabel(132, 146, "battery", live.chargeActive || live.dischargeActive, Math.abs(batteryFlow))}
         ${flowLabel(300, 146, "grid", live.importActive || live.exportActive, gridValue)}
       </svg>
-      ${ring("pv", 238, 58, t.legendPv, powerParts(live.solar, locale), "", live.solarActive ? "" : t.idle, m.ids.live.solar)}
+      ${m.config.showSolar ? ring("pv", 238, 58, t.legendPv, powerParts(live.solar, locale), "", live.solarActive ? "" : t.idle, m.ids.live.solar) : ""}
       ${ring("battery", 62, 165, t.legendSoc, [formatPercent(live.soc, locale), ""], batteryFlow ? `${batteryFlow < 0 ? "−" : "+"}${formatPower(Math.abs(batteryFlow), locale)}` : t.idle, batteryNote, batteryEntityId(m), socArc)}
       ${ring("grid", 414, 165, t.grid, powerParts(gridValue, locale), "", gridStatus(m), gridEntityId(m))}
       ${ring("home", 238, 282, t.home, powerParts(live.load, locale), "", "", m.ids.live.load)}
@@ -320,7 +322,9 @@ function renderPaper(m) {
     const bat = (live.discharge / load) * 100;
     const grid = (live.gridImport / load) * 100;
     const pv = clamp(100 - bat - grid, 0, 100);
-    lede = bat < 1 && grid < 1
+    lede = !m.config.showSolar
+      ? fill(t.paperSharesNoPv, { bat: `<em>${Math.round(bat)}</em>`, grid: `<em>${Math.round(grid)}</em>` })
+      : bat < 1 && grid < 1
       ? t.paperSunOnly
       : fill(t.paperShares, { pv: `<em>${Math.round(pv)}</em>`, bat: `<em>${Math.round(bat)}</em>`, grid: `<em>${Math.round(grid)}</em>` });
   }
@@ -364,7 +368,7 @@ function renderLcars(m) {
     ? formatPercent(clamp(((m.today.load - m.today.gridImport) / m.today.load) * 100, 0, 100), locale) : "—";
   const code = String(m.station || "47").replace(/\D/g, "").slice(-5).padStart(5, "0");
   const side = [
-    ["c1", "01", t.lcarsPanels, m.panels ? 'data-action="panels"' : ""],
+    ...(m.panels ? [["c1", "01", t.lcarsPanels, 'data-action="panels"']] : []),
     ["c2", "02", t.battery, entityAttr(batteryEntityId(m))],
     ["c3", "03", t.grid, entityAttr(gridEntityId(m))],
     ["c4", "04", t.inverter, 'data-action="inverter"'],
@@ -379,7 +383,7 @@ function renderLcars(m) {
         <span class="lc-fill"></span>
       </nav>
       <div class="lc-main">
-        ${row("pv", t.lcarsPvIn, live.solar, m.ids.live.solar)}
+        ${m.config.showSolar ? row("pv", t.lcarsPvIn, live.solar, m.ids.live.solar) : ""}
         ${row("battery", live.chargeActive ? t.lcarsBatIn : t.lcarsBatOut, live.chargeActive ? live.charge : live.discharge, batteryEntityId(m))}
         ${row("grid", live.exportActive ? t.lcarsGridOut : t.lcarsGridIn, live.exportActive ? live.gridExport : live.gridImport, gridEntityId(m))}
         ${row("home", t.lcarsHome, live.load, m.ids.live.load)}
@@ -442,7 +446,7 @@ function renderAtlantis(m) {
           <path d="M0 -62 L54 -31 L54 31 L0 62 L-54 31 L-54 -31 Z" class="atl-crystal" filter="url(#atl-glow)"/>
         </g>
         <g fill="none" stroke-linecap="round" filter="url(#atl-glow)">
-          ${flowPath("M240 18 L240 69", live.solarActive, false, "pv")}
+          ${m.config.showSolar ? flowPath("M240 18 L240 69", live.solarActive, false, "pv") : ""}
           ${flowPath("M60 165 L144 165", live.chargeActive || live.dischargeActive, live.chargeActive, "battery")}
           ${flowPath("M420 165 L336 165", live.importActive || live.exportActive, live.exportActive, "grid")}
           ${flowPath("M240 261 L240 312", live.loadActive, false, "load")}
@@ -453,7 +457,7 @@ function renderAtlantis(m) {
         <small>${escapeHtml(isNum(f.stored) ? formatEnergy(f.stored, locale) : batteryStatus(m))}</small>
         ${f.at ? `<small class="atl-when" title="${escapeHtml(f.mode === "charging" ? t.chipFull : t.chipLasts)}">${f.mode === "charging" ? "▲" : "▼"} ${escapeHtml(formatClock(f.at, locale))}</small>` : ""}
       </button>
-      ${label("left:50%;top:3%", "", formatPower(live.solar, locale), t.sun, m.ids.live.solar, "pv")}
+      ${m.config.showSolar ? label("left:50%;top:3%", "", formatPower(live.solar, locale), t.sun, m.ids.live.solar, "pv") : ""}
       ${label("left:10%;top:50%", live.chargeActive ? t.absorbing : live.dischargeActive ? t.supplying : t.idle, formatPower(batteryFlow, locale), "", batteryEntityId(m))}
       ${label("left:90%;top:50%", t.grid, formatPower(gridValue, locale), gridStatus(m), gridEntityId(m), "grid")}
       ${label("left:50%;top:97%", "", formatPower(live.load, locale), t.home, m.ids.live.load, "load")}

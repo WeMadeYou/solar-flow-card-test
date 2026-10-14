@@ -13,7 +13,8 @@ DeyeCloud sensors are found automatically; any other inverter works by pointing 
 - **Live power flow** between solar, battery, grid and home, animated in the direction energy moves.
 - **Periods** 24H, 3D, 7D, month and all time for production, consumption, grid import/export and battery charge/discharge.
 - **Charts** following the selected period: power over the day (24H, 3D) and daily or monthly energy bars (7D, month, all). Hover or tap for values.
-- **Period summary**: autarky, self-consumption, savings, avoided CO₂ and specific yield (kWh/kWp).
+- **Period summary**: self-sufficiency, self-consumption, savings, avoided CO₂ and yield per kWp (energy produced per kW of installed panels; compare days and installations). Each item can be switched off.
+- **Installations without PV** (battery with an EMS): `show_solar: false`.
 - **Battery forecast**: time until full while charging, time until the reserve while discharging.
 - **Inverter details** (tap the inverter or the house): PV strings, temperatures, battery and grid readings.
 - **Panels**: one tile per optimizer with today's production; the weakest panel is highlighted when it falls below 85% of the median.
@@ -69,6 +70,12 @@ period: today             # default tab: today | 3d | 7d | month | all
 | `show_chart` | `true` | Chart in the energy section. |
 | `show_forecast` | `true` | Battery forecast (needs `battery_capacity`). |
 | `show_panels` | `true` | Optimizer / panel tiles. |
+| `show_solar` | `true` | Set `false` for installations without PV (battery with an EMS): hides the sun, panels, PV production and the PV-based summary items in every theme. |
+| `show_autarky` | `true` | Self-sufficiency in the period summary. |
+| `show_self_use` | `true` | Self-consumption in the period summary. |
+| `show_savings` | `true` | Savings in the period summary (also needs `price_import`). |
+| `show_co2` | `true` | Avoided CO₂ in the period summary. |
+| `show_yield` | `true` | Yield per kWp in the period summary (also needs `pv_capacity`). |
 | `panel_strings` | 1 or 2 | Number of strings the panels are split into, in order. |
 | `animation` | `true` | Animated flows. |
 | `load_fonts` | `true` | Load the theme's font from Google Fonts; off uses system fonts. |

@@ -19,6 +19,7 @@
     <label>Theme <select id="theme"><option>all</option><option>diorama</option><option>aurora</option><option>paper</option><option>lcars</option><option>atlantis</option></select></label>
     <label>Scenario <select id="scenario"></select></label>
     <label>Language <select id="language"><option>pl</option><option>en</option></select></label>
+    <label>PV <select id="solar"><option value="1">yes</option><option value="0">no (EMS)</option></select></label>
     <label>Width <select id="width"><option>520</option><option>420</option><option>360</option><option>700</option></select></label>
   </div>
   <div class="cards" id="cards"></div>
@@ -30,7 +31,7 @@
     const params = new URLSearchParams(location.search);
     const $ = (id) => document.getElementById(id);
     $("scenario").innerHTML = Object.entries(SCENARIOS).map(([key, s]) => `<option value="${key}">${s.label}</option>`).join("");
-    for (const id of ["theme", "scenario", "language", "width"]) {
+    for (const id of ["theme", "scenario", "language", "width", "solar"]) {
       if (params.get(id)) $(id).value = params.get(id);
       $(id).addEventListener("change", render);
     }
@@ -53,6 +54,7 @@
           price_export: 0.3,
           co2_factor: 0.7,
           period: params.get("period") || undefined,
+          show_solar: $("solar").value === "0" ? false : undefined,
         });
         card.hass = hass;
         wrap.appendChild(card);

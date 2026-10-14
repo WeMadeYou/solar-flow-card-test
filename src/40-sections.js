@@ -44,7 +44,7 @@ function tabsHtml(m) {
 function tilesHtml(m) {
   return `
     <div class="sfc-tiles">
-      ${TILE_DEFS.map(([name, icon, label]) => {
+      ${TILE_DEFS.filter(([name]) => m.config.showSolar || name !== "solar").map(([name, icon, label]) => {
         const entityId = m.ids.energy[name];
         return `
           <button class="sfc-tile ${name}" ${entityId ? `data-entity="${escapeHtml(entityId)}"` : "disabled"}>
@@ -158,7 +158,7 @@ function inverterHtml(m) {
 
 function panelsHtml(m) {
   const data = m.panels;
-  if (!m.config.showPanels || !data) return "";
+  if (!m.config.showPanels || !m.config.showSolar || !data) return "";
   const { t, locale } = m;
   const note = data.weakest
     ? fill(t.panelWeak, { name: data.weakest.name, pct: formatNumber((data.weakest.today / data.median) * 100, locale, 0) })
@@ -202,7 +202,7 @@ function chartHtml(m) {
   const chart = m.chart;
   if (!chart) return "";
   let body;
-  if (chart.data?.kind === "power" && chart.data.solar?.some((v) => v !== null)) {
+  if (chart.data?.kind === "power" && ["solar", "load", "battery", "grid"].some((k) => chart.data[k]?.some((v) => v !== null))) {
     body = powerChartHtml(chart.data, m.t, m.locale);
   } else if (chart.data?.kind === "energy" && chart.data.buckets?.some((b) => b.solar || b.load)) {
     body = energyChartHtml(chart.data, m.t, m.locale);
@@ -283,7 +283,7 @@ function energyChartHtml(data, t, locale) {
   const { buckets, spec } = data;
   const W = 1000;
   const H = 300;
-  const kinds = [["solar", "pv"], ["load", "load"], ["gridImport", "grid"]];
+  const kinds = [["solar", "pv"], ["load", "load"], ["gridImport", "grid"]].filter(([key]) => !data.noSolar || key !== "solar");
   const maxValue = Math.max(0.1, ...buckets.flatMap((b) => kinds.map(([k]) => b[k] || 0)));
   const step = niceStep(maxValue, 4);
   const top = Math.ceil(maxValue / step) * step;
@@ -317,7 +317,7 @@ function energyChartHtml(data, t, locale) {
       }).join("")).join("")}
     </svg>`;
   return chartFrame(
-    [["pv", t.pvProduction], ["load", t.consumption], ["grid", t.gridImport]],
+    [["pv", t.pvProduction], ["load", t.consumption], ["grid", t.gridImport]].filter(([kind]) => !data.noSolar || kind !== "pv"),
     svg,
     ticks.map((v) => `<span class="sfc-ylabel" style="top:${((y(v) / H) * 100).toFixed(2)}%">${escapeHtml(formatNumber(v, locale, step < 1 ? 1 : 0))} kWh</span>`).join(""),
     buckets.map((bucket, i) => {
@@ -354,7 +354,7 @@ function chartTipHtml(data, index, t, locale) {
     ? bucket.start.toLocaleDateString(locale, { month: "long", year: "numeric" })
     : bucket.start.toLocaleDateString(locale, { weekday: "short", day: "numeric", month: "short" });
   const rows = [
-    ["pv", t.pvProduction, bucket.solar],
+    ["pv", t.pvProduction, data.noSolar ? undefined : bucket.solar],
     ["load", t.consumption, bucket.load],
     ["grid", t.gridImport, bucket.gridImport],
     ["export", t.gridExport, bucket.gridExport],
