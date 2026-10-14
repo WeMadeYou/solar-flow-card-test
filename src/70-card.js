@@ -1,0 +1,253 @@
+
+const DEFAULT_CONFIG = {
+  theme: "diorama",
+  show_energy: true,
+  show_chart: true,
+  show_forecast: true,
+  show_panels: true,
+  animation: true,
+  load_fonts: true,
+};
+
+class SolarFlowCard extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+    this._config = { ...DEFAULT_CONFIG };
+    this._hass = null;
+    this._period = null;
+    this._inverterOpen = false;
+    this._cache = new Map();
+    this._signature = "";
+  }
+
+  static getStubConfig() {
+    return { theme: "diorama" };
+  }
+
+  static getConfigElement() {
+    return document.createElement(EDITOR_TAG);
+  }
+
+  setConfig(config) {
+    // Never throw: Home Assistant can pass an incomplete config while the
+    // editor initializes, and a throw replaces the card with an error card.
+    const normalized = config && typeof config === "object" && !Array.isArray(config) ? config : {};
+    this._config = { ...DEFAULT_CONFIG, ...normalized };
+    if (!THEMES.includes(this._config.theme)) this._config.theme = "diorama";
+    this._signature = "";
+    this._render();
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    this._render();
+  }
+
+  getCardSize() {
+    return 8 + (this._config.show_energy !== false ? 5 : 0) + (this._config.show_panels !== false ? 2 : 0);
+  }
+
+  getGridOptions() {
+    return { columns: 12, rows: "auto", min_columns: 6 };
+  }
+
+  // Cached async loader; a finished request re-renders the card.
+  _fetch(key, ttl, loader) {
+    const cached = this._cache.get(key);
+    if (cached && (cached.loading || Date.now() - cached.at < ttl)) return cached;
+    const entry = { ...(cached || {}), loading: true };
+    this._cache.set(key, entry);
+    loader()
+      .then((data) => this._cache.set(key, { data, at: Date.now() }))
+      .catch((error) => {
+        console.warn("Solar Flow Card: history unavailable", error);
+        this._cache.set(key, { error: true, data: cached?.data, at: Date.now() });
+      })
+      .finally(() => {
+        this._signature = "";
+        this._render();
+      });
+    return entry;
+  }
+
+  _periodEnergy(resolved, period, today) {
+    if (period === "today") return { totals: today, buckets: null, spec: null };
+    const ids = ENERGY_ORDER.map((name) => resolved.energy[name]?.entityId).filter(Boolean);
+    if (!ids.length || typeof this._hass.callWS !== "function") return { totals: {}, error: true };
+    const spec = statsSpec(period);
+    const entry = this._fetch(`stats|${period}|${ids.join(",")}|${spec.start.toDateString()}`, spec.ttl, () =>
+      loadStatistics(this._hass, spec, resolved.energy)
+    );
+    if (!entry.data) return { totals: {}, loading: entry.loading, error: entry.error, spec };
+    const buckets = withLiveToday(entry.data.buckets, spec, today);
+    return { totals: sumBuckets(buckets), buckets, spec, loading: entry.loading, error: entry.error };
+  }
+
+  _chartState(resolved, period, energy) {
+    if (this._config.show_chart === false) return null;
+    if (period === "today" || period === "3d") {
+      const ids = Object.values(resolved.live).filter(Boolean).map((entry) => entry.entityId);
+      if (!ids.length || typeof this._hass.callWS !== "function") return null;
+      const spec = powerSpec(period);
+      const entry = this._fetch(`history|${period}|${ids.join(",")}|${spec.start.toDateString()}`, spec.ttl, () =>
+        loadPowerHistory(this._hass, spec, resolved.live)
+      );
+      return {
+        loading: entry.loading,
+        error: entry.error,
+        at: entry.at,
+        data: entry.data ? this._powerChartData(entry.data.series, spec) : null,
+      };
+    }
+    if (energy.error && !energy.buckets) return { error: true };
+    return {
+      loading: energy.loading,
+      error: energy.error,
+      at: energy.buckets ? energy.buckets.length : 0,
+      data: energy.buckets ? { kind: "energy", spec: energy.spec, buckets: energy.buckets } : null,
+    };
+  }
+
+  // Signed battery and grid series, with the same fallbacks as liveValues().
+  _powerChartData(series, spec) {
+    const quiet = (values) => !values || values.every((v) => v === null || Math.abs(v) <= ACTIVE_W);
+    const batteryFactor = this._config.invert_battery ? -1 : 1;
+    const gridFactor = this._config.invert_grid ? -1 : 1;
+    let battery = null;
+    if (!(quiet(series.charge) && quiet(series.discharge))) {
+      battery = combineSeries(series.discharge || series.charge.map(() => 0), series.charge || series.discharge.map(() => 0), (d, c) => d - c);
+    } else if (series.battery) {
+      battery = series.battery.map((v) => (v === null ? null : v * batteryFactor));
+    }
+    let grid = null;
+    if (!(quiet(series.gridImport) && quiet(series.gridExport)) && (series.gridImport || series.gridExport)) {
+      grid = combineSeries(series.gridImport || series.gridExport.map(() => 0), series.gridExport || series.gridImport.map(() => 0), (i, e) => i - e);
+    } else if (series.grid) {
+      grid = series.grid.map((v) => (v === null ? null : v * gridFactor));
+    } else if (series.gridImport) {
+      grid = series.gridImport;
+    }
+    return { kind: "power", spec, solar: series.solar || null, load: series.load || null, battery, grid, soc: series.soc || null };
+  }
+
+  _render() {
+    if (!this.shadowRoot || !this._hass) return;
+    try {
+      const config = this._config;
+      const language = languageOf(this._hass, config);
+      const t = stringsFor(language);
+      const locale = t.locale;
+      const theme = config.theme;
+      if (config.load_fonts !== false) ensureThemeFonts(theme);
+      const resolved = resolveEntities(this._hass, config);
+      if (!hasAnyEntity(resolved)) {
+        const signature = `empty|${language}|${theme}`;
+        if (signature === this._signature) return;
+        this._signature = signature;
+        this.shadowRoot.innerHTML = `<style>${BASE_CSS}${THEME_CSS[theme]}</style>
+          <ha-card class="sfc theme-${theme}"><div class="sfc-empty"><h2>${escapeHtml(t.noData)}</h2><p>${escapeHtml(t.noDataHelp)}</p></div></ha-card>`;
+        return;
+      }
+      const period = PERIODS.includes(this._period) ? this._period : PERIODS.includes(config.period) ? config.period : "today";
+      const live = liveValues(resolved, config);
+      const status = liveStatus(resolved);
+      const today = todayEnergy(resolved);
+      const energy = this._periodEnergy(resolved, period, today);
+      const chart = this._chartState(resolved, period, energy);
+      const forecast = batteryForecast(live, config);
+      const panels = panelData(this._hass, resolved, config);
+      const inverter = this._inverterOpen ? inverterReadings(resolved) : null;
+      const since = period === "all" && energy.buckets?.length
+        ? energy.buckets[0].start.toLocaleDateString(locale, { month: "short", year: "numeric" })
+        : null;
+      const ids = {
+        live: Object.fromEntries(Object.entries(resolved.live).map(([k, v]) => [k, v?.entityId || null])),
+        energy: Object.fromEntries(Object.entries(resolved.energy).map(([k, v]) => [k, v?.entityId || null])),
+      };
+      const now = new Date();
+      const signature = JSON.stringify([
+        language, config, period, live, status.state, today, energy.totals, Boolean(energy.loading),
+        chart && [Boolean(chart.loading), Boolean(chart.error), chart.at], forecast.mode, Math.round(forecast.hours * 60 || 0),
+        panels?.panels.map((p) => [p.today, p.power]), this._inverterOpen,
+        inverter?.map((d) => [[...d.strings.values()].map((s) => Object.values(s).map((r) => r.value)), d.temperatures.map((r) => r.value), d.battery.map((r) => r.value), d.grid.map((r) => r.value)]),
+        Math.floor(now.getTime() / 60000),
+      ]);
+      if (signature === this._signature) return;
+      this._signature = signature;
+
+      const model = {
+        t,
+        locale,
+        now,
+        theme,
+        station: resolved.station,
+        name: resolved.name || t.defaultTitle,
+        config: {
+          ...config,
+          showEnergy: config.show_energy !== false,
+          showChart: config.show_chart !== false,
+          showForecast: config.show_forecast !== false,
+          showPanels: config.show_panels !== false,
+        },
+        ids,
+        live,
+        status,
+        today,
+        period,
+        totals: energy.totals || {},
+        energyLoading: Boolean(energy.loading),
+        summary: periodSummary(energy.totals || {}, config, t, locale),
+        since,
+        chart,
+        forecast,
+        panels,
+        inverter,
+        inverterOpen: this._inverterOpen,
+      };
+      model.systemStatus = systemStatus(status, forecast, panels);
+
+      this.shadowRoot.innerHTML = `
+        <style>${BASE_CSS}${THEME_CSS[theme]}</style>
+        <ha-card class="sfc theme-${theme} ${config.animation === false ? "no-anim" : ""}">${THEME_RENDER[theme](model)}</ha-card>`;
+      this._wire(model);
+    } catch (error) {
+      console.error("Solar Flow Card render error", error);
+      this.shadowRoot.innerHTML = `<style>${BASE_CSS}${THEME_CSS.diorama}</style>
+        <ha-card class="sfc"><div class="sfc-empty"><h2>Solar Flow Card</h2><p>${escapeHtml(error?.message || error)}</p></div></ha-card>`;
+    }
+  }
+
+  _wire(model) {
+    const root = this.shadowRoot;
+    root.querySelectorAll("[data-entity]").forEach((element) => {
+      element.addEventListener("click", (event) => {
+        event.stopPropagation();
+        this.dispatchEvent(new CustomEvent("hass-more-info", {
+          bubbles: true,
+          composed: true,
+          detail: { entityId: element.dataset.entity },
+        }));
+      });
+    });
+    root.querySelectorAll('[data-action="inverter"]').forEach((element) => {
+      element.addEventListener("click", (event) => {
+        event.stopPropagation();
+        this._inverterOpen = !this._inverterOpen;
+        this._signature = "";
+        this._render();
+      });
+    });
+    root.querySelectorAll('[data-action="panels"]').forEach((element) => {
+      element.addEventListener("click", () => root.getElementById("sfc-panels")?.scrollIntoView({ behavior: "smooth", block: "nearest" }));
+    });
+    root.querySelectorAll("[data-period]").forEach((element) => {
+      element.addEventListener("click", () => {
+        if (element.dataset.period === model.period) return;
+        this._period = element.dataset.period;
+        this._render();
+      });
+    });
+    wireChart(root, model.chart?.data, model.t, model.locale);
+  }
+}
