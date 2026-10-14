@@ -255,25 +255,43 @@ function renderAurora(m) {
 // Paper: an editorial page with a Sankey diagram of where the power goes.
 // --------------------------------------------------------------------------
 
+// Where the power comes from right now, as shares that add up to 100%.
+// Sources are allocated to the uses in proportion, as in the Sankey.
+function liveSources(m) {
+  const { live } = m;
+  const items = [
+    ["pv", m.t.solar, m.config.showSolar ? live.solar : 0, m.ids.live.solar],
+    ["battery", m.t.battery, live.discharge, batteryEntityId(m)],
+    ["grid", m.t.grid, live.gridImport, gridEntityId(m)],
+  ];
+  const total = items.reduce((sum, [, , value]) => sum + (value > ACTIVE_W ? value : 0), 0);
+  const shares = items.map(([, , value]) => (total > 0 && value > ACTIVE_W ? (value / total) * 100 : 0));
+  const rounded = shares.map(Math.round);
+  const drift = 100 - rounded.reduce((a, b) => a + b, 0);
+  if (total > 0 && drift) rounded[shares.indexOf(Math.max(...shares))] += drift;
+  return { items, total, shares: rounded };
+}
+
 function sankeyHtml(m) {
   const { live, t, locale } = m;
-  const sources = [
-    ["pv", t.solar, live.solar, m.ids.live.solar],
-    ["battery", t.battery, live.discharge, batteryEntityId(m)],
-    ["grid", t.grid, live.gridImport, gridEntityId(m)],
-  ].filter(([, , value]) => value > ACTIVE_W);
+  const sources = liveSources(m).items.filter(([, , value]) => value > ACTIVE_W);
   const sinks = [
     ["load", t.home, live.load, m.ids.live.load],
     ["battery", t.battery, live.charge, batteryEntityId(m)],
     ["grid", t.grid, live.gridExport, gridEntityId(m)],
   ].filter(([, , value]) => value > ACTIVE_W);
   if (!sources.length || !sinks.length) return `<div class="pap-quiet">${escapeHtml(t.idle)}</div>`;
+  // Balance both sides: what goes in but is not measured going out is the
+  // inverter's losses and own use; the reverse is an unmeasured source.
+  const sourceTotal = sources.reduce((s, [, , v]) => s + v, 0);
+  const sinkTotal = sinks.reduce((s, [, , v]) => s + v, 0);
+  if (sourceTotal - sinkTotal > ACTIVE_W) sinks.push(["loss", t.losses, sourceTotal - sinkTotal, null]);
+  if (sinkTotal - sourceTotal > ACTIVE_W) sources.push(["other", t.otherSource, sinkTotal - sourceTotal, null]);
+  const total = Math.max(sourceTotal, sinkTotal);
   const W = 468;
   const H = 200;
   const gap = 14;
-  const sourceTotal = sources.reduce((s, [, , v]) => s + v, 0);
-  const sinkTotal = sinks.reduce((s, [, , v]) => s + v, 0);
-  const scale = (H - gap * (Math.max(sources.length, sinks.length) - 1)) / Math.max(sourceTotal, sinkTotal);
+  const scale = (H - gap * (Math.max(sources.length, sinks.length) - 1)) / total;
   const stack = (items) => {
     let y = 0;
     return items.map(([kind, label, value, entityId]) => {
@@ -285,28 +303,26 @@ function sankeyHtml(m) {
   const left = stack(sources);
   const right = stack(sinks);
   let ribbons = "";
-  // Each source feeds the sinks in proportion to their size; the left end
-  // of a ribbon is measured against the source, the right end against the
-  // sink, so both bars fill exactly even when the totals differ slightly.
+  // Each source feeds every use in proportion to the use's share.
   for (const s of left) {
     for (const k of right) {
-      const h = ((s.value * k.value) / sinkTotal) * scale;
-      const hk = ((k.value * s.value) / sourceTotal) * scale;
-      if (h < 0.5 && hk < 0.5) continue;
+      const h = ((s.value * k.value) / total) * scale;
+      if (h < 0.5) continue;
       const y0 = s.y + s.used;
       const y1 = k.y + k.used;
       s.used += h;
-      k.used += hk;
-      ribbons += `<path class="pap-ribbon ${s.kind}" d="M10 ${y0.toFixed(1)} C${W / 2} ${y0.toFixed(1)} ${W / 2} ${y1.toFixed(1)} ${W - 10} ${y1.toFixed(1)} L${W - 10} ${(y1 + hk).toFixed(1)} C${W / 2} ${(y1 + hk).toFixed(1)} ${W / 2} ${(y0 + h).toFixed(1)} 10 ${(y0 + h).toFixed(1)} Z"/>`;
+      k.used += h;
+      ribbons += `<path class="pap-ribbon ${s.kind}" d="M10 ${y0.toFixed(1)} C${W / 2} ${y0.toFixed(1)} ${W / 2} ${y1.toFixed(1)} ${W - 10} ${y1.toFixed(1)} L${W - 10} ${(y1 + h).toFixed(1)} C${W / 2} ${(y1 + h).toFixed(1)} ${W / 2} ${(y0 + h).toFixed(1)} 10 ${(y0 + h).toFixed(1)} Z"/>`;
     }
   }
   const bars = left.map((s) => `<rect class="pap-node ${s.kind}" x="0" y="${s.y.toFixed(1)}" width="10" height="${s.h.toFixed(1)}"/>`).join("")
     + right.map((k) => `<rect class="pap-node sink ${k.kind}" x="${W - 10}" y="${k.y.toFixed(1)}" width="10" height="${k.h.toFixed(1)}"/>`).join("");
   const label = (node, side) => `
-    <button class="pap-label ${side}" style="top:${((Math.max(0, node.y + node.h / 2 - 16) / H) * 100).toFixed(1)}%" ${entityAttr(node.entityId)}>
+    <button class="pap-label ${side} ${node.kind}" style="top:${((Math.max(0, node.y + node.h / 2 - 16) / H) * 100).toFixed(1)}%" ${entityAttr(node.entityId)}>
       <b>${escapeHtml(formatPower(node.value, locale))}</b>${escapeHtml(node.label)}${node.kind === "battery" && isNum(live.soc) ? ` · ${escapeHtml(formatPercent(live.soc, locale))}` : ""}
     </button>`;
   return `
+    <div class="pap-cols"><span>${escapeHtml(t.sankeyFrom)}</span><span>${escapeHtml(t.sankeyTo)}</span></div>
     <div class="pap-sankey">
       <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">${ribbons}${bars}</svg>
       ${left.map((n) => label(n, "left")).join("")}
@@ -318,15 +334,13 @@ function renderPaper(m) {
   const { t, locale, live } = m;
   const load = live.load;
   let lede = "";
-  if (load > ACTIVE_W) {
-    const bat = (live.discharge / load) * 100;
-    const grid = (live.gridImport / load) * 100;
-    const pv = clamp(100 - bat - grid, 0, 100);
-    lede = !m.config.showSolar
-      ? fill(t.paperSharesNoPv, { bat: `<em>${Math.round(bat)}</em>`, grid: `<em>${Math.round(grid)}</em>` })
-      : bat < 1 && grid < 1
-      ? t.paperSunOnly
-      : fill(t.paperShares, { pv: `<em>${Math.round(pv)}</em>`, bat: `<em>${Math.round(bat)}</em>`, grid: `<em>${Math.round(grid)}</em>` });
+  const sourcesNow = liveSources(m);
+  if (load > ACTIVE_W && sourcesNow.total > 0) {
+    const names = [t.paperSun, t.paperBattery, t.paperGrid];
+    const parts = sourcesNow.shares.map((pct, i) => [names[i], pct]).filter(([, pct]) => pct > 0);
+    lede = parts.length === 1
+      ? fill(t.paperOnly, { source: `<em>${parts[0][0]}</em>` })
+      : fill(t.paperMix, { parts: parts.map(([name, pct]) => `${name} <em>${pct}%</em>`).join(", ") });
   }
   const f = m.forecast;
   if (f.mode === "discharging") lede += ` ${fill(t.paperLasts, { time: `<em>${formatClock(f.at, locale)}</em>` })}`;

@@ -7,6 +7,7 @@ export const SCENARIOS = {
   noon: { label: "Noon, charging", generationPower: 5200, consumptionPower: 640, batteryPower: -3900, purchasePower: 0, gridPower: 660, batterySOC: 71 },
   afternoon: { label: "Afternoon, mixed", generationPower: 1550, consumptionPower: 2760, batteryPower: 1320, purchasePower: 8, gridPower: 0, batterySOC: 55 },
   evening: { label: "Evening, battery", generationPower: 0, consumptionPower: 1850, batteryPower: 1850, purchasePower: 0, gridPower: 0, batterySOC: 38 },
+  losses: { label: "Evening, inverter losses", generationPower: 0, consumptionPower: 823, batteryPower: 924, purchasePower: 0, gridPower: 0, batterySOC: 33 },
   night: { label: "Night, grid", generationPower: 0, consumptionPower: 420, batteryPower: 0, purchasePower: 420, gridPower: 0, batterySOC: 10 },
 };
 
