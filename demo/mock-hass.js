@@ -47,7 +47,7 @@ export function createHass({ scenario = "afternoon", language = "pl" } = {}) {
   for (const [key, value] of Object.entries(today)) {
     add(`sensor.deye_${key.toLowerCase()}_today`, value, { sensor_type: "daily", metric_key: key, relative_day: "today", unit_of_measurement: "kWh", state_class: "total_increasing" });
   }
-  const inverter = (key, value, unit) => add(`sensor.deye_inverter_${key.toLowerCase()}`, value, {
+  const inverter = (key, value, unit) => add(`sensor.deye_inverter_${key.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`, value, {
     sensor_type: "device", device_type: "INVERTER", device_sn: "2603313875", device_key: key, unit_of_measurement: unit,
   });
   const pv1 = live.generationPower * 0.52;
@@ -62,9 +62,20 @@ export function createHass({ scenario = "afternoon", language = "pl" } = {}) {
   inverter("DCTemperature", 37.5, "°C");
   inverter("BatteryVoltage", 52.8, "V");
   inverter("BatteryCurrent", -live.batteryPower / 52.8, "A");
-  inverter("BatteryTemperature", 24.0, "°C");
   inverter("GridFrequency", 50.01, "Hz");
   inverter("ACVoltageRUA", 231.5, "V");
+  inverter("Temperature- Battery", scenario === "night" ? 7.5 : 18.5, "°C");
+  inverter("BatteryTotalCurrent", Math.abs(live.batteryPower) / 52.8, "A");
+  const split = [0.12, 0.5, 0.38];
+  const gridNow = (live.purchasePower || 0) - (live.gridPower || 0);
+  split.forEach((share, i) => {
+    inverter(`LoadPowerL${i + 1}`, live.consumptionPower * share, "W");
+    inverter(`GridPowerL${i + 1}`, gridNow / 3, "W");
+    inverter(`GridVoltageL${i + 1}`, [236.9, 239.6, 237.3][i], "V");
+  });
+  inverter("TotalInverterOutputPower", Math.max(0, live.consumptionPower - (live.purchasePower || 0)) * 0.98, "W");
+  inverter("RatedPower", 10000, "W");
+  inverter("TotalGeneratorPower", 0, "W");
   for (let i = 0; i < 16; i++) {
     const serial = `OPT${2400 + i}`;
     const value = i === 11 ? 0.61 : 1.12 + (i % 5) * 0.03;

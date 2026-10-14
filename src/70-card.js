@@ -67,7 +67,7 @@ class SolarFlowCard extends HTMLElement {
   }
 
   getCardSize() {
-    return 8 + (this._config.show_energy !== false ? 5 : 0) + (this._config.show_panels !== false ? 2 : 0);
+    return 8 + (this._config.show_system !== false ? 2 : 0) + (this._config.show_energy !== false ? 5 : 0) + (this._config.show_panels !== false ? 2 : 0);
   }
 
   getGridOptions() {
@@ -185,6 +185,7 @@ class SolarFlowCard extends HTMLElement {
       const forecast = batteryForecast(live, config);
       const panels = showSolar ? panelData(this._hass, resolved, config) : null;
       const inverter = this._inverterOpen ? inverterReadings(resolved) : null;
+      const system = config.show_system !== false ? systemData(this._hass, resolved, config) : null;
       const since = period === "all" && energy.buckets?.length
         ? energy.buckets[0].start.toLocaleDateString(locale, { month: "short", year: "numeric" })
         : null;
@@ -196,7 +197,7 @@ class SolarFlowCard extends HTMLElement {
       const signature = JSON.stringify([
         language, config, period, [...this._hiddenSeries], live, status.state, today, energy.totals, Boolean(energy.loading),
         chart && [Boolean(chart.loading), Boolean(chart.error), chart.at], forecast.mode, Math.round(forecast.hours * 60 || 0),
-        panels?.panels.map((p) => [p.today, p.power]), this._inverterOpen,
+        panels?.panels.map((p) => [p.today, p.power]), system, this._inverterOpen,
         inverter?.map((d) => [[...d.strings.values()].map((s) => Object.values(s).map((r) => r.value)), d.temperatures.map((r) => r.value), d.battery.map((r) => r.value), d.grid.map((r) => r.value)]),
         Math.floor(now.getTime() / 60000),
       ]);
@@ -217,6 +218,7 @@ class SolarFlowCard extends HTMLElement {
           showForecast: config.show_forecast !== false,
           showPanels: config.show_panels !== false,
           showSolar,
+          showSystem: config.show_system !== false,
         },
         ids,
         live,
@@ -231,10 +233,11 @@ class SolarFlowCard extends HTMLElement {
         forecast,
         panels,
         inverter,
+        system,
         inverterOpen: this._inverterOpen,
         hiddenSeries: this._hiddenSeries,
       };
-      model.systemStatus = systemStatus(status, forecast, panels);
+      model.systemStatus = systemStatus(status, forecast, panels, system);
 
       this.shadowRoot.innerHTML = `
         <style>${BASE_CSS}${THEME_CSS[theme]}</style>

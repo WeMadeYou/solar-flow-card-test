@@ -353,11 +353,103 @@ function panelData(hass, resolved, config) {
   };
 }
 
+// Installation details: power per phase, inverter load, battery (BMS) and
+// generator. `key` is the option under `entities:`, `deye` the DeyeCloud
+// device keys tried in order (an inverter's device sensors).
+const SYSTEM_METRICS = {
+  loadL1: { key: "load_power_l1", deye: ["LoadPowerL1", "LoadPhasePowerA"] },
+  loadL2: { key: "load_power_l2", deye: ["LoadPowerL2", "LoadPhasePowerB"] },
+  loadL3: { key: "load_power_l3", deye: ["LoadPowerL3", "LoadPhasePowerC"] },
+  gridL1: { key: "grid_power_l1", deye: ["GridPowerL1"] },
+  gridL2: { key: "grid_power_l2", deye: ["GridPowerL2"] },
+  gridL3: { key: "grid_power_l3", deye: ["GridPowerL3"] },
+  voltL1: { key: "grid_voltage_l1", deye: ["GridVoltageL1", "LoadVoltageL1", "ACVoltageRUA"] },
+  voltL2: { key: "grid_voltage_l2", deye: ["GridVoltageL2", "LoadVoltageL2", "ACVoltageSVB"] },
+  voltL3: { key: "grid_voltage_l3", deye: ["GridVoltageL3", "LoadVoltageL3", "ACVoltageTWC"] },
+  batteryTemp: { key: "battery_temperature", deye: ["Temperature- Battery", "BatteryTemperature", "BMSTemperature"] },
+  batteryVoltage: { key: "battery_voltage", deye: ["BatteryVoltage", "BMSVoltage"] },
+  batteryCurrent: { key: "battery_current", deye: ["BatteryTotalCurrent", "BatteryCurrent", "BMSCurrent", "BatteryCurrent1"] },
+  inverterPower: { key: "inverter_power", deye: ["TotalInverterOutputPower"] },
+  ratedPower: { key: "inverter_rated_power", deye: ["RatedPower"] },
+  generator: { key: "generator_power", deye: ["TotalGeneratorPower", "GeneratorActivePower"] },
+};
+// Battery temperatures outside this range limit charging on most LiFePO4 packs.
+const BATTERY_COLD = 10;
+const BATTERY_HOT = 45;
+
+function normalizeKey(key) {
+  return String(key).toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+// Power in W from a sensor in W or kW.
+function wattsOf(stateObj) {
+  const value = stateNumber(stateObj);
+  if (value === null) return null;
+  return /^kW$/i.test(stateUnit(stateObj)) ? value * 1000 : value;
+}
+
+function systemData(hass, resolved, config) {
+  const states = hass?.states || {};
+  const configured = config.entities || {};
+  // Device sensors of the first inverter, by normalized key.
+  const devices = resolved.candidates.filter(([, s]) => s.attributes?.sensor_type === "device"
+    && String(s.attributes?.device_type || "").includes("INVERTER"));
+  const serial = devices.length ? String(devices[0][1].attributes?.device_sn || "") : "";
+  const byKey = new Map();
+  for (const [entityId, stateObj] of devices) {
+    if (String(stateObj.attributes?.device_sn || "") !== serial) continue;
+    const key = deviceKey(stateObj);
+    if (key) byKey.set(normalizeKey(key), { entityId, stateObj });
+  }
+  const found = {};
+  for (const [name, def] of Object.entries(SYSTEM_METRICS)) {
+    const id = configured[def.key];
+    if (id && states[id]) found[name] = { entityId: id, stateObj: states[id] };
+    else found[name] = def.deye.map((key) => byKey.get(normalizeKey(key))).find((entry) => entry && stateNumber(entry.stateObj) !== null) || null;
+  }
+  const watts = (name) => (found[name] ? wattsOf(found[name].stateObj) : null);
+  const number = (name) => (found[name] ? stateNumber(found[name].stateObj) : null);
+  const gridSign = config.invert_grid ? -1 : 1;
+  const phases = [1, 2, 3].map((n) => ({
+    name: `L${n}`,
+    load: watts(`loadL${n}`),
+    grid: isNum(watts(`gridL${n}`)) ? watts(`gridL${n}`) * gridSign : null,
+    voltage: number(`voltL${n}`),
+    entityId: found[`loadL${n}`]?.entityId || found[`gridL${n}`]?.entityId || found[`voltL${n}`]?.entityId || null,
+  }));
+  const hasPhases = phases.filter((p) => isNum(p.load) || isNum(p.grid)).length >= 2;
+  const loads = phases.map((p) => p.load).filter(isNum);
+  const rated = positiveNumber(config.inverter_power_rating) ? positiveNumber(config.inverter_power_rating) * 1000 : watts("ratedPower");
+  const inverterPower = watts("inverterPower");
+  const batteryTemp = number("batteryTemp");
+  const generator = watts("generator");
+  const data = {
+    phases: hasPhases ? phases : null,
+    phaseMax: Math.max(1, ...loads),
+    phaseSpread: loads.length >= 2 ? Math.max(...loads) - Math.min(...loads) : null,
+    inverter: isNum(inverterPower) ? {
+      power: inverterPower,
+      rated: isNum(rated) && rated > 0 ? rated : null,
+      share: isNum(rated) && rated > 0 ? clamp((Math.abs(inverterPower) / rated) * 100, 0, 100) : null,
+      entityId: found.inverterPower.entityId,
+    } : null,
+    battery: [
+      ["temperature", found.batteryTemp, batteryTemp, "°C"],
+      ["voltage", found.batteryVoltage, number("batteryVoltage"), "V"],
+      ["current", found.batteryCurrent, isNum(number("batteryCurrent")) ? Math.abs(number("batteryCurrent")) : null, "A"],
+    ].filter(([, entry, value]) => entry && isNum(value)).map(([kind, entry, value, unit]) => ({ kind, entityId: entry.entityId, value, unit })),
+    batteryTemp,
+    batteryWarn: isNum(batteryTemp) ? (batteryTemp < BATTERY_COLD ? "cold" : batteryTemp > BATTERY_HOT ? "hot" : null) : null,
+    generator: isNum(generator) && generator > ACTIVE_W ? { power: generator, entityId: found.generator.entityId } : null,
+  };
+  return data.phases || data.inverter || data.battery.length || data.generator ? data : null;
+}
+
 // Status used by themes that show one (LCARS): alert when offline or the
-// battery reached its reserve, caution when delayed, close to the reserve
-// or a panel is underperforming.
-function systemStatus(status, forecast, panels) {
+// battery reached its reserve, caution when delayed, close to the reserve,
+// a panel is underperforming or the battery is too cold or hot.
+function systemStatus(status, forecast, panels, system) {
   if (status.state === "offline" || (isNum(forecast.soc) && forecast.soc <= forecast.minSoc + 1)) return "alert";
-  if (status.state === "delayed" || (isNum(forecast.soc) && forecast.soc < forecast.minSoc + 15) || panels?.weakest) return "warn";
+  if (status.state === "delayed" || (isNum(forecast.soc) && forecast.soc < forecast.minSoc + 15) || panels?.weakest || system?.batteryWarn) return "warn";
   return "nominal";
 }

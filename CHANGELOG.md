@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.7-beta
+
+- New **Installation** section in every theme:
+  - power on each phase with grid power, voltage and the spread between phases;
+  - inverter load against its rated power;
+  - battery temperature, voltage and current, with a warning when the battery is below 10 °C or above 45 °C;
+  - the generator while it runs.
+- DeyeCloud sensors are found automatically; other inverters set them under `entities:`.
+- New options: `show_system` (also in the editor) and `inverter_power_rating`.
+- LCARS: a battery that is too cold or too hot sets the status to caution.
+
 ## 0.1.6-beta
 
 - Three new themes:

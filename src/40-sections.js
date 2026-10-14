@@ -8,6 +8,7 @@ const MINI_ICONS = {
   discharge: '<svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="3"/><path d="M9 2h6M8 12h8"/></svg>',
   bolt: '<svg viewBox="0 0 24 24"><path d="m13 2-8 12h6l-1 8 9-13h-6z"/></svg>',
   chip: '<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg>',
+  phase: '<svg viewBox="0 0 24 24"><path d="M2 12c2.5-6 5-6 7.5 0s5 6 7.5 0 3.5-4 5-2"/></svg>',
   panel: '<svg viewBox="0 0 24 24"><path d="M4 5h16l-2 10H2z"/><path d="M8 5 6.5 15M14 5l-1 10M3 10h16M11 15v4M7 19h8"/></svg>',
 };
 
@@ -189,8 +190,56 @@ function panelsHtml(m) {
 }
 
 // Sections every theme shows below its main view.
+// Installation: power per phase, inverter load, battery (BMS) and generator.
+function systemHtml(m) {
+  const data = m.system;
+  if (!m.config.showSystem || !data) return "";
+  const { t, locale } = m;
+  const attr = (entityId) => (entityId ? `data-entity="${escapeHtml(entityId)}"` : "");
+  const phases = data.phases ? `
+    <div class="sfc-phases">
+      ${data.phases.map((p) => `
+        <button class="sfc-phase" ${attr(p.entityId)}>
+          <small>${escapeHtml(p.name)}</small>
+          <strong>${escapeHtml(formatPower(p.load, locale))}</strong>
+          <i style="--p:${isNum(p.load) ? ((p.load / data.phaseMax) * 100).toFixed(0) : 0}%"></i>
+          <span>${escapeHtml([isNum(p.grid) && fill(t.phaseGrid, { power: formatPower(p.grid, locale) }), isNum(p.voltage) && `${formatNumber(p.voltage, locale, 0)} V`].filter(Boolean).join(" · "))}</span>
+        </button>`).join("")}
+    </div>` : "";
+  const labels = { temperature: t.batteryTemperature, voltage: t.batteryVoltage, current: t.batteryCurrent };
+  const meters = [
+    data.inverter && `
+      <button class="sfc-meter inverter" ${attr(data.inverter.entityId)}>
+        <small>${escapeHtml(t.inverterLoad)}</small>
+        <b>${escapeHtml(isNum(data.inverter.share) ? formatPercent(data.inverter.share, locale) : formatPower(data.inverter.power, locale))}</b>
+        ${isNum(data.inverter.share) ? `<i style="--p:${data.inverter.share.toFixed(0)}%"></i><span>${escapeHtml(fill(t.inverterOf, { power: formatPower(data.inverter.power, locale), rated: formatPower(data.inverter.rated, locale) }))}</span>` : ""}
+      </button>`,
+    ...data.battery.map((r) => `
+      <button class="sfc-meter battery ${r.kind === "temperature" && data.batteryWarn ? "warn" : ""}" ${attr(r.entityId)}>
+        <small>${escapeHtml(labels[r.kind])}</small>
+        <b>${escapeHtml(`${formatNumber(r.value, locale, 1)} ${r.unit}`)}</b>
+      </button>`),
+    data.generator && `
+      <button class="sfc-meter generator on" ${attr(data.generator.entityId)}>
+        <small>${escapeHtml(t.generatorRunning)}</small>
+        <b>${escapeHtml(formatPower(data.generator.power, locale))}</b>
+      </button>`,
+  ].filter(Boolean).join("");
+  const warn = data.batteryWarn ? `<p class="sfc-panels-note warn">${escapeHtml(data.batteryWarn === "cold" ? t.batteryCold : t.batteryHot)}</p>` : "";
+  return `
+    <section class="sfc-section sfc-system">
+      <div class="sfc-head">
+        <div><span class="sfc-kicker">${MINI_ICONS.phase}</span><h3>${escapeHtml(t.systemTitle)}</h3></div>
+        ${isNum(data.phaseSpread) && data.phases ? `<span class="sfc-hint">${escapeHtml(fill(t.phaseSpread, { power: formatPower(data.phaseSpread, locale) }))}</span>` : ""}
+      </div>
+      ${phases}
+      ${meters ? `<div class="sfc-meters">${meters}</div>` : ""}
+      ${warn}
+    </section>`;
+}
+
 function standardSections(m) {
-  return `${inverterHtml(m)}${forecastHtml(m)}${energySectionHtml(m)}${panelsHtml(m)}`;
+  return `${inverterHtml(m)}${forecastHtml(m)}${systemHtml(m)}${energySectionHtml(m)}${panelsHtml(m)}`;
 }
 
 // ---------------------------------------------------------------------------

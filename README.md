@@ -28,6 +28,7 @@ DeyeCloud sensors are found automatically; any other inverter works by pointing 
 - **Period summary**: self-sufficiency, self-consumption, savings, avoided CO₂ and yield per kWp (energy produced per kW of installed panels; compare days and installations). Each item can be switched off.
 - **Installations without PV** (battery with an EMS): `show_solar: false`.
 - **Battery forecast**: time until full while charging, time until the reserve while discharging.
+- **Installation**: power on each phase (L1/L2/L3) with grid power and voltage and the spread between phases, inverter load against its rated power, battery temperature, voltage and current with a warning when the battery is too cold or hot to charge fully, and the generator while it runs.
 - **Inverter details** (tap the inverter or the house): PV strings, temperatures, battery and grid readings.
 - **Panels**: one tile per optimizer with today's production; the weakest panel is highlighted when it falls below 85% of the median.
 - English and Polish, with a visual editor; [more languages welcome](CONTRIBUTING.md#add-or-improve-a-translation).
@@ -104,6 +105,7 @@ co2_factor: 0.7
 | `battery_min_soc` | `10` | Battery reserve in %. "Lasts until" counts down to this level. |
 | `pv_capacity` | – | PV size in kWp. Enables the yield per kWp. |
 | `pv_panels` | `8` | Modules drawn on the Diorama roof when no optimizers are found. |
+| `inverter_power_rating` | from the inverter | Inverter rated power in kW, for the inverter load. DeyeCloud reports it; set it for other inverters. |
 | `panel_strings` | `1` (`2` above 8 panels) | Number of strings the panels are split into, in order. |
 | `price_import` | – | Price per kWh bought from the grid. Enables the savings. |
 | `price_export` | `0` | Price per kWh sold to the grid. |
@@ -117,6 +119,7 @@ co2_factor: 0.7
 | `show_energy` | `true` | Energy section: period tabs, chart, tiles and summary. |
 | `show_chart` | `true` | Chart in the energy section. |
 | `show_forecast` | `true` | Battery forecast (needs `battery_capacity`). |
+| `show_system` | `true` | Installation: phases, inverter load, battery temperature/voltage/current, generator (shown when the data exists). |
 | `show_panels` | `true` | Optimizer / panel tiles (shown only when panel data exists). |
 
 ### Period summary
@@ -157,6 +160,16 @@ entities:
   grid_export_energy: sensor.grid_export_today
   battery_charge_energy: sensor.battery_charge_today
   battery_discharge_energy: sensor.battery_discharge_today
+  # Installation section, all optional:
+  load_power_l1: sensor.load_l1                # W per phase, also _l2, _l3
+  grid_power_l1: sensor.grid_l1                # W per phase, + import, also _l2, _l3
+  grid_voltage_l1: sensor.voltage_l1           # V per phase, also _l2, _l3
+  inverter_power: sensor.inverter_output_power # W
+  inverter_rated_power: sensor.inverter_rated  # W (or the inverter_power_rating option)
+  battery_temperature: sensor.battery_temp     # °C
+  battery_voltage: sensor.battery_voltage      # V
+  battery_current: sensor.battery_current      # A
+  generator_power: sensor.generator_power      # W
 panels:                                        # optional, energy today per panel
   - sensor.panel_1_energy_today
   - entity: sensor.panel_2_energy_today
