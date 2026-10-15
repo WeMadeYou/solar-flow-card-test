@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **Gate Command** theme (`gate`): a gate control room. Four chevrons are the connection points of the panels, battery, grid and home, linked to the corner readouts and pulsing gently while power flows; the other five show the battery level. A dialing computer lists every flow with a status line, the event horizon ripples while power flows and the glyph ring turns slowly while the battery charges or discharges. Compact by default, wide with `wide: true`.
+- **Wide layout** for every theme (`wide: true`, also in the editor): the main view and the chart side by side, the other sections open below in balanced columns, with the inverter details shown without a click. A missing section (no panels, no battery) leaves no gap. Below about 880 px of card width the card stays compact.
+- The theme picker in the editor wraps to fit nine themes.
+
 ## 1.2.0
 
 - **Several batteries**: the `batteries:` option (name, soc, power, capacity, optional voltage, temperature and `invert`). The themes show one combined battery (summed power, charge weighted by capacity, total capacity for the forecast, also in the power chart); the Installation section shows each battery with its charge, power, voltage and temperature, and warns when one of them is too cold or hot. The demo has a "two batteries" setting.

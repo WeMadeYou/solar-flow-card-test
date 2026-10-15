@@ -154,7 +154,7 @@ function inverterHtml(m) {
     <section class="sfc-section sfc-inverter">
       <div class="sfc-head">
         <div><span class="sfc-kicker">${MINI_ICONS.chip}</span><h3>${escapeHtml(t.inverterDetails)}</h3></div>
-        <button type="button" class="sfc-link" data-action="inverter">${escapeHtml(t.close)}</button>
+        ${m.config.wide ? "" : `<button type="button" class="sfc-link" data-action="inverter">${escapeHtml(t.close)}</button>`}
       </div>
       ${content}
     </section>`;
@@ -266,6 +266,9 @@ function systemHtml(m) {
 }
 
 function standardSections(m) {
+  // Wide: the energy section leads across the full width, the rest flow
+  // into balanced columns below it.
+  if (m.config.wide) return `${energySectionHtml(m)}<div class="sfc-wide-rest">${inverterHtml(m)}${forecastHtml(m)}${systemHtml(m)}${panelsHtml(m)}</div>`;
   return `${inverterHtml(m)}${forecastHtml(m)}${systemHtml(m)}${energySectionHtml(m)}${panelsHtml(m)}`;
 }
 

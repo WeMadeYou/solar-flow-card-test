@@ -10,6 +10,8 @@ const EDITOR_NUMBERS = [
   ["price_export", "editorPriceExport", "0.01"],
   ["co2_factor", "editorCo2", "0.01"],
 ];
+// Switches that are off unless set: [config key, label key].
+const EDITOR_OPTIN = [["wide", "editorWide"]];
 const EDITOR_SWITCHES = [
   ["show_solar", "editorSolar"],
   ["show_battery", "editorBattery"],
@@ -72,7 +74,7 @@ class SolarFlowCardEditor extends HTMLElement {
           color: var(--primary-text-color); background: var(--card-background-color);
           border: 1px solid var(--divider-color); border-radius: 10px;
         }
-        .themes { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+        .themes { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }
         .themes button { padding: 10px 4px; border-radius: 10px; border: 1px solid var(--divider-color); background: var(--card-background-color);
           color: var(--primary-text-color); font: inherit; font-size: 12px; cursor: pointer; }
         .themes button.on { border-color: var(--primary-color); box-shadow: inset 0 0 0 1px var(--primary-color); font-weight: 700; }
@@ -110,6 +112,9 @@ class SolarFlowCardEditor extends HTMLElement {
         ${EDITOR_SWITCHES.map(([key, label]) => `
           <div class="switch"><label for="${key}" style="color:inherit">${escapeHtml(t[label])}</label>
             <input id="${key}" type="checkbox" ${this._config[key] === false ? "" : "checked"} /></div>`).join("")}
+        ${EDITOR_OPTIN.map(([key, label]) => `
+          <div class="switch"><label for="${key}" style="color:inherit">${escapeHtml(t[label])}</label>
+            <input id="${key}" type="checkbox" ${this._config[key] === true ? "checked" : ""} /></div>`).join("")}
         <p class="hint">${escapeHtml(t.editorHint)}</p>
       </div>`;
     const root = this.shadowRoot;
@@ -128,6 +133,9 @@ class SolarFlowCardEditor extends HTMLElement {
       const number = Number.parseFloat(e.target.value);
       this._set(key, Number.isFinite(number) ? number : undefined);
     }));
+    EDITOR_OPTIN.forEach(([key]) => root.getElementById(key)?.addEventListener("change", (e) =>
+      this._set(key, e.target.checked ? true : undefined)
+    ));
     EDITOR_SWITCHES.forEach(([key]) => root.getElementById(key)?.addEventListener("change", (e) =>
       this._set(key, e.target.checked ? undefined : false)
     ));
@@ -142,7 +150,7 @@ if (!window.customCards.some((card) => card.type === CARD_TAG)) {
   window.customCards.push({
     type: CARD_TAG,
     name: "Solar Flow Card",
-    description: "Solar, battery, grid and home power flow with charts, forecasts and five themes.",
+    description: "Solar, battery, grid and home power flow with charts, forecasts and nine themes.",
     preview: true,
     documentationURL: "https://github.com/gratak/solar-flow-card",
   });

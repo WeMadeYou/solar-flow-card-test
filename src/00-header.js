@@ -9,7 +9,7 @@
 const CARD_VERSION = "1.2.0";
 const CARD_TAG = "solar-flow-card";
 const EDITOR_TAG = "solar-flow-card-editor";
-const THEMES = ["diorama", "aurora", "paper", "lcars", "atlantis", "expanse", "foundation", "galaxy"];
+const THEMES = ["diorama", "aurora", "paper", "lcars", "atlantis", "expanse", "foundation", "galaxy", "gate"];
 const PERIODS = ["today", "3d", "7d", "month", "all"];
 // A flow below this many watts counts as idle.
 const ACTIVE_W = 5;
