@@ -7,7 +7,7 @@
  * Built from src/*.js by scripts/build.mjs. Edit the sources, not this file.
  */
 (() => {
-const CARD_VERSION = "1.0.3";
+const CARD_VERSION = "1.1.0";
 const CARD_TAG = "solar-flow-card";
 const EDITOR_TAG = "solar-flow-card-editor";
 const THEMES = ["diorama", "aurora", "paper", "lcars", "atlantis", "expanse", "foundation", "galaxy"];
@@ -255,6 +255,9 @@ const TRANSLATIONS = {
     "lastsFor": "Gaat {d} mee",
     "lastsUntil": "tot ongeveer {time} (tot {soc}%)",
     "holding": "Blijft stabiel",
+    "slowCharge": "Laadt langzaam op",
+    "slowDischarge": "Ontlaadt langzaam",
+    "slowDetail": "meer dan 2 dagen in dit tempo",
     "storedOf": "{kwh} van {cap}",
     "inverterDetails": "Omvormer details",
     "pvStrings": "PV-strings",
