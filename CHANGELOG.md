@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.1
+
+- `background: glass` (also in the editor): a translucent, blurred card, so a background image set on the dashboard view shows through it. Light glass in Diorama and Paper, dark in the other themes.
+
 ## 1.4.0
 
 Everything from the 1.3.0 and 1.4.0 betas, now stable.

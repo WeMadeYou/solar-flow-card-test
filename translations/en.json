@@ -236,5 +236,6 @@
     "windy-variant": "Windy, cloudy",
     "exceptional": "Exceptional"
   },
-  "editorPanelsAverage": "Panel average and weakest panel per string"
+  "editorPanelsAverage": "Panel average and weakest panel per string",
+  "editorGlass": "Glass background (the dashboard background shows through the card)"
 }

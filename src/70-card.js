@@ -381,7 +381,7 @@ class SolarFlowCard extends HTMLElement {
 
       this.shadowRoot.innerHTML = `
         <style>${BASE_CSS}${THEME_CSS[theme]}</style>
-        <ha-card class="sfc theme-${theme} ${config.animation === false ? "no-anim" : ""}">${wide ? wideLayout(theme, THEME_RENDER[theme](model)) : THEME_RENDER[theme](model)}</ha-card>`;
+        <ha-card class="sfc theme-${theme} ${config.animation === false ? "no-anim" : ""} ${config.background === "glass" ? "glass" : ""}">${wide ? wideLayout(theme, THEME_RENDER[theme](model)) : THEME_RENDER[theme](model)}</ha-card>`;
       this._wire(model);
       if (wide) this._balanceWide();
     } catch (error) {

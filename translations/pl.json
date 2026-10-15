@@ -236,5 +236,6 @@
     "windy-variant": "Wietrznie, pochmurno",
     "exceptional": "Wyjątkowe warunki"
   },
-  "editorPanelsAverage": "Średnia i najsłabszy panel osobno dla każdego stringu"
+  "editorPanelsAverage": "Średnia i najsłabszy panel osobno dla każdego stringu",
+  "editorGlass": "Szklane tło (tło dashboardu prześwituje przez kartę)"
 }

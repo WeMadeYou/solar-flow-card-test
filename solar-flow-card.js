@@ -7,7 +7,7 @@
  * Built from src/*.js by scripts/build.mjs. Edit the sources, not this file.
  */
 (() => {
-const CARD_VERSION = "1.4.0";
+const CARD_VERSION = "1.4.1";
 const CARD_TAG = "solar-flow-card";
 const EDITOR_TAG = "solar-flow-card-editor";
 const THEMES = ["diorama", "aurora", "paper", "lcars", "atlantis", "expanse", "foundation", "galaxy", "gate", "reactor"];
@@ -255,7 +255,8 @@ const TRANSLATIONS = {
       "windy-variant": "Windy, cloudy",
       "exceptional": "Exceptional"
     },
-    "editorPanelsAverage": "Panel average and weakest panel per string"
+    "editorPanelsAverage": "Panel average and weakest panel per string",
+    "editorGlass": "Glass background (the dashboard background shows through the card)"
   },
   "nl": {
     "languageName": "Nederlands",
@@ -495,7 +496,8 @@ const TRANSLATIONS = {
       "windy-variant": "Winderig, bewolkt",
       "exceptional": "Uitzonderlijk"
     },
-    "editorPanelsAverage": "Gemiddelde en zwakste paneel per string"
+    "editorPanelsAverage": "Gemiddelde en zwakste paneel per string",
+    "editorGlass": "Glazen achtergrond (de dashboardachtergrond schijnt door de kaart)"
   },
   "pl": {
     "languageName": "Polski",
@@ -735,7 +737,8 @@ const TRANSLATIONS = {
       "windy-variant": "Wietrznie, pochmurno",
       "exceptional": "Wyjątkowe warunki"
     },
-    "editorPanelsAverage": "Średnia i najsłabszy panel osobno dla każdego stringu"
+    "editorPanelsAverage": "Średnia i najsłabszy panel osobno dla każdego stringu",
+    "editorGlass": "Szklane tło (tło dashboardu prześwituje przez kartę)"
   }
 };
 
@@ -3561,6 +3564,9 @@ const THEME_RENDER = {
 
 const BASE_CSS = `
   :host { display: block; }
+  /* background: glass – translucent card that lets the dashboard background
+     show through, blurred so the readings stay legible. */
+  ha-card.sfc.glass { background: var(--sfc-glass, rgba(6, 12, 20, .38)); backdrop-filter: blur(6px) saturate(1.25); -webkit-backdrop-filter: blur(6px) saturate(1.25); }
   ha-card.sfc {
     display: block;
     box-sizing: border-box;
@@ -3815,6 +3821,7 @@ const THEME_CSS = {
   // ---------------------------------------------------------------- Diorama
   diorama: `
     .sfc {
+      --sfc-glass: rgba(255, 255, 255, .55);
       --sfc-font: "Nunito", system-ui, sans-serif;
       --sfc-bg: #ffffff; --sfc-surface: #f5f8fb; --sfc-border: #e3eaf1; --sfc-text: #24364a; --sfc-muted: #6a7d92;
       --sfc-pv: #f5a400; --sfc-load: #f26b5b; --sfc-battery: #1fbf86; --sfc-grid: #5b8def;
@@ -3922,6 +3929,7 @@ const THEME_CSS = {
   // ------------------------------------------------------------------ Paper
   paper: `
     .sfc {
+      --sfc-glass: rgba(255, 255, 255, .55);
       --sfc-font: "Inter", system-ui, sans-serif; --sfc-heading-font: "Fraunces", Georgia, serif; --sfc-num-font: "Fraunces", Georgia, serif;
       --sfc-heading-weight: 600;
       --sfc-bg: #f6f1e7; --sfc-surface: transparent; --sfc-border: #ddd3c2; --sfc-text: #2a2722; --sfc-muted: #8a8173;
@@ -4921,7 +4929,7 @@ class SolarFlowCard extends HTMLElement {
 
       this.shadowRoot.innerHTML = `
         <style>${BASE_CSS}${THEME_CSS[theme]}</style>
-        <ha-card class="sfc theme-${theme} ${config.animation === false ? "no-anim" : ""}">${wide ? wideLayout(theme, THEME_RENDER[theme](model)) : THEME_RENDER[theme](model)}</ha-card>`;
+        <ha-card class="sfc theme-${theme} ${config.animation === false ? "no-anim" : ""} ${config.background === "glass" ? "glass" : ""}">${wide ? wideLayout(theme, THEME_RENDER[theme](model)) : THEME_RENDER[theme](model)}</ha-card>`;
       this._wire(model);
       if (wide) this._balanceWide();
     } catch (error) {
@@ -5010,7 +5018,7 @@ function editorStrings(hass, config) {
 }
 
 // Switches that are off unless set: [config key, label key, value when on].
-const EDITOR_OPTIN = [["wide", "editorWide"], ["show_insights", "editorInsights"], ["panels_average", "editorPanelsAverage", "per_string"]];
+const EDITOR_OPTIN = [["wide", "editorWide"], ["show_insights", "editorInsights"], ["panels_average", "editorPanelsAverage", "per_string"], ["background", "editorGlass", "glass"]];
 const EDITOR_SWITCHES = [
   ["show_solar", "editorSolar"],
   ["show_battery", "editorBattery"],

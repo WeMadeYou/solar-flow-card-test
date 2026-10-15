@@ -236,5 +236,6 @@
     "windy-variant": "Winderig, bewolkt",
     "exceptional": "Uitzonderlijk"
   },
-  "editorPanelsAverage": "Gemiddelde en zwakste paneel per string"
+  "editorPanelsAverage": "Gemiddelde en zwakste paneel per string",
+  "editorGlass": "Glazen achtergrond (de dashboardachtergrond schijnt door de kaart)"
 }
