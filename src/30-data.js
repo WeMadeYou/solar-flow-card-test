@@ -512,6 +512,80 @@ function systemData(hass, resolved, config) {
   return data.phases || data.inverter || data.battery.length || data.generator ? data : null;
 }
 
+// Several batteries (the `batteries:` option): the themes show them as one
+// combined battery, the Installation section lists each. Power is signed
+// like battery_power (+ discharging); `invert: true` flips one battery.
+function batteryBank(hass, config) {
+  if (!Array.isArray(config.batteries) || !config.batteries.length) return null;
+  const states = hass?.states || {};
+  const flip = config.invert_battery ? -1 : 1;
+  const items = config.batteries.map((item, i) => {
+    if (!item || typeof item !== "object") return null;
+    const entity = (id) => (typeof id === "string" && states[id] ? states[id] : null);
+    const watts = entity(item.power) ? wattsOf(entity(item.power)) : null;
+    return {
+      name: item.name ? String(item.name) : `#${i + 1}`,
+      soc: entity(item.soc) ? stateNumber(entity(item.soc)) : null,
+      power: isNum(watts) ? watts * flip * (item.invert ? -1 : 1) : null,
+      capacity: positiveNumber(item.capacity),
+      voltage: entity(item.voltage) ? stateNumber(entity(item.voltage)) : null,
+      temperature: entity(item.temperature) ? stateNumber(entity(item.temperature)) : null,
+      entityId: (entity(item.soc) && item.soc) || (entity(item.power) && item.power) || null,
+    };
+  }).filter((item) => item && (isNum(item.soc) || isNum(item.power)));
+  if (!items.length) return null;
+  const powered = items.filter((item) => isNum(item.power));
+  const charged = items.filter((item) => isNum(item.soc));
+  const weighted = charged.length && charged.every((item) => item.capacity);
+  const total = (list, read) => list.reduce((sum, item) => sum + read(item), 0);
+  return {
+    items,
+    power: powered.length ? total(powered, (item) => item.power) : null,
+    soc: !charged.length ? null : weighted
+      ? total(charged, (item) => item.soc * item.capacity) / total(charged, (item) => item.capacity)
+      : total(charged, (item) => item.soc) / charged.length,
+    capacity: items.every((item) => item.capacity) ? total(items, (item) => item.capacity) : null,
+  };
+}
+
+// History sources for each battery of the bank: bank_power_<i>, bank_soc_<i>.
+function bankHistorySources(hass, config) {
+  const states = hass?.states || {};
+  const sources = {};
+  if (config.show_battery === false || !Array.isArray(config.batteries)) return sources;
+  config.batteries.forEach((item, i) => {
+    if (!item || typeof item !== "object") return;
+    if (typeof item.power === "string" && states[item.power]) sources[`bank_power_${i}`] = { entityId: item.power, stateObj: states[item.power] };
+    if (typeof item.soc === "string" && states[item.soc]) sources[`bank_soc_${i}`] = { entityId: item.soc, stateObj: states[item.soc] };
+  });
+  return sources;
+}
+
+// Combined battery power and charge over time from the bank's history.
+function combineBankSeries(series, config) {
+  if (config.show_battery === false || !Array.isArray(config.batteries)) return {};
+  const flip = config.invert_battery ? -1 : 1;
+  const powers = [];
+  const socs = [];
+  config.batteries.forEach((item, i) => {
+    if (series[`bank_power_${i}`]) powers.push([series[`bank_power_${i}`], flip * (item?.invert ? -1 : 1)]);
+    if (series[`bank_soc_${i}`]) socs.push([series[`bank_soc_${i}`], positiveNumber(item?.capacity) || 1]);
+  });
+  const combine = (list, value, weight) => {
+    if (!list.length) return null;
+    return list[0][0].map((_, k) => {
+      const points = list.filter(([values]) => isNum(values[k]));
+      if (!points.length) return null;
+      const total = points.reduce((sum, entry) => sum + value(entry, k), 0);
+      return weight ? total / points.reduce((sum, [, w]) => sum + w, 0) : total;
+    });
+  };
+  return {
+    battery: combine(powers, ([values, sign], k) => values[k] * sign, false),
+    soc: combine(socs, ([values, w], k) => values[k] * w, true),
+  };
+}
+
 // Weather from a Home Assistant weather entity (the `weather_entity` option,
 // otherwise the first one found), for themes that draw the sky.
 const WEATHER_LOOK = {

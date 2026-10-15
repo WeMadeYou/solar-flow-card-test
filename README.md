@@ -141,6 +141,7 @@ co2_factor: 0.7
 |---|---|---|
 | `entities` | DeyeCloud, automatic | Sensors for other inverters, see below. |
 | `panels` | DeyeCloud optimizers | Per-panel energy sensors, see below. |
+| `batteries` | – | Several batteries (e.g. a hybrid inverter's BAT1 and BAT2), see below. |
 | `invert_battery` | `false` | Your signed battery power is positive while charging. |
 | `invert_grid` | `false` | Your signed grid power is positive while exporting. |
 
@@ -179,6 +180,28 @@ panels:                                        # optional, energy today per pane
     power: sensor.panel_2_power
     name: South 2
 ```
+
+### Several batteries
+
+Two or more batteries (on one inverter's two battery inputs, on two inverters, or AC-coupled) are listed under `batteries:`. The themes show them as one battery: the power is summed, the charge level is weighted by capacity (10 kWh at 80% and 5 kWh at 20% make 60%) and the forecast uses the total capacity. The Installation section shows each battery with its charge, power, voltage and temperature.
+
+```yaml
+type: custom:solar-flow-card
+batteries:
+  - name: LiFePO4 48 V
+    soc: sensor.bat1_soc                       # %
+    power: sensor.bat1_power                   # W or kW, + discharging / − charging
+    capacity: 10                               # kWh
+    voltage: sensor.bat1_voltage               # optional
+    temperature: sensor.bat1_temperature       # optional
+  - name: HV 200 V
+    soc: sensor.bat2_soc
+    power: sensor.bat2_power
+    capacity: 13.5
+    invert: true                               # this one is + while charging
+```
+
+`battery_capacity` defaults to the sum of the capacities; `invert_battery` flips all of them.
 
 The 3D, 7D, month and all-time totals and bars come from the long-term statistics of the daily energy sensors, so those need `state_class: total_increasing`. Statistics are compiled hourly; today's part always uses the live sensor.
 

@@ -1299,6 +1299,80 @@ function systemData(hass, resolved, config) {
   return data.phases || data.inverter || data.battery.length || data.generator ? data : null;
 }
 
+// Several batteries (the `batteries:` option): the themes show them as one
+// combined battery, the Installation section lists each. Power is signed
+// like battery_power (+ discharging); `invert: true` flips one battery.
+function batteryBank(hass, config) {
+  if (!Array.isArray(config.batteries) || !config.batteries.length) return null;
+  const states = hass?.states || {};
+  const flip = config.invert_battery ? -1 : 1;
+  const items = config.batteries.map((item, i) => {
+    if (!item || typeof item !== "object") return null;
+    const entity = (id) => (typeof id === "string" && states[id] ? states[id] : null);
+    const watts = entity(item.power) ? wattsOf(entity(item.power)) : null;
+    return {
+      name: item.name ? String(item.name) : `#${i + 1}`,
+      soc: entity(item.soc) ? stateNumber(entity(item.soc)) : null,
+      power: isNum(watts) ? watts * flip * (item.invert ? -1 : 1) : null,
+      capacity: positiveNumber(item.capacity),
+      voltage: entity(item.voltage) ? stateNumber(entity(item.voltage)) : null,
+      temperature: entity(item.temperature) ? stateNumber(entity(item.temperature)) : null,
+      entityId: (entity(item.soc) && item.soc) || (entity(item.power) && item.power) || null,
+    };
+  }).filter((item) => item && (isNum(item.soc) || isNum(item.power)));
+  if (!items.length) return null;
+  const powered = items.filter((item) => isNum(item.power));
+  const charged = items.filter((item) => isNum(item.soc));
+  const weighted = charged.length && charged.every((item) => item.capacity);
+  const total = (list, read) => list.reduce((sum, item) => sum + read(item), 0);
+  return {
+    items,
+    power: powered.length ? total(powered, (item) => item.power) : null,
+    soc: !charged.length ? null : weighted
+      ? total(charged, (item) => item.soc * item.capacity) / total(charged, (item) => item.capacity)
+      : total(charged, (item) => item.soc) / charged.length,
+    capacity: items.every((item) => item.capacity) ? total(items, (item) => item.capacity) : null,
+  };
+}
+
+// History sources for each battery of the bank: bank_power_<i>, bank_soc_<i>.
+function bankHistorySources(hass, config) {
+  const states = hass?.states || {};
+  const sources = {};
+  if (config.show_battery === false || !Array.isArray(config.batteries)) return sources;
+  config.batteries.forEach((item, i) => {
+    if (!item || typeof item !== "object") return;
+    if (typeof item.power === "string" && states[item.power]) sources[`bank_power_${i}`] = { entityId: item.power, stateObj: states[item.power] };
+    if (typeof item.soc === "string" && states[item.soc]) sources[`bank_soc_${i}`] = { entityId: item.soc, stateObj: states[item.soc] };
+  });
+  return sources;
+}
+
+// Combined battery power and charge over time from the bank's history.
+function combineBankSeries(series, config) {
+  if (config.show_battery === false || !Array.isArray(config.batteries)) return {};
+  const flip = config.invert_battery ? -1 : 1;
+  const powers = [];
+  const socs = [];
+  config.batteries.forEach((item, i) => {
+    if (series[`bank_power_${i}`]) powers.push([series[`bank_power_${i}`], flip * (item?.invert ? -1 : 1)]);
+    if (series[`bank_soc_${i}`]) socs.push([series[`bank_soc_${i}`], positiveNumber(item?.capacity) || 1]);
+  });
+  const combine = (list, value, weight) => {
+    if (!list.length) return null;
+    return list[0][0].map((_, k) => {
+      const points = list.filter(([values]) => isNum(values[k]));
+      if (!points.length) return null;
+      const total = points.reduce((sum, entry) => sum + value(entry, k), 0);
+      return weight ? total / points.reduce((sum, [, w]) => sum + w, 0) : total;
+    });
+  };
+  return {
+    battery: combine(powers, ([values, sign], k) => values[k] * sign, false),
+    soc: combine(socs, ([values, w], k) => values[k] * w, true),
+  };
+}
+
 // Weather from a Home Assistant weather entity (the `weather_entity` option,
 // otherwise the first one found), for themes that draw the sky.
 const WEATHER_LOOK = {
@@ -1543,10 +1617,33 @@ function panelsHtml(m) {
 // Sections every theme shows below its main view.
 // Installation: power per phase, inverter load, battery (BMS) and generator.
 function systemHtml(m) {
-  const data = m.system;
-  if (!m.config.showSystem || !data) return "";
+  const bank = m.config.showBattery && m.bank?.items.length > 1 ? m.bank : null;
+  if (!m.config.showSystem || !(m.system || bank)) return "";
+  const data = { phases: null, inverter: null, battery: [], batteryWarn: null, generator: null, ...m.system };
+  if (bank) {
+    // The bank's own readings replace the inverter's combined battery ones.
+    const temps = bank.items.map((b) => b.temperature).filter(isNum);
+    data.battery = [];
+    data.batteryWarn = temps.some((v) => v < BATTERY_COLD) ? "cold" : temps.some((v) => v > BATTERY_HOT) ? "hot" : data.batteryWarn;
+  }
   const { t, locale } = m;
   const attr = (entityId) => (entityId ? `data-entity="${escapeHtml(entityId)}"` : "");
+  // Each battery of a bank: charge with a bar, then power, voltage and temperature.
+  const batteries = bank ? `
+    <div class="sfc-phases sfc-bank" style="--n:${Math.min(bank.items.length, 3)}">
+      ${bank.items.map((b) => `
+        <button class="sfc-phase sfc-bat" ${attr(b.entityId)}>
+          <small>${escapeHtml(b.name)}</small>
+          <strong>${escapeHtml(formatPercent(b.soc, locale))}</strong>
+          <i style="--p:${isNum(b.soc) ? clamp(b.soc, 0, 100).toFixed(0) : 0}%"></i>
+          <span>${escapeHtml([
+            isNum(b.power) && (Math.abs(b.power) <= ACTIVE_W ? t.idle : `${b.power > 0 ? "−" : "+"}${formatPower(Math.abs(b.power), locale)}`),
+            isNum(b.voltage) && `${formatNumber(b.voltage, locale, 1)} V`,
+            isNum(b.temperature) && `${formatNumber(b.temperature, locale, 1)} °C`,
+            b.capacity && formatEnergy(b.capacity, locale),
+          ].filter(Boolean).join(" · "))}</span>
+        </button>`).join("")}
+    </div>` : "";
   const phases = data.phases ? `
     <div class="sfc-phases" style="--n:${data.phases.length}">
       ${data.phases.map((p) => `
@@ -1583,6 +1680,7 @@ function systemHtml(m) {
         <div><span class="sfc-kicker">${MINI_ICONS.phase}</span><h3>${escapeHtml(t.systemTitle)}</h3></div>
         ${isNum(data.phaseSpread) && data.phases ? `<span class="sfc-hint">${escapeHtml(fill(t.phaseSpread, { power: formatPower(data.phaseSpread, locale) }))}</span>` : ""}
       </div>
+      ${batteries}
       ${phases}
       ${meters ? `<div class="sfc-meters">${meters}</div>` : ""}
       ${warn}
@@ -1817,7 +1915,7 @@ function powerSpec(period) {
 
 async function loadPowerHistory(hass, spec, live) {
   const sources = Object.fromEntries(
-    ["solar", "load", "battery", "charge", "discharge", "gridImport", "gridExport", "grid", "soc"]
+    ["solar", "load", "battery", "charge", "discharge", "gridImport", "gridExport", "grid", "soc", ...Object.keys(live).filter((name) => name.startsWith("bank_"))]
       .map((name) => [name, live[name]?.entityId])
       .filter(([, id]) => id)
   );
@@ -2790,6 +2888,10 @@ const BASE_CSS = `
   .sfc-phase span, .sfc-meter span { color: var(--sfc-muted); font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .sfc-phase i, .sfc-meter i { display: block; height: 4px; margin: 3px 0 1px; border-radius: 999px;
     background: linear-gradient(90deg, var(--sfc-c, var(--sfc-load)) var(--p), var(--sfc-track) var(--p)); }
+  .sfc-bank { grid-template-columns: repeat(var(--n), minmax(0, 1fr)); }
+  .sfc-bank + .sfc-phases { margin-top: 8px; }
+  .sfc-bat { --sfc-c: var(--sfc-battery); }
+  .sfc-bat strong { color: var(--sfc-battery); }
   .sfc-meters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
   .sfc-meter.inverter, .sfc-meter.generator { grid-column: 1 / -1; }
   .sfc-meter b { font-size: 14px; font-family: var(--sfc-num-font, inherit); white-space: nowrap; }
@@ -3406,11 +3508,12 @@ class SolarFlowCard extends HTMLElement {
   _chartState(resolved, period, energy) {
     if (this._config.show_chart === false) return null;
     if (period === "today" || period === "3d") {
-      const ids = Object.values(resolved.live).filter(Boolean).map((entry) => entry.entityId);
+      const live = { ...resolved.live, ...bankHistorySources(this._hass, this._config) };
+      const ids = Object.values(live).filter(Boolean).map((entry) => entry.entityId);
       if (!ids.length || typeof this._hass.callWS !== "function") return null;
       const spec = powerSpec(period);
       const entry = this._fetch(`history|${period}|${ids.join(",")}|${spec.start.toDateString()}`, spec.ttl, () =>
-        loadPowerHistory(this._hass, spec, resolved.live)
+        loadPowerHistory(this._hass, spec, live)
       );
       return {
         loading: entry.loading,
@@ -3448,6 +3551,10 @@ class SolarFlowCard extends HTMLElement {
       grid = series.gridImport;
     }
     const noBattery = this._config.show_battery === false;
+    // Several batteries: their summed power and capacity-weighted charge.
+    const bankSeries = combineBankSeries(series, this._config);
+    if (bankSeries.battery) battery = bankSeries.battery;
+    const soc = bankSeries.soc || series.soc || null;
     // No consumption sensor: the same balance as liveValues(), point by point.
     let load = series.load || null;
     if (!load && (series.solar || grid)) {
@@ -3465,7 +3572,7 @@ class SolarFlowCard extends HTMLElement {
       load,
       battery: noBattery ? null : battery,
       grid,
-      soc: noBattery ? null : series.soc || null,
+      soc: noBattery ? null : soc,
     };
   }
 
@@ -3495,6 +3602,18 @@ class SolarFlowCard extends HTMLElement {
         live.solarActive = false;
       }
       const showBattery = config.show_battery !== false;
+      const bank = showBattery ? batteryBank(this._hass, config) : null;
+      if (bank) {
+        if (isNum(bank.power)) {
+          const p = bank.power;
+          Object.assign(live, { battery: p, charge: Math.max(0, -p), discharge: Math.max(0, p), chargeActive: -p > ACTIVE_W, dischargeActive: p > ACTIVE_W });
+          if (live.loadComputed) {
+            live.load = Math.max(0, live.solar + live.grid + p);
+            live.loadActive = live.load > ACTIVE_W;
+          }
+        }
+        if (isNum(bank.soc)) live.soc = bank.soc;
+      }
       if (!showBattery) {
         Object.assign(live, { charge: 0, discharge: 0, battery: 0, soc: null, chargeActive: false, dischargeActive: false });
       }
@@ -3502,7 +3621,7 @@ class SolarFlowCard extends HTMLElement {
       const today = todayEnergy(resolved);
       const energy = this._periodEnergy(resolved, period, today);
       const chart = this._chartState(resolved, period, energy);
-      const forecast = batteryForecast(live, config);
+      const forecast = batteryForecast(live, bank?.capacity && !positiveNumber(config.battery_capacity) ? { ...config, battery_capacity: bank.capacity } : config);
       const panels = showSolar ? panelData(this._hass, resolved, config) : null;
       const weather = theme === "diorama" ? weatherData(this._hass, config) : null;
       const inverter = this._inverterOpen ? inverterReadings(resolved) : null;
@@ -3515,11 +3634,12 @@ class SolarFlowCard extends HTMLElement {
         live: Object.fromEntries(Object.entries(resolved.live).map(([k, v]) => [k, v?.entityId || null])),
         energy: Object.fromEntries(Object.entries(resolved.energy).map(([k, v]) => [k, v?.entityId || null])),
       };
+      if (bank && !ids.live.soc && !ids.live.battery) ids.live.soc = bank.items[0].entityId;
       const now = new Date();
       const signature = JSON.stringify([
         language, config, period, [...this._hiddenSeries], live, status.state, today, energy.totals, Boolean(energy.loading),
         chart && [Boolean(chart.loading), Boolean(chart.error), chart.at], forecast.mode, Math.round(forecast.hours * 60 || 0),
-        panels?.panels.map((p) => [p.today, p.power]), system, weather && [weather.condition, weather.temperature], this._inverterOpen,
+        panels?.panels.map((p) => [p.today, p.power]), system, bank, weather && [weather.condition, weather.temperature], this._inverterOpen,
         inverter?.map((d) => [[...d.strings.values()].map((s) => Object.values(s).map((r) => r.value)), d.temperatures.map((r) => r.value), d.battery.map((r) => r.value), d.grid.map((r) => r.value)]),
         Math.floor(now.getTime() / 60000),
       ]);
@@ -3557,6 +3677,7 @@ class SolarFlowCard extends HTMLElement {
         panels,
         inverter,
         system,
+        bank,
         weather,
         inverterOpen: this._inverterOpen,
         hiddenSeries: this._hiddenSeries,

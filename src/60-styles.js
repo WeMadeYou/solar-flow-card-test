@@ -165,6 +165,10 @@ const BASE_CSS = `
   .sfc-phase span, .sfc-meter span { color: var(--sfc-muted); font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .sfc-phase i, .sfc-meter i { display: block; height: 4px; margin: 3px 0 1px; border-radius: 999px;
     background: linear-gradient(90deg, var(--sfc-c, var(--sfc-load)) var(--p), var(--sfc-track) var(--p)); }
+  .sfc-bank { grid-template-columns: repeat(var(--n), minmax(0, 1fr)); }
+  .sfc-bank + .sfc-phases { margin-top: 8px; }
+  .sfc-bat { --sfc-c: var(--sfc-battery); }
+  .sfc-bat strong { color: var(--sfc-battery); }
   .sfc-meters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
   .sfc-meter.inverter, .sfc-meter.generator { grid-column: 1 / -1; }
   .sfc-meter b { font-size: 14px; font-family: var(--sfc-num-font, inherit); white-space: nowrap; }

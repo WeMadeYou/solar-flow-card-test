@@ -109,11 +109,12 @@ class SolarFlowCard extends HTMLElement {
   _chartState(resolved, period, energy) {
     if (this._config.show_chart === false) return null;
     if (period === "today" || period === "3d") {
-      const ids = Object.values(resolved.live).filter(Boolean).map((entry) => entry.entityId);
+      const live = { ...resolved.live, ...bankHistorySources(this._hass, this._config) };
+      const ids = Object.values(live).filter(Boolean).map((entry) => entry.entityId);
       if (!ids.length || typeof this._hass.callWS !== "function") return null;
       const spec = powerSpec(period);
       const entry = this._fetch(`history|${period}|${ids.join(",")}|${spec.start.toDateString()}`, spec.ttl, () =>
-        loadPowerHistory(this._hass, spec, resolved.live)
+        loadPowerHistory(this._hass, spec, live)
       );
       return {
         loading: entry.loading,
@@ -151,6 +152,10 @@ class SolarFlowCard extends HTMLElement {
       grid = series.gridImport;
     }
     const noBattery = this._config.show_battery === false;
+    // Several batteries: their summed power and capacity-weighted charge.
+    const bankSeries = combineBankSeries(series, this._config);
+    if (bankSeries.battery) battery = bankSeries.battery;
+    const soc = bankSeries.soc || series.soc || null;
     // No consumption sensor: the same balance as liveValues(), point by point.
     let load = series.load || null;
     if (!load && (series.solar || grid)) {
@@ -168,7 +173,7 @@ class SolarFlowCard extends HTMLElement {
       load,
       battery: noBattery ? null : battery,
       grid,
-      soc: noBattery ? null : series.soc || null,
+      soc: noBattery ? null : soc,
     };
   }
 
@@ -198,6 +203,18 @@ class SolarFlowCard extends HTMLElement {
         live.solarActive = false;
       }
       const showBattery = config.show_battery !== false;
+      const bank = showBattery ? batteryBank(this._hass, config) : null;
+      if (bank) {
+        if (isNum(bank.power)) {
+          const p = bank.power;
+          Object.assign(live, { battery: p, charge: Math.max(0, -p), discharge: Math.max(0, p), chargeActive: -p > ACTIVE_W, dischargeActive: p > ACTIVE_W });
+          if (live.loadComputed) {
+            live.load = Math.max(0, live.solar + live.grid + p);
+            live.loadActive = live.load > ACTIVE_W;
+          }
+        }
+        if (isNum(bank.soc)) live.soc = bank.soc;
+      }
       if (!showBattery) {
         Object.assign(live, { charge: 0, discharge: 0, battery: 0, soc: null, chargeActive: false, dischargeActive: false });
       }
@@ -205,7 +222,7 @@ class SolarFlowCard extends HTMLElement {
       const today = todayEnergy(resolved);
       const energy = this._periodEnergy(resolved, period, today);
       const chart = this._chartState(resolved, period, energy);
-      const forecast = batteryForecast(live, config);
+      const forecast = batteryForecast(live, bank?.capacity && !positiveNumber(config.battery_capacity) ? { ...config, battery_capacity: bank.capacity } : config);
       const panels = showSolar ? panelData(this._hass, resolved, config) : null;
       const weather = theme === "diorama" ? weatherData(this._hass, config) : null;
       const inverter = this._inverterOpen ? inverterReadings(resolved) : null;
@@ -218,11 +235,12 @@ class SolarFlowCard extends HTMLElement {
         live: Object.fromEntries(Object.entries(resolved.live).map(([k, v]) => [k, v?.entityId || null])),
         energy: Object.fromEntries(Object.entries(resolved.energy).map(([k, v]) => [k, v?.entityId || null])),
       };
+      if (bank && !ids.live.soc && !ids.live.battery) ids.live.soc = bank.items[0].entityId;
       const now = new Date();
       const signature = JSON.stringify([
         language, config, period, [...this._hiddenSeries], live, status.state, today, energy.totals, Boolean(energy.loading),
         chart && [Boolean(chart.loading), Boolean(chart.error), chart.at], forecast.mode, Math.round(forecast.hours * 60 || 0),
-        panels?.panels.map((p) => [p.today, p.power]), system, weather && [weather.condition, weather.temperature], this._inverterOpen,
+        panels?.panels.map((p) => [p.today, p.power]), system, bank, weather && [weather.condition, weather.temperature], this._inverterOpen,
         inverter?.map((d) => [[...d.strings.values()].map((s) => Object.values(s).map((r) => r.value)), d.temperatures.map((r) => r.value), d.battery.map((r) => r.value), d.grid.map((r) => r.value)]),
         Math.floor(now.getTime() / 60000),
       ]);
@@ -260,6 +278,7 @@ class SolarFlowCard extends HTMLElement {
         panels,
         inverter,
         system,
+        bank,
         weather,
         inverterOpen: this._inverterOpen,
         hiddenSeries: this._hiddenSeries,
