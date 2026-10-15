@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.0-beta.2
+
+- Panels with optimizers are grouped by `panels_per_string` too: `[11, 7]` shows a string of 11 and one of 7 instead of two equal halves (#37). Without the option the panels are split by `panel_strings` as before.
+
 ## 1.3.0-beta
 
 A test release: install it from HACS with "Show beta versions" turned on.

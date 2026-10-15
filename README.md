@@ -117,7 +117,7 @@ co2_factor: 0.7
 | `pv_capacity` | – | PV size in kWp. Enables the yield per kWp. |
 | `pv_panels` | `8` | Modules drawn on the Diorama roof when no optimizers are found. |
 | `inverter_power_rating` | from the inverter | Inverter rated power in kW, for the inverter load. DeyeCloud reports it; set it for other inverters. |
-| `panels_per_string` | – | Panels on each string, a number or a list (`[8, 9]`). Without optimizers the Panels section then shows an estimate per panel from the inverter's string power, marked ≈ with a note. The editor shows one field per string the inverter reports, with its current voltage. |
+| `panels_per_string` | – | Panels on each string, a number or a list (`[11, 7]`). Groups the optimizer tiles into strings in that order, and without optimizers shows an estimate per panel from the inverter's string power, marked ≈ with a note. The editor shows one field per string the inverter reports, with its current voltage. |
 | `panel_strings` | `1` (`2` above 8 panels) | Number of strings the panels are split into, in order. |
 | `price_import` | – | Price per kWh bought from the grid. Enables the savings. |
 | `price_export` | `0` | Price per kWh sold to the grid. |

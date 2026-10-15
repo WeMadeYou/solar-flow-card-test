@@ -7,7 +7,7 @@
  * Built from src/*.js by scripts/build.mjs. Edit the sources, not this file.
  */
 (() => {
-const CARD_VERSION = "1.3.0-beta";
+const CARD_VERSION = "1.3.0-beta.2";
 const CARD_TAG = "solar-flow-card";
 const EDITOR_TAG = "solar-flow-card-editor";
 const THEMES = ["diorama", "aurora", "paper", "lcars", "atlantis", "expanse", "foundation", "galaxy", "gate"];
@@ -1287,10 +1287,26 @@ function panelData(hass, resolved, config) {
   }
   if (!(median >= 0.05 && weakest && weakest.today < median * 0.85)) weakest = null;
   if (weakest) weakest.weak = true;
-  const stringCount = clamp(Math.round(Number(config.panel_strings) || (panels.length > 8 ? 2 : 1)), 1, panels.length);
-  const perString = Math.ceil(panels.length / stringCount);
+  // Strings: the panels on each string (`panels_per_string`, a list or one
+  // number) in panel order, otherwise `panel_strings` equal parts.
+  const setting = config.panels_per_string;
+  const counts = (Array.isArray(setting) ? setting : []).map((n) => Math.round(Number(n)) || 0).filter((n) => n > 0);
+  const each = Array.isArray(setting) ? 0 : Math.round(Number(setting)) || 0;
   const strings = [];
-  for (let i = 0; i < panels.length; i += perString) strings.push(panels.slice(i, i + perString));
+  if (counts.length || each > 0) {
+    let i = 0;
+    for (const n of counts) {
+      if (i >= panels.length) break;
+      strings.push(panels.slice(i, i + n));
+      i += n;
+    }
+    const size = each > 0 ? each : panels.length;
+    for (; i < panels.length; i += size) strings.push(panels.slice(i, i + size));
+  } else {
+    const stringCount = clamp(Math.round(Number(config.panel_strings) || (panels.length > 8 ? 2 : 1)), 1, panels.length);
+    const perString = Math.ceil(panels.length / stringCount);
+    for (let i = 0; i < panels.length; i += perString) strings.push(panels.slice(i, i + perString));
+  }
   return {
     panels,
     strings,
