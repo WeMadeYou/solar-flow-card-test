@@ -45,7 +45,7 @@ function tabsHtml(m) {
 function tilesHtml(m) {
   return `
     <div class="sfc-tiles">
-      ${TILE_DEFS.filter(([name]) => m.config.showSolar || name !== "solar").map(([name, icon, label]) => {
+      ${TILE_DEFS.filter(([name]) => (m.config.showSolar || name !== "solar") && (m.config.showBattery || (name !== "charge" && name !== "discharge"))).map(([name, icon, label]) => {
         const entityId = m.ids.energy[name];
         return `
           <button class="sfc-tile ${name}" ${entityId ? `data-entity="${escapeHtml(entityId)}"` : "disabled"}>

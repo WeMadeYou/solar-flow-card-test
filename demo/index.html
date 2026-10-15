@@ -20,6 +20,7 @@
     <label>Scenario <select id="scenario"></select></label>
     <label>Language <select id="language"><option>pl</option><option>en</option></select></label>
     <label>PV <select id="solar"><option value="1">yes</option><option value="0">no (EMS)</option></select></label>
+    <label>Battery <select id="battery"><option value="1">yes</option><option value="0">no</option></select></label>
     <label>Width <select id="width"><option>520</option><option>420</option><option>360</option><option>700</option></select></label>
   </div>
   <div class="cards" id="cards"></div>
@@ -31,7 +32,7 @@
     const params = new URLSearchParams(location.search);
     const $ = (id) => document.getElementById(id);
     $("scenario").innerHTML = Object.entries(SCENARIOS).map(([key, s]) => `<option value="${key}">${s.label}</option>`).join("");
-    for (const id of ["theme", "scenario", "language", "width", "solar"]) {
+    for (const id of ["theme", "scenario", "language", "width", "solar", "battery"]) {
       if (params.get(id)) {
         // Lets ?language=de show a new translation before the demo lists it.
         if (![...$(id).options].some((o) => o.value === params.get(id))) $(id).add(new Option(params.get(id)));
@@ -59,6 +60,7 @@
           co2_factor: 0.7,
           period: params.get("period") || undefined,
           show_solar: $("solar").value === "0" ? false : undefined,
+          show_battery: $("battery").value === "0" ? false : undefined,
         });
         card.hass = hass;
         wrap.appendChild(card);

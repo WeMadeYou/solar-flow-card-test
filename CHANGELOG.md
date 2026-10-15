@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.3
+
+- New option `show_battery: false` (also in the editor: "The installation has a battery") for PV installations without a battery. Every theme drops the battery node and its flow; the battery forecast, charge/discharge tiles, battery and SOC chart series and the battery readings in the Installation section are hidden. Atlantis, Foundation and Far galaxy show today's self-sufficiency in the middle instead of the charge level; LCARS and Diorama show today's grid figures in place of the battery ones.
+- Demo: a "Battery" switch.
+
 ## 1.0.2
 
 - Grid power on DeyeCloud stations that only report the net grid power ("Grid Net Power", `wirePower`): the card showed the grid as 0 W / balanced while importing. The net power is now used (+ import, − export), also in the power chart.

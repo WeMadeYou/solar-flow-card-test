@@ -12,6 +12,7 @@ const EDITOR_NUMBERS = [
 ];
 const EDITOR_SWITCHES = [
   ["show_solar", "editorSolar"],
+  ["show_battery", "editorBattery"],
   ["show_energy", "editorShowEnergy"],
   ["show_chart", "editorShowChart"],
   ["show_forecast", "editorShowForecast"],

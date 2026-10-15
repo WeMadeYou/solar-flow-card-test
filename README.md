@@ -28,7 +28,7 @@ DeyeCloud sensors are found automatically; any other inverter works by pointing 
 - **Periods** 24H, 3D, 7D, month and all time for production, consumption, grid import/export and battery charge/discharge.
 - **Charts** following the selected period: power over the day (24H, 3D) and daily or monthly energy bars (7D, month, all). Hover or tap for values; click a legend entry to hide or show that series (remembered in the browser).
 - **Period summary**: self-sufficiency, self-consumption, savings, avoided CO₂ and yield per kWp (energy produced per kW of installed panels; compare days and installations). Each item can be switched off.
-- **Installations without PV** (battery with an EMS): `show_solar: false`.
+- **Installations without PV** (battery with an EMS): `show_solar: false`. **Without a battery** (PV only): `show_battery: false`.
 - **Battery forecast**: time until full while charging, time until the reserve while discharging.
 - **Installation**: power on each phase (L1/L2/L3) with grid power and voltage and the spread between phases, inverter load against its rated power, battery temperature, voltage and current with a warning when the battery is too cold or hot to charge fully, and the generator while it runs.
 - **Inverter details** (tap the inverter or the house): PV strings, temperatures, battery and grid readings.
@@ -101,6 +101,7 @@ co2_factor: 0.7
 | Option | Default | Description |
 |---|---|---|
 | `show_solar` | `true` | `false` for installations without PV (a battery with an EMS): every theme drops the sun, roof modules, PV production and the PV-based summary items. |
+| `show_battery` | `true` | `false` for installations without a battery: every theme drops the battery, its flows, forecast, tiles and chart series; themes that showed the charge level in the middle show today's self-sufficiency instead. |
 | `battery_capacity` | – | Usable battery capacity in kWh. Enables the battery forecast and the stored energy. |
 | `battery_min_soc` | `10` | Battery reserve in %. "Lasts until" counts down to this level. |
 | `pv_capacity` | – | PV size in kWp. Enables the yield per kWp. |
