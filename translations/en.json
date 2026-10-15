@@ -184,6 +184,8 @@
   "editorPvCapacity": "PV size (kWp)",
   "editorPvPanels": "Number of panels",
   "editorPanelsPerString": "Panels per string",
+  "editorStringPanels": "PV{n} · now {volts}",
+  "editorStringsHint": "Panels on each string. Without optimizers the card estimates each panel from its string's power; leave unused strings empty.",
   "editorInverterRating": "Inverter rated power (kW)",
   "editorPriceImport": "Import price per kWh",
   "editorPriceExport": "Export price per kWh",

@@ -184,6 +184,8 @@
   "editorPvCapacity": "Moc instalacji PV (kWp)",
   "editorPvPanels": "Liczba paneli",
   "editorPanelsPerString": "Paneli na string",
+  "editorStringPanels": "PV{n} · teraz {volts}",
+  "editorStringsHint": "Liczba paneli na każdym stringu. Bez optymalizatorów karta szacuje każdy panel z mocy jego stringu; nieużywane stringi zostaw puste.",
   "editorInverterRating": "Moc znamionowa falownika (kW)",
   "editorPriceImport": "Cena zakupu za kWh",
   "editorPriceExport": "Cena sprzedaży za kWh",

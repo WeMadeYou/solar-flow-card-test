@@ -184,6 +184,8 @@
   "editorPvCapacity": "PV-grootte (kWp)",
   "editorPvPanels": "Aantal panelen",
   "editorPanelsPerString": "Panelen per string",
+  "editorStringPanels": "PV{n} · nu {volts}",
+  "editorStringsHint": "Panelen per string. Zonder optimizers schat de kaart elk paneel uit het vermogen van zijn string; laat ongebruikte strings leeg.",
   "editorInverterRating": "Nominaal vermogen omvormer (kW)",
   "editorPriceImport": "Inkoopprijs per kWh",
   "editorPriceExport": "Verkoopprijs per kWh",
