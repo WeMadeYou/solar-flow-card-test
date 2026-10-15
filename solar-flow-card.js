@@ -7,7 +7,7 @@
  * Built from src/*.js by scripts/build.mjs. Edit the sources, not this file.
  */
 (() => {
-const CARD_VERSION = "1.4.0-beta.2";
+const CARD_VERSION = "1.4.0-beta.3";
 const CARD_TAG = "solar-flow-card";
 const EDITOR_TAG = "solar-flow-card-editor";
 const THEMES = ["diorama", "aurora", "paper", "lcars", "atlantis", "expanse", "foundation", "galaxy", "gate", "reactor"];
@@ -254,7 +254,8 @@ const TRANSLATIONS = {
       "windy": "Windy",
       "windy-variant": "Windy, cloudy",
       "exceptional": "Exceptional"
-    }
+    },
+    "editorPanelsAverage": "Panel average and weakest panel per string"
   },
   "nl": {
     "languageName": "Nederlands",
@@ -493,7 +494,8 @@ const TRANSLATIONS = {
       "windy": "Winderig",
       "windy-variant": "Winderig, bewolkt",
       "exceptional": "Uitzonderlijk"
-    }
+    },
+    "editorPanelsAverage": "Gemiddelde en zwakste paneel per string"
   },
   "pl": {
     "languageName": "Polski",
@@ -732,7 +734,8 @@ const TRANSLATIONS = {
       "windy": "Wietrznie",
       "windy-variant": "Wietrznie, pochmurno",
       "exceptional": "Wyjątkowe warunki"
-    }
+    },
+    "editorPanelsAverage": "Średnia i najsłabszy panel osobno dla każdego stringu"
   }
 };
 
@@ -1358,17 +1361,8 @@ function panelData(hass, resolved, config) {
       .map((panel, i) => ({ ...panel, name: `#${i + 1}` }));
   }
   if (!panels.length) return null;
-  const values = panels.map((p) => p.today).filter(isNum);
-  const sorted = [...values].sort((a, b) => a - b);
-  const median = sorted.length ? sorted[Math.floor((sorted.length - 1) / 2)] : 0;
-  const max = Math.max(0.01, ...values);
-  let weakest = null;
-  for (const panel of panels) {
-    panel.share = isNum(panel.today) ? clamp(panel.today / max, 0, 1) : 0;
-    if (isNum(panel.today) && (!weakest || panel.today < weakest.today)) weakest = panel;
-  }
-  if (!(median >= 0.05 && weakest && weakest.today < median * 0.85)) weakest = null;
-  if (weakest) weakest.weak = true;
+  const max = Math.max(0.01, ...panels.map((p) => p.today).filter(isNum));
+  for (const panel of panels) panel.share = isNum(panel.today) ? clamp(panel.today / max, 0, 1) : 0;
   // Strings: the panels on each string (`panels_per_string`, a list or one
   // number) in panel order, otherwise `panel_strings` equal parts.
   const setting = config.panels_per_string;
@@ -1389,13 +1383,32 @@ function panelData(hass, resolved, config) {
     const perString = Math.ceil(panels.length / stringCount);
     for (let i = 0; i < panels.length; i += perString) strings.push(panels.slice(i, i + perString));
   }
+  // Average, median and weakest panel: over all panels, or for each string
+  // on its own (`panels_average: per_string`, for strings facing different
+  // ways). A panel is weak below 85% of the median of its group.
+  const perString = config.panels_average === "per_string" && strings.length > 1;
+  const groups = (perString ? strings : [panels]).map(panelStats);
+  for (const group of groups) if (group.weakest) group.weakest.weak = true;
+  const weak = groups.map((g) => g.weakest && { ...g, ratio: g.weakest.today / g.median }).filter(Boolean)
+    .sort((a, b) => a.ratio - b.ratio)[0];
   return {
     panels,
     strings,
-    median,
-    weakest,
-    average: values.length ? values.reduce((s, v) => s + v, 0) / values.length : null,
+    stringStats: perString ? groups : null,
+    median: weak ? weak.median : groups[0].median,
+    weakest: weak ? weak.weakest : null,
+    average: panelStats(panels).average,
   };
+}
+
+function panelStats(list) {
+  const values = list.map((p) => p.today).filter(isNum);
+  const sorted = [...values].sort((a, b) => a - b);
+  const median = sorted.length ? sorted[Math.floor((sorted.length - 1) / 2)] : 0;
+  let weakest = null;
+  for (const panel of list) if (isNum(panel.today) && (!weakest || panel.today < weakest.today)) weakest = panel;
+  if (!(median >= 0.05 && weakest && weakest.today < median * 0.85)) weakest = null;
+  return { median, weakest, average: values.length ? values.reduce((s, v) => s + v, 0) / values.length : null };
 }
 
 // Installation details: power per phase, inverter load, battery (BMS) and
@@ -1882,9 +1895,10 @@ function panelsHtml(m) {
   const { t, locale } = m;
   // Estimated tiles: dashed, marked ≈, with a note on where the numbers come from.
   const est = data.estimate ? "≈ " : "";
-  const note = data.estimate ? t.panelsEstimateNote : data.weakest
-    ? fill(t.panelWeak, { name: data.weakest.name, pct: formatNumber((data.weakest.today / data.median) * 100, locale, 0) })
-    : t.panelsEven;
+  const statsNote = (stats) => `${fill(t.panelAvg, { kwh: formatEnergy(stats.average, locale) })} · ${stats.weakest
+    ? fill(t.panelWeak, { name: stats.weakest.name, pct: formatNumber((stats.weakest.today / stats.median) * 100, locale, 0) })
+    : t.panelsEven}`;
+  const note = data.estimate ? t.panelsEstimateNote : statsNote(data);
   return `
     <section class="sfc-section sfc-panels" id="sfc-panels">
       <div class="sfc-head">
@@ -1903,10 +1917,9 @@ function panelsHtml(m) {
                 <span>${escapeHtml(isNum(panel.power) ? `${est}${formatPower(panel.power, locale)}` : "kWh")}</span>
               </button>`).join("")}
           </div>
+          ${data.stringStats ? `<p class="sfc-panels-note ${data.stringStats[i].weakest ? "warn" : ""}">${escapeHtml(statsNote(data.stringStats[i]))}</p>` : ""}
         </div>`).join("")}
-      <p class="sfc-panels-note ${data.weakest ? "warn" : ""} ${data.estimate ? "estimate" : ""}">
-        ${data.estimate ? escapeHtml(note) : `${escapeHtml(fill(t.panelAvg, { kwh: formatEnergy(data.average, locale) }))} · ${escapeHtml(note)}`}
-      </p>
+      ${data.stringStats ? "" : `<p class="sfc-panels-note ${data.weakest ? "warn" : ""} ${data.estimate ? "estimate" : ""}">${escapeHtml(note)}</p>`}
     </section>`;
 }
 
@@ -4993,8 +5006,8 @@ function editorStrings(hass, config) {
   }
 }
 
-// Switches that are off unless set: [config key, label key].
-const EDITOR_OPTIN = [["wide", "editorWide"], ["show_insights", "editorInsights"]];
+// Switches that are off unless set: [config key, label key, value when on].
+const EDITOR_OPTIN = [["wide", "editorWide"], ["show_insights", "editorInsights"], ["panels_average", "editorPanelsAverage", "per_string"]];
 const EDITOR_SWITCHES = [
   ["show_solar", "editorSolar"],
   ["show_battery", "editorBattery"],
@@ -5117,9 +5130,9 @@ class SolarFlowCardEditor extends HTMLElement {
         ${EDITOR_SWITCHES.map(([key, label]) => `
           <div class="switch"><label for="${key}" style="color:inherit">${escapeHtml(t[label])}</label>
             <input id="${key}" type="checkbox" ${this._config[key] === false ? "" : "checked"} /></div>`).join("")}
-        ${EDITOR_OPTIN.map(([key, label]) => `
+        ${EDITOR_OPTIN.map(([key, label, value]) => `
           <div class="switch"><label for="${key}" style="color:inherit">${escapeHtml(t[label])}</label>
-            <input id="${key}" type="checkbox" ${this._config[key] === true ? "checked" : ""} /></div>`).join("")}
+            <input id="${key}" type="checkbox" ${this._config[key] === (value ?? true) ? "checked" : ""} /></div>`).join("")}
         <p class="hint">${escapeHtml(t.editorHint)}</p>
       </div>`;
     const root = this.shadowRoot;
@@ -5148,8 +5161,8 @@ class SolarFlowCardEditor extends HTMLElement {
       const number = Number.parseFloat(e.target.value);
       this._set(key, Number.isFinite(number) ? number : undefined);
     }));
-    EDITOR_OPTIN.forEach(([key]) => root.getElementById(key)?.addEventListener("change", (e) =>
-      this._set(key, e.target.checked ? true : undefined)
+    EDITOR_OPTIN.forEach(([key, , value]) => root.getElementById(key)?.addEventListener("change", (e) =>
+      this._set(key, e.target.checked ? value ?? true : undefined)
     ));
     EDITOR_SWITCHES.forEach(([key]) => root.getElementById(key)?.addEventListener("change", (e) =>
       this._set(key, e.target.checked ? undefined : false)

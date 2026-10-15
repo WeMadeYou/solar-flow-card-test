@@ -235,5 +235,6 @@
     "windy": "Windy",
     "windy-variant": "Windy, cloudy",
     "exceptional": "Exceptional"
-  }
+  },
+  "editorPanelsAverage": "Panel average and weakest panel per string"
 }

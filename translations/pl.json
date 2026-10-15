@@ -235,5 +235,6 @@
     "windy": "Wietrznie",
     "windy-variant": "Wietrznie, pochmurno",
     "exceptional": "Wyjątkowe warunki"
-  }
+  },
+  "editorPanelsAverage": "Średnia i najsłabszy panel osobno dla każdego stringu"
 }

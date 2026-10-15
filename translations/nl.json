@@ -235,5 +235,6 @@
     "windy": "Winderig",
     "windy-variant": "Winderig, bewolkt",
     "exceptional": "Uitzonderlijk"
-  }
+  },
+  "editorPanelsAverage": "Gemiddelde en zwakste paneel per string"
 }
