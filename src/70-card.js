@@ -207,6 +207,7 @@ class SolarFlowCard extends HTMLElement {
       const chart = this._chartState(resolved, period, energy);
       const forecast = batteryForecast(live, config);
       const panels = showSolar ? panelData(this._hass, resolved, config) : null;
+      const weather = theme === "diorama" ? weatherData(this._hass, config) : null;
       const inverter = this._inverterOpen ? inverterReadings(resolved) : null;
       const system = config.show_system !== false ? systemData(this._hass, resolved, config) : null;
       if (system && !showBattery) Object.assign(system, { battery: [], batteryWarn: null });
@@ -221,7 +222,7 @@ class SolarFlowCard extends HTMLElement {
       const signature = JSON.stringify([
         language, config, period, [...this._hiddenSeries], live, status.state, today, energy.totals, Boolean(energy.loading),
         chart && [Boolean(chart.loading), Boolean(chart.error), chart.at], forecast.mode, Math.round(forecast.hours * 60 || 0),
-        panels?.panels.map((p) => [p.today, p.power]), system, this._inverterOpen,
+        panels?.panels.map((p) => [p.today, p.power]), system, weather && [weather.condition, weather.temperature], this._inverterOpen,
         inverter?.map((d) => [[...d.strings.values()].map((s) => Object.values(s).map((r) => r.value)), d.temperatures.map((r) => r.value), d.battery.map((r) => r.value), d.grid.map((r) => r.value)]),
         Math.floor(now.getTime() / 60000),
       ]);
@@ -259,6 +260,7 @@ class SolarFlowCard extends HTMLElement {
         panels,
         inverter,
         system,
+        weather,
         inverterOpen: this._inverterOpen,
         hiddenSeries: this._hiddenSeries,
       };

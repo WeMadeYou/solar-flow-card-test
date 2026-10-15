@@ -512,6 +512,44 @@ function systemData(hass, resolved, config) {
   return data.phases || data.inverter || data.battery.length || data.generator ? data : null;
 }
 
+// Weather from a Home Assistant weather entity (the `weather_entity` option,
+// otherwise the first one found), for themes that draw the sky.
+const WEATHER_LOOK = {
+  "sunny": { clouds: 0 },
+  "clear-night": { clouds: 0 },
+  "partlycloudy": { clouds: 2 },
+  "cloudy": { clouds: 4, grey: 0.35, sun: false },
+  "fog": { clouds: 1, grey: 0.45, sun: false, fog: true },
+  "rainy": { clouds: 4, grey: 0.45, sun: false, rain: 1 },
+  "pouring": { clouds: 5, grey: 0.6, sun: false, rain: 2 },
+  "snowy": { clouds: 4, grey: 0.35, sun: false, snow: true },
+  "snowy-rainy": { clouds: 4, grey: 0.45, sun: false, rain: 1, snow: true },
+  "hail": { clouds: 5, grey: 0.55, sun: false, rain: 2 },
+  "lightning": { clouds: 5, grey: 0.6, sun: false, lightning: true },
+  "lightning-rainy": { clouds: 5, grey: 0.6, sun: false, rain: 2, lightning: true },
+  "windy": { clouds: 3, wind: true },
+  "windy-variant": { clouds: 4, grey: 0.25, wind: true },
+  "exceptional": { clouds: 3, grey: 0.3 },
+};
+
+function weatherData(hass, config) {
+  if (config.show_weather === false) return null;
+  const states = hass?.states || {};
+  const entityId = config.weather_entity && states[config.weather_entity]
+    ? config.weather_entity
+    : Object.keys(states).find((id) => id.startsWith("weather."));
+  const stateObj = entityId ? states[entityId] : null;
+  if (!stateObj || !(stateObj.state in WEATHER_LOOK)) return null;
+  const temperature = Number.parseFloat(stateObj.attributes?.temperature);
+  return {
+    entityId,
+    condition: stateObj.state,
+    temperature: Number.isFinite(temperature) ? temperature : null,
+    unit: stateObj.attributes?.temperature_unit || "°C",
+    ...WEATHER_LOOK[stateObj.state],
+  };
+}
+
 // Status used by themes that show one (LCARS): alert when offline or the
 // battery reached its reserve, caution when delayed, close to the reserve,
 // a panel is underperforming or the battery is too cold or hot.

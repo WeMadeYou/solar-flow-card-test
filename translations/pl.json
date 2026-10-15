@@ -165,6 +165,7 @@
   "editorShowForecast": "Pokaż prognozę magazynu",
   "editorShowSystem": "Instalacja (fazy, obciążenie falownika, bateria)",
   "editorShowPanels": "Pokaż panele (optymalizatory)",
+  "editorShowWeather": "Pogoda na niebie Dioramy",
   "editorSolar": "Instalacja ma panele PV",
   "editorBattery": "Instalacja ma magazyn energii",
   "editorShowSelfSufficiency": "Pokaż samowystarczalność",

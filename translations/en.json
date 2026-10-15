@@ -165,6 +165,7 @@
   "editorShowForecast": "Show battery forecast",
   "editorShowSystem": "Installation (phases, inverter load, battery)",
   "editorShowPanels": "Show panels (optimizers)",
+  "editorShowWeather": "Weather in the Diorama sky",
   "editorSolar": "The installation has PV panels",
   "editorBattery": "The installation has a battery",
   "editorShowSelfSufficiency": "Show self-sufficiency",

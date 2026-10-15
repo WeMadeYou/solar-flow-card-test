@@ -20,6 +20,7 @@
     <label>Scenario <select id="scenario"></select></label>
     <label>Language <select id="language"><option>pl</option><option>en</option><option>nl</option></select></label>
     <label>PV <select id="solar"><option value="1">yes</option><option value="0">no (EMS)</option></select></label>
+    <label>Weather <select id="weather"><option value="">scenario</option><option>sunny</option><option>partlycloudy</option><option>cloudy</option><option>rainy</option><option>pouring</option><option>lightning-rainy</option><option>snowy</option><option>fog</option><option>windy</option><option>clear-night</option></select></label>
     <label>Battery <select id="battery"><option value="1">yes</option><option value="0">no</option></select></label>
     <label>Width <select id="width"><option>520</option><option>420</option><option>360</option><option>700</option></select></label>
   </div>
@@ -51,7 +52,7 @@
     const params = new URLSearchParams(location.search);
     const $ = (id) => document.getElementById(id);
     $("scenario").innerHTML = Object.entries(SCENARIOS).map(([key, s]) => `<option value="${key}">${s.label}</option>`).join("");
-    for (const id of ["theme", "scenario", "language", "width", "solar", "battery"]) {
+    for (const id of ["theme", "scenario", "language", "width", "solar", "battery", "weather"]) {
       if (params.get(id)) {
         // Lets ?language=de show a new translation before the demo lists it.
         if (![...$(id).options].some((o) => o.value === params.get(id))) $(id).add(new Option(params.get(id)));
@@ -63,7 +64,7 @@
     function render() {
       const themes = $("theme").value === "all" ? ["diorama", "aurora", "paper", "lcars", "atlantis", "expanse", "foundation", "galaxy"] : [$("theme").value];
       window.setDemoHour(SCENARIOS[$("scenario").value].hour);
-      const hass = createHass({ scenario: $("scenario").value, language: $("language").value });
+      const hass = createHass({ scenario: $("scenario").value, language: $("language").value, weather: $("weather").value || undefined });
       const cards = $("cards");
       cards.style.setProperty("--w", `${$("width").value}px`);
       cards.innerHTML = "";

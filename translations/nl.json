@@ -165,6 +165,7 @@
   "editorShowForecast": "Toon batterijvoorspelling",
   "editorShowSystem": "Installatie (fasen, omvormerbelasting, batterij)",
   "editorShowPanels": "Toon panelen (optimizers)",
+  "editorShowWeather": "Weer in de Diorama-lucht",
   "editorSolar": "De installatie heeft zonnepanelen",
   "editorBattery": "De installatie heeft een batterij",
   "editorShowSelfSufficiency": "Toon zelfvoorziening",

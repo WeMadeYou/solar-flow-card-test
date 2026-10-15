@@ -18,6 +18,7 @@ const EDITOR_SWITCHES = [
   ["show_forecast", "editorShowForecast"],
   ["show_system", "editorShowSystem"],
   ["show_panels", "editorShowPanels"],
+  ["show_weather", "editorShowWeather"],
   ["show_self_sufficiency", "editorShowSelfSufficiency"],
   ["show_self_use", "editorShowSelfUse"],
   ["show_savings", "editorShowSavings"],
