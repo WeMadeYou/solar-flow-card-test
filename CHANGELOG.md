@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.0-beta.4
+
+- Reactor: the battery and solar gauges end above the battery and grid flow lines instead of crossing them.
+
 ## 1.4.0-beta.3
 
 - `panels_average: per_string` (also in the editor): the panel average and the weakest panel are worked out for each string on its own, with a summary under each string, so a string facing another way does not make the other look weak. The default (`all`) stays as before.
