@@ -1837,10 +1837,24 @@ function batteryWhen(m) {
   return { label: m.t.battery, value: formatPercent(f.soc, m.locale) };
 }
 
-// Share of today's consumption not taken from the grid (0–100), or null.
-function selfSufficiencyToday(m) {
-  const { load, gridImport } = m.today;
-  return isNum(load) && isNum(gridImport) && load > 0.05 ? clamp(((load - gridImport) / load) * 100, 0, 100) : null;
+// The inverter at the centre of a theme: its measured output when known,
+// otherwise what it delivers from the panels and the battery.
+function inverterHub(m) {
+  const inverter = m.system?.inverter;
+  if (inverter) return { power: Math.abs(inverter.power), share: inverter.share };
+  const { live } = m;
+  return { power: Math.max(0, live.solar + live.discharge - live.charge), share: null };
+}
+
+// Battery label for a theme's battery node: "Battery 37%".
+function batteryLabel(m) {
+  return isNum(m.live.soc) ? `${m.t.battery} ${formatPercent(m.live.soc, m.locale)}` : m.t.battery;
+}
+
+// When the battery will be full or reach the reserve, with an arrow.
+function batteryWhenShort(m) {
+  const f = m.forecast;
+  return f.at ? `${f.mode === "charging" ? "▲" : "▼"} ${formatWhen(f.at, m.locale)}` : "";
 }
 
 function clockText(m) {
@@ -2260,11 +2274,9 @@ function renderLcars(m) {
 
 function renderAtlantis(m) {
   const { t, locale, live } = m;
-  const own = selfSufficiencyToday(m);
-  // Without a battery the core shows today's self-sufficiency instead.
-  const soc = m.config.showBattery ? (isNum(live.soc) ? clamp(live.soc, 0, 100) : 0) : own ?? 0;
-  const arc = ((soc / 100) * 603.2).toFixed(1);
-  const f = m.forecast;
+  // The core is the inverter; its ring shows the load against rated power.
+  const hub = inverterHub(m);
+  const arc = (((hub.share ?? 0) / 100) * 603.2).toFixed(1);
   const batteryFlow = live.dischargeActive ? live.discharge : live.charge;
   const gridValue = live.importActive ? live.gridImport : live.exportActive ? live.gridExport : Math.abs(live.grid);
   const ticks = Array.from({ length: 72 }, (_, i) => {
@@ -2305,14 +2317,11 @@ function renderAtlantis(m) {
         </g>
       </svg>
       <button class="atl-center" data-action="inverter" title="${escapeHtml(t.inverterDetails)}">
-        ${m.config.showBattery ? `
-        <small>${escapeHtml(t.battery)}</small><b>${escapeHtml(formatPercent(live.soc, locale))}</b>
-        <small>${escapeHtml(isNum(f.stored) ? formatEnergy(f.stored, locale) : batteryStatus(m))}</small>` : `
-        <small>${escapeHtml(t.autarkyToday)}</small><b>${escapeHtml(isNum(own) ? formatPercent(own, locale) : "—")}</b>`}
-        ${m.config.showBattery && f.at ? `<small class="atl-when" title="${escapeHtml(f.mode === "charging" ? t.chipFull : t.chipLasts)}">${f.mode === "charging" ? "▲" : "▼"} ${escapeHtml(formatWhen(f.at, locale))}</small>` : ""}
+        <small>${escapeHtml(t.inverter)}</small><b>${escapeHtml(formatPower(hub.power, locale))}</b>
+        ${isNum(hub.share) ? `<small>${escapeHtml(formatPercent(hub.share, locale))}</small>` : ""}
       </button>
       ${m.config.showSolar ? label("left:50%;top:3%", "", formatPower(live.solar, locale), t.sun, m.ids.live.solar, "pv") : ""}
-      ${!m.config.showBattery ? "" : label("left:10%;top:50%", live.chargeActive ? t.absorbing : live.dischargeActive ? t.supplying : t.idle, formatPower(batteryFlow, locale), "", batteryEntityId(m))}
+      ${!m.config.showBattery ? "" : label("left:10%;top:50%", batteryLabel(m), formatPower(batteryFlow, locale), [live.chargeActive ? t.absorbing : live.dischargeActive ? t.supplying : t.idle, batteryWhenShort(m)].filter(Boolean).join(" "), batteryEntityId(m))}
       ${label("left:90%;top:50%", t.grid, formatPower(gridValue, locale), gridStatus(m), gridEntityId(m), "grid")}
       ${label("left:50%;top:97%", "", formatPower(live.load, locale), t.home, m.ids.live.load, "load")}
     </div>
@@ -2405,7 +2414,6 @@ function renderFoundation(m) {
     return `<circle cx="${(Math.cos(a) * r).toFixed(1)}" cy="${(Math.sin(a) * r * 0.62).toFixed(1)}" r="${i % 7 ? 0.8 : 1.6}"/>`;
   }).join("");
   const f = m.forecast;
-  const own = selfSufficiencyToday(m);
   const forecast = !m.config.showBattery
     ? liveSentence(m) || escapeHtml(t.galaxyQuiet)
     : f.mode === "discharging"
@@ -2442,12 +2450,10 @@ function renderFoundation(m) {
         </g>
       </svg>
       <button class="fnd-center" style="${pos(240, 170)}" data-action="inverter" title="${escapeHtml(t.inverterDetails)}">
-        ${m.config.showBattery
-          ? `<b>${escapeHtml(formatPercent(live.soc, locale))}</b><small>${escapeHtml(t.battery)}</small>`
-          : `<b>${escapeHtml(isNum(own) ? formatPercent(own, locale) : "—")}</b><small>${escapeHtml(t.autarkyToday)}</small>`}
+        <b>${escapeHtml(formatPower(inverterHub(m).power, locale))}</b><small>${escapeHtml(t.inverter)}</small>
       </button>
       ${m.config.showSolar ? node("pv", 240, 22, t.sun, formatPower(live.solar, locale), "", entityAttr(m.ids.live.solar)) : ""}
-      ${!m.config.showBattery ? "" : node("battery", 60, 170, t.battery, formatPower(batteryFlow, locale), batteryStatus(m), entityAttr(batteryEntityId(m)))}
+      ${!m.config.showBattery ? "" : node("battery", 60, 170, batteryLabel(m), formatPower(batteryFlow, locale), batteryStatus(m), entityAttr(batteryEntityId(m)))}
       ${node("grid", 420, 170, t.grid, formatPower(gridValue, locale), gridStatus(m), entityAttr(gridEntityId(m)))}
       ${node("load", 240, 318, t.home, formatPower(live.load, locale), "", entityAttr(m.ids.live.load))}
     </div>
@@ -2472,7 +2478,6 @@ function renderGalaxy(m) {
     </button>`;
   const crawl = liveSentence(m) || escapeHtml(t.galaxyQuiet);
   const soc = isNum(live.soc) ? clamp(live.soc, 0, 100) : 0;
-  const own = selfSufficiencyToday(m);
   const lock = m.config.showBattery && soc <= (m.forecast.minSoc ?? 10) + 1 ? "low" : "";
   return `
     <div class="gal-stars"></div>
@@ -2495,12 +2500,12 @@ function renderGalaxy(m) {
           ${flowPath("M466 288 L290 185", live.loadActive, true, "load")}
         </g>
       </svg>
-      <button class="gal-center ${lock}" style="${pos(240, 150)}" data-action="inverter" title="${escapeHtml(t.inverterDetails)}">
-        <b>${escapeHtml(m.config.showBattery ? formatPercent(live.soc, locale) : isNum(own) ? formatPercent(own, locale) : "—")}</b>
-        ${m.config.showBattery ? "" : `<small>${escapeHtml(t.autarkyToday)}</small>`}
+      <button class="gal-center" style="${pos(240, 150)}" data-action="inverter" title="${escapeHtml(t.inverterDetails)}">
+        <b>${escapeHtml(formatPower(inverterHub(m).power, locale))}</b>
+        <small>${escapeHtml(t.inverter)}</small>
       </button>
       ${m.config.showSolar ? readout("pv", 62, 118, t.solar, formatPower(live.solar, locale), "", entityAttr(m.ids.live.solar)) : ""}
-      ${!m.config.showBattery ? "" : readout("battery", 62, 182, t.battery, formatPower(batteryFlow, locale), batteryStatus(m), entityAttr(batteryEntityId(m)))}
+      ${!m.config.showBattery ? "" : readout(`battery ${lock}`, 62, 182, batteryLabel(m), formatPower(batteryFlow, locale), batteryStatus(m), entityAttr(batteryEntityId(m)))}
       ${readout("grid", 418, 118, t.grid, formatPower(gridValue, locale), gridStatus(m), entityAttr(gridEntityId(m)))}
       ${readout("load", 418, 182, t.home, formatPower(live.load, locale), "", entityAttr(m.ids.live.load))}
       <div class="gal-hud"><span>${escapeHtml(clockText(m))}</span><span class="${m.status.state}">${escapeHtml(m.t[m.status.state])}</span></div>
@@ -2988,7 +2993,7 @@ const THEME_CSS = {
     @keyframes atl-pulse { 50% { opacity: .45; transform: scale(1.08); } }
     .atl-center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 1px;
       padding: 0; border: 0; background: none; text-transform: uppercase; }
-    .atl-center b { font-weight: 200; font-size: clamp(26px, 7.5cqw, 40px); color: #e8fdff; text-shadow: 0 0 12px rgba(0,220,255,.7); line-height: 1; }
+    .atl-center b { font-weight: 200; font-size: clamp(18px, 5.2cqw, 28px); white-space: nowrap; text-transform: none; color: #e8fdff; text-shadow: 0 0 12px rgba(0,220,255,.7); line-height: 1; }
     .atl-center small { font-size: clamp(8px, 1.9cqw, 10px); letter-spacing: .24em; color: var(--sfc-muted); }
     .atl-center .atl-when { color: #9ff6ff; letter-spacing: .1em; }
     .atl-center { max-width: 24%; text-align: center; }
@@ -3108,7 +3113,7 @@ const THEME_CSS = {
     @keyframes fnd-breathe { 50% { opacity: .7; transform: scale(.94); } }
     .fnd-ring { stroke: rgba(243,207,122,.6); stroke-width: .8; stroke-dasharray: 1 3; }
     .fnd-center { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; padding: 0; border: 0; background: none; }
-    .fnd-center b { font: 400 clamp(22px, 6.4cqw, 32px)/1 var(--sfc-heading-font); color: #1a1206; text-shadow: 0 0 10px rgba(255,244,214,.9); }
+    .fnd-center b { font: 400 clamp(15px, 4.2cqw, 21px)/1 var(--sfc-heading-font); white-space: nowrap; color: #1a1206; text-shadow: 0 0 10px rgba(255,244,214,.9); }
     .fnd-center small { color: #3b2a0e; font: 600 10px var(--sfc-heading-font); letter-spacing: .2em; text-transform: uppercase; }
     .fnd-node { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; padding: 2px 6px; border: 0; background: none; white-space: nowrap; }
     .fnd-node small { color: var(--sfc-muted); font: 400 10px var(--sfc-heading-font); letter-spacing: .24em; text-transform: uppercase; }
@@ -3160,10 +3165,10 @@ const THEME_CSS = {
     .gal-cross { stroke: #ff4b3a; stroke-width: 1.5; }
     @keyframes gal-blink { 50% { opacity: .3; } }
     .gal-center { position: absolute; transform: translate(-50%, -50%); padding: 0; border: 0; background: none; }
-    .gal-center b { color: #ffe81f; font: 700 clamp(18px, 5cqw, 26px) var(--sfc-heading-font); text-shadow: 0 0 8px rgba(255,232,31,.6); }
+    .gal-center b { color: #ffe81f; font: 700 clamp(13px, 3.6cqw, 18px) var(--sfc-heading-font); white-space: nowrap; text-shadow: 0 0 8px rgba(255,232,31,.6); }
     .gal-center { display: grid; justify-items: center; }
     .gal-center small { color: #ffe81f; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; }
-    .gal-center.low b { color: #ff4b3a; text-shadow: 0 0 8px rgba(255,75,58,.6); }
+    .gal-readout.low small, .gal-readout.low b { color: #ff4b3a; }
     .gal-readout { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 0; padding: 3px 6px; border: 0;
       background: rgba(2,2,3,.75); white-space: nowrap; --c: var(--sfc-text); }
     .gal-readout.pv { --c: var(--sfc-pv); } .gal-readout.battery { --c: var(--sfc-battery); } .gal-readout.grid { --c: var(--sfc-grid); } .gal-readout.load { --c: var(--sfc-load); }

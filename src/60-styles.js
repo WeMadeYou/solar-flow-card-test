@@ -467,7 +467,7 @@ const THEME_CSS = {
     @keyframes atl-pulse { 50% { opacity: .45; transform: scale(1.08); } }
     .atl-center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 1px;
       padding: 0; border: 0; background: none; text-transform: uppercase; }
-    .atl-center b { font-weight: 200; font-size: clamp(26px, 7.5cqw, 40px); color: #e8fdff; text-shadow: 0 0 12px rgba(0,220,255,.7); line-height: 1; }
+    .atl-center b { font-weight: 200; font-size: clamp(18px, 5.2cqw, 28px); white-space: nowrap; text-transform: none; color: #e8fdff; text-shadow: 0 0 12px rgba(0,220,255,.7); line-height: 1; }
     .atl-center small { font-size: clamp(8px, 1.9cqw, 10px); letter-spacing: .24em; color: var(--sfc-muted); }
     .atl-center .atl-when { color: #9ff6ff; letter-spacing: .1em; }
     .atl-center { max-width: 24%; text-align: center; }
@@ -587,7 +587,7 @@ const THEME_CSS = {
     @keyframes fnd-breathe { 50% { opacity: .7; transform: scale(.94); } }
     .fnd-ring { stroke: rgba(243,207,122,.6); stroke-width: .8; stroke-dasharray: 1 3; }
     .fnd-center { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; padding: 0; border: 0; background: none; }
-    .fnd-center b { font: 400 clamp(22px, 6.4cqw, 32px)/1 var(--sfc-heading-font); color: #1a1206; text-shadow: 0 0 10px rgba(255,244,214,.9); }
+    .fnd-center b { font: 400 clamp(15px, 4.2cqw, 21px)/1 var(--sfc-heading-font); white-space: nowrap; color: #1a1206; text-shadow: 0 0 10px rgba(255,244,214,.9); }
     .fnd-center small { color: #3b2a0e; font: 600 10px var(--sfc-heading-font); letter-spacing: .2em; text-transform: uppercase; }
     .fnd-node { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; padding: 2px 6px; border: 0; background: none; white-space: nowrap; }
     .fnd-node small { color: var(--sfc-muted); font: 400 10px var(--sfc-heading-font); letter-spacing: .24em; text-transform: uppercase; }
@@ -639,10 +639,10 @@ const THEME_CSS = {
     .gal-cross { stroke: #ff4b3a; stroke-width: 1.5; }
     @keyframes gal-blink { 50% { opacity: .3; } }
     .gal-center { position: absolute; transform: translate(-50%, -50%); padding: 0; border: 0; background: none; }
-    .gal-center b { color: #ffe81f; font: 700 clamp(18px, 5cqw, 26px) var(--sfc-heading-font); text-shadow: 0 0 8px rgba(255,232,31,.6); }
+    .gal-center b { color: #ffe81f; font: 700 clamp(13px, 3.6cqw, 18px) var(--sfc-heading-font); white-space: nowrap; text-shadow: 0 0 8px rgba(255,232,31,.6); }
     .gal-center { display: grid; justify-items: center; }
     .gal-center small { color: #ffe81f; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; }
-    .gal-center.low b { color: #ff4b3a; text-shadow: 0 0 8px rgba(255,75,58,.6); }
+    .gal-readout.low small, .gal-readout.low b { color: #ff4b3a; }
     .gal-readout { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 0; padding: 3px 6px; border: 0;
       background: rgba(2,2,3,.75); white-space: nowrap; --c: var(--sfc-text); }
     .gal-readout.pv { --c: var(--sfc-pv); } .gal-readout.battery { --c: var(--sfc-battery); } .gal-readout.grid { --c: var(--sfc-grid); } .gal-readout.load { --c: var(--sfc-load); }

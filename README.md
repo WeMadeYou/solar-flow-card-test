@@ -45,9 +45,9 @@ History comes from Home Assistant itself (recorder history and long-term statist
 | `aurora` | Neon rings and glowing flows on a night sky. |
 | `paper` | An editorial page: a sentence that explains the moment and a Sankey diagram of where the power goes. |
 | `lcars` | A starship operations panel with segment bars, a battery cell gauge and a status line. |
-| `atlantis` | A holographic power core with the battery in a crystal and hexagonal panels. |
+| `atlantis` | A holographic power core: the inverter in a crystal with its load on the ring, hexagonal panels. |
 | `expanse` | A ship's power distribution display: bracketed readouts, orbital trajectories and a segmented charge bar with the reserve in red. |
-| `foundation` | A radiant of slowly turning golden orbits around the battery, with a forecast written below. |
+| `foundation` | A radiant of slowly turning golden orbits around the inverter, with a battery forecast written below. |
 | `galaxy` | A targeting computer flying down a trench, with the moment told as an opening crawl; the target turns red at the battery reserve. |
 
 ## Installation
