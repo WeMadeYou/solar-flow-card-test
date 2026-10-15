@@ -7,7 +7,7 @@
  * Built from src/*.js by scripts/build.mjs. Edit the sources, not this file.
  */
 (() => {
-const CARD_VERSION = "1.3.0-beta.3";
+const CARD_VERSION = "1.3.0-beta.4";
 const CARD_TAG = "solar-flow-card";
 const EDITOR_TAG = "solar-flow-card-editor";
 const THEMES = ["diorama", "aurora", "paper", "lcars", "atlantis", "expanse", "foundation", "galaxy", "gate"];
@@ -4168,14 +4168,18 @@ function wideLayout(theme, html) {
 
 // Wide layout: deal the sections, in order, to the shorter of the two
 // columns (under the main view or under the energy section), so both end at
-// about the same height.
+// about the same height. Returns false while the card is not laid out yet
+// (Home Assistant's ha-card renders its slot a moment later).
 function balanceWide(root) {
   const wide = root.querySelector(".sfc-wide");
   const main = wide?.querySelector(":scope > .sfc-wide-main");
   const fill = main?.querySelector(":scope > .sfc-wide-fill");
   const energy = wide?.querySelector(":scope > .sfc-sections > .sfc-energy");
   const rest = wide?.querySelector(".sfc-wide-rest");
-  if (!fill || !energy || !rest || getComputedStyle(wide).display !== "grid") return;
+  if (!fill || !energy || !rest || wide.dataset.balanced) return true;
+  if (!main.offsetHeight || !energy.offsetHeight) return false;
+  if (getComputedStyle(wide).display !== "grid") return true;
+  wide.dataset.balanced = "1";
   const bottom = (el) => el.getBoundingClientRect().bottom;
   const sections = [...rest.children];
   sections.forEach((section) => section.remove());
@@ -4183,6 +4187,7 @@ function balanceWide(root) {
     const right = rest.lastElementChild ? bottom(rest.lastElementChild) : bottom(energy);
     (bottom(main) < right ? fill : rest).append(section);
   }
+  return true;
 }
 
 class SolarFlowCard extends HTMLElement {
@@ -4497,12 +4502,20 @@ class SolarFlowCard extends HTMLElement {
         <style>${BASE_CSS}${THEME_CSS[theme]}</style>
         <ha-card class="sfc theme-${theme} ${config.animation === false ? "no-anim" : ""}">${wide ? wideLayout(theme, THEME_RENDER[theme](model)) : THEME_RENDER[theme](model)}</ha-card>`;
       this._wire(model);
-      if (wide) balanceWide(this.shadowRoot);
+      if (wide) this._balanceWide();
     } catch (error) {
       console.error("Solar Flow Card render error", error);
       this.shadowRoot.innerHTML = `<style>${BASE_CSS}${THEME_CSS.diorama}</style>
         <ha-card class="sfc"><div class="sfc-empty"><h2>Solar Flow Card</h2><p>${escapeHtml(error?.message || error)}</p></div></ha-card>`;
     }
+  }
+
+  // Balance once the card has a layout; retried for a few frames while
+  // ha-card is still rendering.
+  _balanceWide(tries = 0) {
+    cancelAnimationFrame(this._balanceFrame);
+    if (balanceWide(this.shadowRoot) || tries > 20) return;
+    this._balanceFrame = requestAnimationFrame(() => this._balanceWide(tries + 1));
   }
 
   _wire(model) {
