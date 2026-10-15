@@ -102,7 +102,7 @@ class SolarFlowCard extends HTMLElement {
       loadStatistics(this._hass, spec, resolved.energy)
     );
     if (!entry.data) return { totals: {}, loading: entry.loading, error: entry.error, spec };
-    const buckets = withLiveToday(entry.data.buckets, spec, today);
+    const buckets = withLiveToday(entry.data.buckets, spec, today).map(deriveLoadEnergy);
     return { totals: sumBuckets(buckets), buckets, spec, loading: entry.loading, error: entry.error };
   }
 
@@ -151,11 +151,21 @@ class SolarFlowCard extends HTMLElement {
       grid = series.gridImport;
     }
     const noBattery = this._config.show_battery === false;
+    // No consumption sensor: the same balance as liveValues(), point by point.
+    let load = series.load || null;
+    if (!load && (series.solar || grid)) {
+      const length = (series.solar || grid).length;
+      load = Array.from({ length }, (_, i) => {
+        const [s, g, b] = [series.solar?.[i], grid?.[i], battery?.[i]];
+        if (!isNum(s) && !isNum(g) && !isNum(b)) return null;
+        return Math.max(0, Math.max(0, isNum(s) ? s : 0) + (isNum(g) ? g : 0) + (isNum(b) ? b : 0));
+      });
+    }
     return {
       kind: "power",
       spec,
       solar: this._config.show_solar === false ? null : series.solar || null,
-      load: series.load || null,
+      load,
       battery: noBattery ? null : battery,
       grid,
       soc: noBattery ? null : series.soc || null,
