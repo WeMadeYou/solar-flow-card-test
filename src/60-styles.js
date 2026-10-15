@@ -358,6 +358,7 @@ const THEME_CSS = {
       text-transform: uppercase; padding: 12px;
     }
     .sfc button { text-transform: uppercase; }
+    .lc-soc.no-battery { grid-template-columns: 1fr; }
     .lc-frame { display: grid; grid-template-columns: 22% 1fr; grid-template-rows: auto 1fr auto; column-gap: 6px; }
     .lc-elbow { position: relative; background: var(--orange); }
     .lc-elbow.top { grid-column: 1; grid-row: 1; height: 64px; border-radius: 44px 0 0 0; }
@@ -639,6 +640,8 @@ const THEME_CSS = {
     @keyframes gal-blink { 50% { opacity: .3; } }
     .gal-center { position: absolute; transform: translate(-50%, -50%); padding: 0; border: 0; background: none; }
     .gal-center b { color: #ffe81f; font: 700 clamp(18px, 5cqw, 26px) var(--sfc-heading-font); text-shadow: 0 0 8px rgba(255,232,31,.6); }
+    .gal-center { display: grid; justify-items: center; }
+    .gal-center small { color: #ffe81f; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; }
     .gal-center.low b { color: #ff4b3a; text-shadow: 0 0 8px rgba(255,75,58,.6); }
     .gal-readout { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 0; padding: 3px 6px; border: 0;
       background: rgba(2,2,3,.75); white-space: nowrap; --c: var(--sfc-text); }

@@ -150,7 +150,16 @@ class SolarFlowCard extends HTMLElement {
     } else if (series.gridImport) {
       grid = series.gridImport;
     }
-    return { kind: "power", spec, solar: this._config.show_solar === false ? null : series.solar || null, load: series.load || null, battery, grid, soc: series.soc || null };
+    const noBattery = this._config.show_battery === false;
+    return {
+      kind: "power",
+      spec,
+      solar: this._config.show_solar === false ? null : series.solar || null,
+      load: series.load || null,
+      battery: noBattery ? null : battery,
+      grid,
+      soc: noBattery ? null : series.soc || null,
+    };
   }
 
   _render() {
@@ -178,6 +187,10 @@ class SolarFlowCard extends HTMLElement {
         live.solar = 0;
         live.solarActive = false;
       }
+      const showBattery = config.show_battery !== false;
+      if (!showBattery) {
+        Object.assign(live, { charge: 0, discharge: 0, battery: 0, soc: null, chargeActive: false, dischargeActive: false });
+      }
       const status = liveStatus(resolved);
       const today = todayEnergy(resolved);
       const energy = this._periodEnergy(resolved, period, today);
@@ -186,6 +199,7 @@ class SolarFlowCard extends HTMLElement {
       const panels = showSolar ? panelData(this._hass, resolved, config) : null;
       const inverter = this._inverterOpen ? inverterReadings(resolved) : null;
       const system = config.show_system !== false ? systemData(this._hass, resolved, config) : null;
+      if (system && !showBattery) Object.assign(system, { battery: [], batteryWarn: null });
       const since = period === "all" && energy.buckets?.length
         ? energy.buckets[0].start.toLocaleDateString(locale, { month: "short", year: "numeric" })
         : null;
@@ -219,6 +233,7 @@ class SolarFlowCard extends HTMLElement {
           showPanels: config.show_panels !== false,
           showSolar,
           showSystem: config.show_system !== false,
+          showBattery,
         },
         ids,
         live,
