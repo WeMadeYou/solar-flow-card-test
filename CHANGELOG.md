@@ -2,7 +2,7 @@
 
 ## 1.3.0-beta.3
 
-- Wide layout: the sections that fit move into the space under the main view, so there is no empty gap beside a tall chart. The layout follows the card's width when it changes (tablet rotation, window resize).
+- Wide layout: two columns down the whole card, the main view on the left and the chart on the right, with each following section placed in the shorter column. Both columns end at about the same height, with no empty gap under the main view. The layout follows the card's width when it changes (tablet rotation, window resize).
 - The comparison table no longer runs into the next column on narrower wide cards: column headings wrap, and the table scrolls sideways if it still does not fit.
 
 ## 1.3.0-beta.2

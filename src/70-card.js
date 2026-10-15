@@ -41,9 +41,9 @@ function wideLayout(theme, html) {
   return `<div class="sfc-wide"><div class="sfc-wide-main">${html.slice(0, at)}<div class="sfc-wide-fill"></div></div>${html.slice(at)}</div>`;
 }
 
-// The energy section beside the main view is usually taller than it. Move
-// the following sections, in order, into the space under the main view
-// while they fit, so the left column has no empty gap.
+// Wide layout: deal the sections, in order, to the shorter of the two
+// columns (under the main view or under the energy section), so both end at
+// about the same height.
 function balanceWide(root) {
   const wide = root.querySelector(".sfc-wide");
   const main = wide?.querySelector(":scope > .sfc-wide-main");
@@ -51,12 +51,12 @@ function balanceWide(root) {
   const energy = wide?.querySelector(":scope > .sfc-sections > .sfc-energy");
   const rest = wide?.querySelector(".sfc-wide-rest");
   if (!fill || !energy || !rest || getComputedStyle(wide).display !== "grid") return;
-  const limit = energy.getBoundingClientRect().bottom + 8;
-  for (const section of [...rest.children]) {
-    if (main.getBoundingClientRect().bottom > limit - 60) break;
-    const next = section.nextSibling;
-    fill.append(section);
-    if (main.getBoundingClientRect().bottom > limit) rest.insertBefore(section, next);
+  const bottom = (el) => el.getBoundingClientRect().bottom;
+  const sections = [...rest.children];
+  sections.forEach((section) => section.remove());
+  for (const section of sections) {
+    const right = rest.lastElementChild ? bottom(rest.lastElementChild) : bottom(energy);
+    (bottom(main) < right ? fill : rest).append(section);
   }
 }
 
