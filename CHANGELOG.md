@@ -20,6 +20,7 @@ Everything from the 1.3.0 and 1.4.0 betas, now stable.
 - Animations continue across re-renders instead of starting over (Reactor, as Foundation).
 - The comparison table stays in its column on narrower wide cards.
 - Wide layout in Home Assistant: sections no longer all end up in the right column.
+- Reactor: the visor frame and the readouts scale together, so the frame never cuts through the sun, battery, grid or home readouts, at any card width.
 
 `show_weather` / `weather_entity` now apply to the Reactor theme too.
 
