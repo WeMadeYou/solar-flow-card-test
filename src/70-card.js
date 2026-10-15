@@ -257,13 +257,14 @@ class SolarFlowCard extends HTMLElement {
       const energy = this._periodEnergy(resolved, period, today);
       const chart = this._chartState(resolved, period, energy);
       const forecast = batteryForecast(live, bank?.capacity && !positiveNumber(config.battery_capacity) ? { ...config, battery_capacity: bank.capacity } : config);
-      const panels = showSolar ? panelData(this._hass, resolved, config) : null;
+      const readings = inverterReadings(resolved);
+      const panels = showSolar ? panelData(this._hass, resolved, config) || estimatePanels(readings, config, today) : null;
       const insights = this._insights(resolved, today, forecast);
       const weather = theme === "diorama" ? weatherData(this._hass, config) : null;
       // The wide layout has room for everything: inverter details stay open.
       const wide = config.wide === true;
       const inverterOpen = wide || this._inverterOpen;
-      const inverter = inverterOpen ? inverterReadings(resolved) : null;
+      const inverter = inverterOpen ? readings : null;
       const system = config.show_system !== false ? systemData(this._hass, resolved, config) : null;
       if (system && !showBattery) Object.assign(system, { battery: [], batteryWarn: null });
       const since = period === "all" && energy.buckets?.length

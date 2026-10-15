@@ -113,6 +113,8 @@ const BASE_CSS = `
   .sfc-panel span { color: var(--sfc-muted); font-size: 10px; }
   .sfc-panels-note { margin: 10px 0 0; color: var(--sfc-muted); font-size: 11px; }
   .sfc-panels-note.warn { color: var(--sfc-load); }
+  .sfc-panel.estimate { border-style: dashed; }
+  .sfc-panels-note.estimate { font-size: 10px; font-style: italic; line-height: 1.35; }
 
   /* Chart */
   .sfc-chart { margin-bottom: 12px; }

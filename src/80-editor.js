@@ -5,6 +5,7 @@ const EDITOR_NUMBERS = [
   ["battery_min_soc", "editorBatteryMinSoc", "1"],
   ["pv_capacity", "editorPvCapacity", "0.1"],
   ["pv_panels", "editorPvPanels", "1"],
+  ["panels_per_string", "editorPanelsPerString", "1"],
   ["inverter_power_rating", "editorInverterRating", "0.1"],
   ["price_import", "editorPriceImport", "0.01"],
   ["price_export", "editorPriceExport", "0.01"],
