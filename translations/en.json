@@ -172,7 +172,8 @@
     "expanse": "Expanse",
     "foundation": "Foundation",
     "galaxy": "Far galaxy",
-    "gate": "Gate Command"
+    "gate": "Gate Command",
+    "reactor": "Reactor"
   },
   "editorTitle": "Title",
   "editorLanguage": "Language",
@@ -196,7 +197,7 @@
   "editorShowForecast": "Show battery forecast",
   "editorShowSystem": "Installation (phases, inverter load, battery)",
   "editorShowPanels": "Show panels (optimizers)",
-  "editorShowWeather": "Weather in the Diorama sky",
+  "editorShowWeather": "Weather in the Diorama and Reactor themes",
   "editorWide": "Wide layout (on a wide dashboard)",
   "editorInsights": "Today at a glance and comparison",
   "editorSolar": "The installation has PV panels",
@@ -208,5 +209,31 @@
   "editorShowYield": "Show yield per kWp",
   "editorAnimation": "Animations",
   "editorFonts": "Load theme fonts (Google Fonts)",
-  "editorHint": "DeyeCloud sensors are found automatically. Other inverters: set the entities in YAML (see README)."
+  "editorHint": "DeyeCloud sensors are found automatically. Other inverters: set the entities in YAML (see README).",
+  "reactorTitle": "Reactor · power systems",
+  "reactorScan": "Atmospheric scan",
+  "reactorTelemetry": "Telemetry",
+  "reactorOverdrive": "Overdrive",
+  "reactorNominal": "Nominal output",
+  "reactorReserve": "Reserve power",
+  "reactorGrid": "Grid assist",
+  "reactorStandby": "Standby",
+  "reactorPvShare": "{pct}% solar power",
+  "weatherNames": {
+    "sunny": "Sunny",
+    "clear-night": "Clear night",
+    "partlycloudy": "Partly cloudy",
+    "cloudy": "Cloudy",
+    "fog": "Fog",
+    "rainy": "Rain",
+    "pouring": "Heavy rain",
+    "snowy": "Snow",
+    "snowy-rainy": "Sleet",
+    "hail": "Hail",
+    "lightning": "Thunderstorm",
+    "lightning-rainy": "Thunderstorm, rain",
+    "windy": "Windy",
+    "windy-variant": "Windy, cloudy",
+    "exceptional": "Exceptional"
+  }
 }

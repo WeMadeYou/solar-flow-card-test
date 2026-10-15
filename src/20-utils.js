@@ -187,6 +187,7 @@ const THEME_FONTS = {
   foundation: "Cinzel:wght@400;600&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500",
   galaxy: "Orbitron:wght@500;700&family=Share+Tech+Mono&family=Oswald:wght@500",
   gate: "Rajdhani:wght@500;600;700&family=Share+Tech+Mono",
+  reactor: "Rajdhani:wght@500;600;700&family=Orbitron:wght@500;700",
 };
 
 // Fonts declared inside a shadow root are ignored, so add the theme's font

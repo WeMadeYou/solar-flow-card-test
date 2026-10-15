@@ -172,7 +172,8 @@
     "expanse": "Expanse",
     "foundation": "Foundation",
     "galaxy": "Ver sterrenstelsel",
-    "gate": "Poortcommando"
+    "gate": "Poortcommando",
+    "reactor": "Reactor"
   },
   "editorTitle": "Titel",
   "editorLanguage": "Taal",
@@ -196,7 +197,7 @@
   "editorShowForecast": "Toon batterijvoorspelling",
   "editorShowSystem": "Installatie (fasen, omvormerbelasting, batterij)",
   "editorShowPanels": "Toon panelen (optimizers)",
-  "editorShowWeather": "Weer in de Diorama-lucht",
+  "editorShowWeather": "Weer in de thema's Diorama en Reactor",
   "editorWide": "Brede indeling (op een breed dashboard)",
   "editorInsights": "Vandaag in het kort en vergelijking",
   "editorSolar": "De installatie heeft zonnepanelen",
@@ -208,5 +209,31 @@
   "editorShowYield": "Toon opbrengst per kWp",
   "editorAnimation": "Animaties",
   "editorFonts": "Laad themalettertypen (Google Fonts)",
-  "editorHint": "DeyeCloud-sensoren worden automatisch gevonden. Andere omvormers: stel de entiteiten in in YAML (zie README)."
+  "editorHint": "DeyeCloud-sensoren worden automatisch gevonden. Andere omvormers: stel de entiteiten in in YAML (zie README).",
+  "reactorTitle": "Reactor · energiesystemen",
+  "reactorScan": "Atmosfeerscan",
+  "reactorTelemetry": "Telemetrie",
+  "reactorOverdrive": "Overdrive",
+  "reactorNominal": "Nominaal vermogen",
+  "reactorReserve": "Reservestroom",
+  "reactorGrid": "Netondersteuning",
+  "reactorStandby": "Stand-by",
+  "reactorPvShare": "{pct}% zonnevermogen",
+  "weatherNames": {
+    "sunny": "Zonnig",
+    "clear-night": "Heldere nacht",
+    "partlycloudy": "Half bewolkt",
+    "cloudy": "Bewolkt",
+    "fog": "Mist",
+    "rainy": "Regen",
+    "pouring": "Stortregen",
+    "snowy": "Sneeuw",
+    "snowy-rainy": "Natte sneeuw",
+    "hail": "Hagel",
+    "lightning": "Onweer",
+    "lightning-rainy": "Onweer met regen",
+    "windy": "Winderig",
+    "windy-variant": "Winderig, bewolkt",
+    "exceptional": "Uitzonderlijk"
+  }
 }

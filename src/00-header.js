@@ -6,10 +6,10 @@
  *
  * Built from src/*.js by scripts/build.mjs. Edit the sources, not this file.
  */
-const CARD_VERSION = "1.3.0-beta.4";
+const CARD_VERSION = "1.4.0-beta";
 const CARD_TAG = "solar-flow-card";
 const EDITOR_TAG = "solar-flow-card-editor";
-const THEMES = ["diorama", "aurora", "paper", "lcars", "atlantis", "expanse", "foundation", "galaxy", "gate"];
+const THEMES = ["diorama", "aurora", "paper", "lcars", "atlantis", "expanse", "foundation", "galaxy", "gate", "reactor"];
 const PERIODS = ["today", "3d", "7d", "month", "all"];
 // A flow below this many watts counts as idle.
 const ACTIVE_W = 5;

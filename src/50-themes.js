@@ -1060,6 +1060,195 @@ function renderGate(m) {
     </div>`;
 }
 
+// --------------------------------------------------------------------------
+// Reactor: a helmet HUD around an arc reactor. Its light segments glow with
+// the solar power (PV share of the installation), the weather shows on the
+// visor glass, and the inner arcs turn while the battery charges/discharges.
+// --------------------------------------------------------------------------
+
+const REACTOR_WEATHER_ICON = {
+  sunny: "☀", "clear-night": "☾", partlycloudy: "⛅", cloudy: "☁", fog: "≋", rainy: "☂", pouring: "☂",
+  snowy: "❄", "snowy-rainy": "❄", hail: "☂", lightning: "ϟ", "lightning-rainy": "ϟ", windy: "≈", "windy-variant": "≈", exceptional: "!",
+};
+
+// How hard the reactor runs, 0–1: solar power against the installation's
+// size (pv_capacity, else the inverter's rating, else today's peak).
+function reactorHeat(m) {
+  const { live, config } = m;
+  if (!config.showSolar) return clamp((inverterHub(m).share ?? 0) / 100, 0, 1);
+  const size = (positiveNumber(config.pv_capacity) || 0) * 1000 || m.system?.inverter?.rated || m.insights?.day?.solarPeak?.value || 5000;
+  return clamp(live.solar / size, 0, 1);
+}
+
+function reactorCore(heat, live) {
+  const cx = 260, cy = 250;
+  const rad = (a) => (a - 90) * Math.PI / 180;
+  const P = (r, a) => [cx + r * Math.cos(rad(a)), cy + r * Math.sin(rad(a))];
+  const f = (v) => v.toFixed(1);
+  const band = (r1, r2, a0, a1) => {
+    const [x0, y0] = P(r2, a0), [x1, y1] = P(r2, a1), [x2, y2] = P(r1, a1), [x3, y3] = P(r1, a0);
+    return `M${f(x0)} ${f(y0)}A${r2} ${r2} 0 0 1 ${f(x1)} ${f(y1)}L${f(x2)} ${f(y2)}A${r1} ${r1} 0 0 0 ${f(x3)} ${f(y3)}Z`;
+  };
+  const lit = Math.round(heat * 10);
+  let segs = "", coils = "", holes = "", arms = "", arcs = "", mesh = "";
+  for (let i = 0; i < 10; i++) {
+    const a = i * 36;
+    segs += `<path class="rx-seg ${i < lit ? "on" : ""}" style="--i:${i}" d="${band(63, 101, a + 7, a + 29)}"/>`;
+    let wind = "";
+    for (let r = 67; r <= 97; r += 2.2) wind += `M${cx - 12} ${f(cy - r)}H${cx + 12}`;
+    coils += `<g transform="rotate(${a} ${cx} ${cy})"><rect x="${cx - 14}" y="${cy - 99}" width="28" height="34" rx="2" fill="#1b1f24"/>`
+      + `<rect x="${cx - 12}" y="${cy - 98}" width="24" height="32" rx="1.5" fill="url(#rx-cu)"/><path d="${wind}" stroke="#3d1a06" stroke-width=".9" opacity=".75"/>`
+      + `<rect x="${cx - 12}" y="${cy - 98}" width="24" height="32" rx="1.5" fill="none" stroke="#f3b27a" stroke-opacity=".35"/></g>`;
+  }
+  for (let i = 0; i < 24; i++) {
+    const [x, y] = P(55, i * 15 + 7.5);
+    holes += `<rect x="${f(x - 2)}" y="${f(y - 2)}" width="4" height="4" transform="rotate(${i * 15} ${f(x)} ${f(y)})"/>`;
+  }
+  for (const a of [30, 150, 270]) {
+    const [x1, y1] = P(22, a), [x2, y2] = P(60, a), [bx, by] = P(50, a);
+    arms += `<line x1="${f(x1)}" y1="${f(y1)}" x2="${f(x2)}" y2="${f(y2)}" stroke="#14181c" stroke-width="13" stroke-linecap="round"/>`
+      + `<line x1="${f(x1)}" y1="${f(y1)}" x2="${f(x2)}" y2="${f(y2)}" stroke="#2c333a" stroke-width="9" stroke-linecap="round"/><circle cx="${f(bx)}" cy="${f(by)}" r="2.6" fill="#8c98a3"/>`;
+    arcs += `<path d="${band(31, 40, a + 14, a + 106)}"/>`;
+  }
+  for (let y = -20; y <= 20; y += 5) {
+    for (let x = -22; x <= 22; x += 5.8) {
+      const ox = x + (Math.round((y + 20) / 5) % 2 ? 2.9 : 0);
+      if (ox * ox + y * y < 20 * 20) mesh += `M${f(cx + ox)} ${f(cy + y - 2.6)}l2.2 1.3v2.6l-2.2 1.3l-2.2-1.3v-2.6z`;
+    }
+  }
+  const spin = live.chargeActive ? "charging" : live.dischargeActive ? "discharging" : "";
+  return `
+    <circle class="rx-halo" cx="${cx}" cy="${cy}" r="${(125 + heat * 80).toFixed(0)}" fill="url(#rx-halo)"/>
+    ${heat >= 0.8 ? `<g class="rx-rays">${Array.from({ length: 24 }, (_, i) => { const [x, y] = P(190 + (i % 3) * 16, i * 15 + 7); return `<line x1="${cx}" y1="${cy}" x2="${f(x)}" y2="${f(y)}" stroke-width="${2 + (i % 3)}" opacity="${0.05 + (i % 2) * 0.05}"/>`; }).join("")}</g>` : ""}
+    <circle cx="${cx}" cy="${cy}" r="120" fill="#2b3036" stroke="#121518" stroke-width="2"/>
+    <circle cx="${cx}" cy="${cy}" r="120" fill="#000" filter="url(#rx-tex)"/>
+    <circle cx="${cx}" cy="${cy}" r="102" fill="#0b1820"/>
+    <g class="rx-segs">${segs}</g>${coils}
+    <circle cx="${cx}" cy="${cy}" r="62" fill="#15191d" stroke="#0a0c0e"/>
+    <g class="rx-holes">${holes}</g>
+    <circle cx="${cx}" cy="${cy}" r="44" fill="#0b1820"/>
+    <g class="rx-arcs ${spin}">${arcs}</g>${arms}
+    <circle cx="${cx}" cy="${cy}" r="26" fill="#1a1f24"/>
+    <circle class="rx-core" cx="${cx}" cy="${cy}" r="23" fill="url(#rx-core)" filter="url(#rx-glow)"/>
+    <path class="rx-mesh" d="${mesh}"/>`;
+}
+
+// The world outside the visor: sky by time of day, then the weather on the glass.
+function reactorWeather(m) {
+  const phase = dioramaSky(m.now).phase;
+  const w = m.weather;
+  const clear = !w || w.sun !== false;
+  let g = "";
+  let glass = "";
+  if (phase === "night") {
+    if (clear) g += [[40, 60], [96, 110], [150, 40], [380, 52], [440, 96], [490, 40], [70, 180], [470, 170], [330, 30], [210, 70]]
+      .map(([x, y], i) => `<circle class="rx-star" style="--d:${(i * 0.7) % 4}s" cx="${x}" cy="${y}" r="${i % 3 ? 1 : 1.6}"/>`).join("");
+  } else if (clear) {
+    g += '<circle class="rx-sun" cx="440" cy="36" r="80" fill="url(#rx-flare)"/><circle cx="360" cy="112" r="8" fill="#ffe7b0" opacity=".22"/><circle cx="318" cy="150" r="14" fill="#9fe6ff" opacity=".1"/>';
+  }
+  if (w?.grey) g += `<rect width="520" height="540" fill="#7d8a99" opacity="${(w.grey * 0.35).toFixed(2)}"/>`;
+  if (w?.fog) g += '<g class="rx-fog"><ellipse cx="160" cy="190" rx="260" ry="60" fill="url(#rx-haze)"/><ellipse cx="380" cy="390" rx="280" ry="70" fill="url(#rx-haze)"/></g>';
+  if (w?.rain) {
+    const n = w.rain > 1 ? 60 : 32;
+    glass += `<g class="rx-rain">${Array.from({ length: n }, (_, i) => { const x = (i * 137) % 540 - 10, y = (i * 61) % 540; return `<line style="--d:-${((i * 0.37) % 1.4).toFixed(2)}s" x1="${x}" y1="${y}" x2="${x - 5}" y2="${y + 16}"/>`; }).join("")}</g>`;
+    glass += `<g class="rx-drops">${Array.from({ length: w.rain > 1 ? 22 : 14 }, (_, i) => { const x = (i * 97 + 30) % 500 + 10, y = (i * 71 + 40) % 460, r = 2 + (i % 4); return `<g style="--d:-${((i * 1.3) % 9).toFixed(1)}s"><circle cx="${x}" cy="${y}" r="${r}"/><path d="M${x} ${y + r}q1 ${8 + r * 2} -1 ${14 + r * 3}"/></g>`; }).join("")}</g>`;
+  }
+  if (w?.snow) {
+    glass += `<g class="rx-snow">${Array.from({ length: 36 }, (_, i) => `<circle style="--d:-${((i * 0.53) % 7).toFixed(2)}s" cx="${(i * 131) % 520}" cy="${(i * 53) % 300}" r="${i % 3 ? 1.5 : 2.3}"/>`).join("")}</g>`;
+    glass += '<rect width="520" height="540" fill="url(#rx-frost)"/>';
+  }
+  if (w?.lightning) glass += '<rect class="rx-flash" width="520" height="540" fill="#dfe9ff"/>';
+  return { phase, sky: g, glass };
+}
+
+function renderReactor(m) {
+  const { t, locale, live, config } = m;
+  const heat = reactorHeat(m);
+  const pct = Math.round(heat * 100);
+  const hub = inverterHub(m);
+  const cx = 260, cy = 250;
+  const P = (r, a) => [cx + r * Math.cos((a - 90) * Math.PI / 180), cy + r * Math.sin((a - 90) * Math.PI / 180)];
+  const arc = (r, a0, a1) => {
+    const [x0, y0] = P(r, a0), [x1, y1] = P(r, a1);
+    return `M${x0.toFixed(1)} ${y0.toFixed(1)}A${r} ${r} 0 0 ${a1 > a0 ? 1 : 0} ${x1.toFixed(1)} ${y1.toFixed(1)}`;
+  };
+  const soc = isNum(live.soc) ? clamp(live.soc, 0, 100) : 0;
+  const batteryFlow = live.dischargeActive ? live.discharge : live.charge;
+  const gridValue = live.importActive ? live.gridImport : live.exportActive ? live.gridExport : Math.abs(live.grid);
+  const sky = reactorWeather(m);
+  const w = m.weather;
+  // A few watts of grid import do not outrank the panels or the battery.
+  const gridAssist = live.importActive && live.gridImport > Math.max(100, 0.25 * live.load);
+  const mode = heat >= 0.8 && config.showSolar ? ["pv", t.reactorOverdrive]
+    : gridAssist ? ["grid", t.reactorGrid]
+      : config.showSolar && live.solarActive ? ["pv", t.reactorNominal]
+        : live.dischargeActive ? ["battery", t.reactorReserve]
+          : live.importActive ? ["grid", t.reactorGrid]
+            : ["idle", t.reactorStandby];
+  const scan = w
+    ? [t.weatherNames?.[w.condition] || w.condition, isNum(w.temperature) ? `${formatNumber(w.temperature, locale, 0)}${w.unit}` : "", config.showSolar ? fill(t.reactorPvShare, { pct }) : ""].filter(Boolean).map(escapeHtml).join(" · ")
+    : liveSentence(m) || escapeHtml(config.showSolar ? fill(t.reactorPvShare, { pct }) : t.reactorStandby);
+  const ticks = Array.from({ length: 72 }, (_, i) => `<line x1="${cx}" y1="${cy - 136}" x2="${cx}" y2="${cy - 136 + (i % 6 ? 4 : 10)}" transform="rotate(${i * 5} ${cx} ${cy})" opacity="${i % 6 ? 0.35 : 0.8}"/>`).join("");
+  const pos = (x, y) => `left:${((x / 520) * 100).toFixed(2)}%;top:${((y / 540) * 100).toFixed(2)}%`;
+  const node = (cls, x, y, label, value, note, attr) => `
+    <button class="rx-node ${cls}" style="${pos(x, y)}" ${attr}>
+      <i></i><small>${escapeHtml(label)}</small><b>${escapeHtml(value)}</b>${note ? `<em>${escapeHtml(note)}</em>` : ""}
+    </button>`;
+  const spinTime = (60 / (1 + heat * 4)).toFixed(1);
+  return `
+    <div class="rx-stage ${heat >= 0.8 && config.showSolar ? "over" : ""} ${sky.phase}" style="--spin:${spinTime}s">
+      <header class="rx-header">
+        <div><small>${escapeHtml(t.reactorTitle)}</small><h1>${escapeHtml(m.name)}</h1></div>
+        <div class="rx-right"><small>${escapeHtml(clockText(m))} · ${escapeHtml(m.t[m.status.state])}</small>
+          ${w ? `<button class="rx-wx" ${entityAttr(w.entityId)}>${escapeHtml(REACTOR_WEATHER_ICON[w.condition] || "")} ${isNum(w.temperature) ? escapeHtml(`${formatNumber(w.temperature, locale, 0)}${w.unit}`) : ""}</button>` : ""}</div>
+      </header>
+      <div class="rx-visor">
+        <svg viewBox="0 0 520 540" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <defs>
+            <linearGradient id="rx-cu" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6b2f0e"/><stop offset=".35" stop-color="#c9773d"/><stop offset=".55" stop-color="#e8a36a"/><stop offset="1" stop-color="#6b2f0e"/></linearGradient>
+            <radialGradient id="rx-seg" cx="260" cy="250" r="101" gradientUnits="userSpaceOnUse"><stop offset=".3" stop-color="#fff"/><stop offset=".62" stop-color="#bfefff"/><stop offset="1" stop-color="#4cc2ff"/></radialGradient>
+            <radialGradient id="rx-core"><stop offset="0" stop-color="#fff"/><stop offset=".6" stop-color="#cdf6ff"/><stop offset="1" stop-color="#3fbfff"/></radialGradient>
+            <radialGradient id="rx-halo"><stop offset="0" stop-color="#9fe8ff" stop-opacity="${(0.25 + heat * 0.45).toFixed(2)}"/><stop offset="1" stop-color="#3fbfff" stop-opacity="0"/></radialGradient>
+            <radialGradient id="rx-flare"><stop offset="0" stop-color="#fff3d0" stop-opacity=".9"/><stop offset="1" stop-color="#ffb347" stop-opacity="0"/></radialGradient>
+            <radialGradient id="rx-frost" cx="50%" cy="50%" r="70%"><stop offset=".65" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#e8f4ff" stop-opacity=".35"/></radialGradient>
+            <radialGradient id="rx-haze"><stop offset="0" stop-color="#c8d6e2" stop-opacity=".28"/><stop offset="1" stop-color="#c8d6e2" stop-opacity="0"/></radialGradient>
+            <pattern id="rx-hex" width="40" height="70" patternUnits="userSpaceOnUse"><path d="M20 0l10 6v12l-10 6l-10-6v-12zM0 35l10 6v12l-10 6l-10-6v-12zM40 35l10 6v12l-10 6l-10-6v-12z" fill="none" stroke="#4fd8ff" stroke-opacity=".06"/></pattern>
+            <filter id="rx-glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="${(1.5 + heat * 3.5).toFixed(1)}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <filter id="rx-tex"><feTurbulence type="fractalNoise" baseFrequency="1.2" numOctaves="2" result="n"/><feColorMatrix in="n" values="0 0 0 0 .35  0 0 0 0 .38  0 0 0 0 .42  0 0 0 .55 0"/><feComposite in2="SourceGraphic" operator="in"/></filter>
+          </defs>
+          ${sky.sky}
+          <rect width="520" height="540" fill="url(#rx-hex)"/>
+          <path class="rx-frame" d="M30 70Q260 14 490 70L506 450Q260 540 14 450Z"/>
+          <g class="rx-ticks">${ticks}</g>
+          ${config.showBattery ? `<path class="rx-track" d="${arc(156, 330, 210)}"/>${soc >= 1 ? `<path class="rx-gauge battery" d="${arc(156, 210, 210 + 1.2 * soc)}"/>` : ""}` : ""}
+          ${config.showSolar ? `<path class="rx-track" d="${arc(156, 30, 150)}"/>${pct >= 1 ? `<path class="rx-gauge pv" d="${arc(156, 150, 150 - 1.2 * pct)}"/>` : ""}` : ""}
+          ${config.showBattery ? `<text class="rx-gtext battery" x="${(P(156, 333)[0] - 6).toFixed(0)}" y="${P(156, 333)[1].toFixed(0)}" text-anchor="end">SOC ${escapeHtml(formatPercent(live.soc, locale))}</text>` : ""}
+          ${config.showSolar ? `<text class="rx-gtext pv" x="${(P(156, 27)[0] + 6).toFixed(0)}" y="${P(156, 27)[1].toFixed(0)}">PV ${pct}%</text>` : ""}
+          <g fill="none" stroke-linecap="round">
+            ${config.showSolar ? flowPath("M260 92 L260 112", live.solarActive, false, "pv") : ""}
+            ${config.showBattery ? flowPath("M118 410 Q124 362 172 338", live.chargeActive || live.dischargeActive, live.chargeActive, "battery") : ""}
+            ${flowPath("M402 410 Q396 362 348 338", live.importActive || live.exportActive, live.exportActive, "grid")}
+            ${flowPath("M260 420 L260 470", live.loadActive, false, "load")}
+          </g>
+          ${reactorCore(heat, live)}
+          ${sky.glass}
+        </svg>
+        ${config.showSolar ? node("pv", 260, 60, t.sun, formatPower(live.solar, locale), "", entityAttr(m.ids.live.solar)) : ""}
+        ${config.showBattery ? node("battery", 96, 442, batteryLabel(m), formatPower(batteryFlow, locale), [batteryStatus(m), batteryWhenShort(m)].filter(Boolean).join(" "), entityAttr(batteryEntityId(m))) : ""}
+        ${node("grid", 424, 442, t.grid, formatPower(gridValue, locale), gridStatus(m), entityAttr(gridEntityId(m)))}
+        ${node("load", 260, 500, t.home, formatPower(live.load, locale), "", entityAttr(m.ids.live.load))}
+        <button class="rx-inv" style="${pos(260, 396)}" data-action="inverter" title="${escapeHtml(t.inverterDetails)}">
+          <b>${escapeHtml(formatPower(hub.power, locale))}</b><small>${escapeHtml(t.inverter)}${isNum(hub.share) ? ` · ${escapeHtml(formatPercent(hub.share, locale))}` : ""}</small>
+        </button>
+      </div>
+      <div class="rx-scan">
+        <div><small>${escapeHtml(w ? t.reactorScan : t.reactorTelemetry)}</small><p>${scan}</p></div>
+        <span class="rx-mode ${mode[0]}">${escapeHtml(mode[1])}</span>
+      </div>
+    </div>
+    <div class="sfc-sections">${standardSections(m)}</div>`;
+}
+
 const THEME_RENDER = {
   diorama: renderDiorama,
   aurora: renderAurora,
@@ -1070,4 +1259,5 @@ const THEME_RENDER = {
   foundation: renderFoundation,
   galaxy: renderGalaxy,
   gate: renderGate,
+  reactor: renderReactor,
 };

@@ -22,7 +22,7 @@ const out = process.env.OUT || join(root, "docs");
 mkdirSync(out, { recursive: true });
 const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
 const errors = [];
-for (const theme of (process.env.THEMES || "diorama,aurora,paper,lcars,atlantis,expanse,foundation,galaxy,gate").split(",")) {
+for (const theme of (process.env.THEMES || "diorama,aurora,paper,lcars,atlantis,expanse,foundation,galaxy,gate,reactor").split(",")) {
   const page = await browser.newPage({ viewport: { width: Number(process.env.WIDTH ?? 520) + 80, height: 1200 }, deviceScaleFactor: 2 });
   page.on("pageerror", (e) => errors.push(`${theme}: ${e.message}`));
   page.on("console", (m) => { if (m.type() === "error") errors.push(`${theme}: ${m.text()}`); });
