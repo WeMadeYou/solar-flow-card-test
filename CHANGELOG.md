@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.4.0
+
+Everything from the 1.3.0 and 1.4.0 betas, now stable.
+
+**New themes**
+- **Reactor** (`reactor`): a helmet HUD around an arc reactor with copper coils on a ring of light. One light segment per 10% of solar power against the installation's size (`pv_capacity`, else the inverter's rating), an overdrive glow above 80%, inner arcs that turn while the battery charges or discharges. The weather shows on the visor: sun glare, stars, rain running down the glass, snow with frost, fog, lightning. Gauges for the battery level and solar share, an atmospheric scan line and a status (overdrive, nominal output, reserve power, grid assist, standby). A start-up sequence the first time the card is shown.
+- **Gate Command** (`gate`): a gate control room with a dialing computer listing every flow. Compact: a smaller gate whose chevrons are the connection points of solar cells, a zero point module (battery), a dial home device (grid) and the mountain base (home). Wide: the full gate with nine chevrons for the battery level. The ring carries the 39 gate symbols.
+
+**Layout and sections**
+- **Wide layout** for every theme (`wide: true`, also in the editor): the main view and the chart side by side, the other sections in two balanced columns (each section goes to the shorter column), inverter details open. Below about 880 px the card stays compact.
+- **Today at a glance** and **Comparison** (`show_insights`, on by default in the wide layout): peaks with their time, the battery's range and cycles, time without the grid; today against yesterday, the 7-day average and this month.
+
+**Panels**
+- `panels_per_string` (a number or a list per string, also in the editor with one field per PV string): groups optimizer tiles into strings (`[11, 7]`), or, without optimizers, shows an estimate per panel from the string power, marked ≈.
+- `panels_average: per_string` (also in the editor): the average and the weakest panel for each string on its own, with a summary under each string.
+
+**Fixes**
+- Animations continue across re-renders instead of starting over (Reactor, as Foundation).
+- The comparison table stays in its column on narrower wide cards.
+- Wide layout in Home Assistant: sections no longer all end up in the right column.
+
+`show_weather` / `weather_entity` now apply to the Reactor theme too.
+
 ## 1.4.0-beta.5
 
 - Reactor: a larger visor frame, so it no longer cuts through the sun, battery, grid and home readouts.
