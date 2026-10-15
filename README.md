@@ -10,7 +10,7 @@
 
 ![Solar Flow Card themes](docs/themes.gif)
 
-A Home Assistant dashboard card for solar installations with a battery: live power flow, charts, a battery forecast, inverter details and per-panel production, in eight themes.
+A Home Assistant dashboard card for solar installations with a battery: live power flow, charts, a battery forecast, inverter details and per-panel production, in nine themes, compact or wide.
 
 DeyeCloud sensors are found automatically; any other inverter works by pointing the card at its entities.
 
@@ -21,6 +21,10 @@ DeyeCloud sensors are found automatically; any other inverter works by pointing 
 | Atlantis | Expanse | Foundation | Far galaxy |
 |---|---|---|---|
 | ![Atlantis](docs/atlantis.png) | ![Expanse](docs/expanse.png) | ![Foundation](docs/foundation.png) | ![Far galaxy](docs/galaxy.png) |
+
+**Gate Command**, wide (`wide: true`):
+
+![Gate Command, wide](docs/gate-wide.png)
 
 ## Features
 
@@ -33,6 +37,7 @@ DeyeCloud sensors are found automatically; any other inverter works by pointing 
 - **Installation**: power on each phase (L1/L2/L3) with grid power and voltage and the spread between phases, inverter load against its rated power, battery temperature, voltage and current with a warning when the battery is too cold or hot to charge fully, and the generator while it runs.
 - **Inverter details** (tap the inverter or the house): PV strings, temperatures, battery and grid readings.
 - **Panels**: one tile per optimizer with today's production; the weakest panel is highlighted when it falls below 85% of the median.
+- **Wide layout** (`wide: true`) for every theme: everything visible at once on a wide dashboard.
 - English, Polish and Dutch, with a visual editor; [more languages welcome](CONTRIBUTING.md#add-or-improve-a-translation).
 
 History comes from Home Assistant itself (recorder history and long-term statistics), so the card adds no requests to your inverter's cloud.
@@ -49,6 +54,7 @@ History comes from Home Assistant itself (recorder history and long-term statist
 | `expanse` | A ship's power distribution display: bracketed readouts, orbital trajectories and a segmented charge bar with the reserve in red. |
 | `foundation` | A radiant of slowly turning golden orbits around the inverter, with a battery forecast written below. |
 | `galaxy` | A targeting computer flying down a trench, with the moment told as an opening crawl; the target turns red at the battery reserve. |
+| `gate` | A gate control room: four chevrons are the connection points of the panels, battery, grid and home (they pulse while power flows), the other five show the battery level; a dialing computer lists every flow. Made for the wide layout, with a compact version for narrow columns. |
 
 ## Installation
 
@@ -88,9 +94,10 @@ co2_factor: 0.7
 
 | Option | Default | Description |
 |---|---|---|
-| `theme` | `diorama` | `diorama`, `aurora`, `paper`, `lcars`, `atlantis`, `expanse`, `foundation` or `galaxy`. |
+| `theme` | `diorama` | `diorama`, `aurora`, `paper`, `lcars`, `atlantis`, `expanse`, `foundation`, `galaxy` or `gate`. |
 | `title` | station name | Card title. |
 | `language` | Home Assistant language | `en`, `pl` or `nl`; also in the visual editor. |
+| `wide` | `false` | Wide layout for a wide dashboard (a panel view or a full-width section): the main view and the chart side by side, every section open below in columns, inverter details included. Below about 880 px of card width the card stays compact. Also in the editor. |
 | `period` | `today` | Tab shown when the dashboard opens: `today`, `3d`, `7d`, `month` or `all`. |
 | `station_id` | first station | DeyeCloud station, when the account has several. |
 | `animation` | `true` | Animated flows. |

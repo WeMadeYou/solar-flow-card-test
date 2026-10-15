@@ -22,11 +22,11 @@ const out = process.env.OUT || join(root, "docs");
 mkdirSync(out, { recursive: true });
 const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
 const errors = [];
-for (const theme of (process.env.THEMES || "diorama,aurora,paper,lcars,atlantis,expanse,foundation,galaxy").split(",")) {
-  const page = await browser.newPage({ viewport: { width: 600, height: 1200 }, deviceScaleFactor: 2 });
+for (const theme of (process.env.THEMES || "diorama,aurora,paper,lcars,atlantis,expanse,foundation,galaxy,gate").split(",")) {
+  const page = await browser.newPage({ viewport: { width: Number(process.env.WIDTH ?? 520) + 80, height: 1200 }, deviceScaleFactor: 2 });
   page.on("pageerror", (e) => errors.push(`${theme}: ${e.message}`));
   page.on("console", (m) => { if (m.type() === "error") errors.push(`${theme}: ${m.text()}`); });
-  await page.goto(`http://localhost:${port}/demo/index.html?theme=${theme}&scenario=${scenario}&language=${language}&period=${period}&solar=${process.env.SOLAR ?? "1"}&battery=${process.env.BATTERY ?? "1"}&weather=${process.env.WEATHER ?? ""}`);
+  await page.goto(`http://localhost:${port}/demo/index.html?theme=${theme}&scenario=${scenario}&language=${language}&period=${period}&solar=${process.env.SOLAR ?? "1"}&battery=${process.env.BATTERY ?? "1"}&weather=${process.env.WEATHER ?? ""}&wide=${process.env.WIDE ?? "0"}&width=${process.env.WIDTH ?? "520"}`);
   await page.waitForFunction(() => window.demoReady);
   await page.waitForTimeout(1500);
   const card = page.locator("solar-flow-card").first();

@@ -30,6 +30,17 @@ function saveHiddenSeries(hidden) {
   }
 }
 
+// Wide layout: the theme's main view on the left, the sections beside it in
+// a grid that flows, so a missing section leaves no gap. Below ~880 px the
+// card falls back to the normal stacked layout. LCARS and Gate arrange
+// their own columns.
+function wideLayout(theme, html) {
+  if (theme === "lcars" || theme === "gate") return html;
+  const at = html.lastIndexOf('<div class="sfc-sections">');
+  if (at < 0) return html;
+  return `<div class="sfc-wide"><div class="sfc-wide-main">${html.slice(0, at)}</div>${html.slice(at)}</div>`;
+}
+
 class SolarFlowCard extends HTMLElement {
   constructor() {
     super();
@@ -225,7 +236,10 @@ class SolarFlowCard extends HTMLElement {
       const forecast = batteryForecast(live, bank?.capacity && !positiveNumber(config.battery_capacity) ? { ...config, battery_capacity: bank.capacity } : config);
       const panels = showSolar ? panelData(this._hass, resolved, config) : null;
       const weather = theme === "diorama" ? weatherData(this._hass, config) : null;
-      const inverter = this._inverterOpen ? inverterReadings(resolved) : null;
+      // The wide layout has room for everything: inverter details stay open.
+      const wide = config.wide === true;
+      const inverterOpen = wide || this._inverterOpen;
+      const inverter = inverterOpen ? inverterReadings(resolved) : null;
       const system = config.show_system !== false ? systemData(this._hass, resolved, config) : null;
       if (system && !showBattery) Object.assign(system, { battery: [], batteryWarn: null });
       const since = period === "all" && energy.buckets?.length
@@ -240,7 +254,7 @@ class SolarFlowCard extends HTMLElement {
       const signature = JSON.stringify([
         language, config, period, [...this._hiddenSeries], live, status.state, today, energy.totals, Boolean(energy.loading),
         chart && [Boolean(chart.loading), Boolean(chart.error), chart.at], forecast.mode, Math.round(forecast.hours * 60 || 0),
-        panels?.panels.map((p) => [p.today, p.power]), system, bank, weather && [weather.condition, weather.temperature], this._inverterOpen,
+        panels?.panels.map((p) => [p.today, p.power]), system, bank, weather && [weather.condition, weather.temperature], inverterOpen,
         inverter?.map((d) => [[...d.strings.values()].map((s) => Object.values(s).map((r) => r.value)), d.temperatures.map((r) => r.value), d.battery.map((r) => r.value), d.grid.map((r) => r.value)]),
         Math.floor(now.getTime() / 60000),
       ]);
@@ -263,6 +277,7 @@ class SolarFlowCard extends HTMLElement {
           showSolar,
           showSystem: config.show_system !== false,
           showBattery,
+          wide,
         },
         ids,
         live,
@@ -280,14 +295,14 @@ class SolarFlowCard extends HTMLElement {
         system,
         bank,
         weather,
-        inverterOpen: this._inverterOpen,
+        inverterOpen,
         hiddenSeries: this._hiddenSeries,
       };
       model.systemStatus = systemStatus(status, forecast, panels, system);
 
       this.shadowRoot.innerHTML = `
         <style>${BASE_CSS}${THEME_CSS[theme]}</style>
-        <ha-card class="sfc theme-${theme} ${config.animation === false ? "no-anim" : ""}">${THEME_RENDER[theme](model)}</ha-card>`;
+        <ha-card class="sfc theme-${theme} ${config.animation === false ? "no-anim" : ""}">${wide ? wideLayout(theme, THEME_RENDER[theme](model)) : THEME_RENDER[theme](model)}</ha-card>`;
       this._wire(model);
     } catch (error) {
       console.error("Solar Flow Card render error", error);
@@ -311,6 +326,10 @@ class SolarFlowCard extends HTMLElement {
     root.querySelectorAll('[data-action="inverter"]').forEach((element) => {
       element.addEventListener("click", (event) => {
         event.stopPropagation();
+        if (model.config.wide) {
+          root.querySelector(".sfc-inverter")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          return;
+        }
         this._inverterOpen = !this._inverterOpen;
         this._signature = "";
         this._render();

@@ -482,7 +482,8 @@ function renderLcars(m) {
         ${side.map(([cls, num, label, attr]) => `<button class="${cls}" ${attr}><small>${num}-${(label.length * 7) % 10}</small>${escapeHtml(label)}</button>`).join("")}
         <span class="lc-fill"></span>
       </nav>
-      <div class="lc-main">
+      <div class="lc-main ${m.config.wide ? "wide" : ""}">
+        <div class="lc-panel">
         ${m.config.showSolar ? row("pv", t.lcarsPvIn, live.solar, m.ids.live.solar) : ""}
         ${!m.config.showBattery ? "" : row(live.chargeActive ? "battery rev" : "battery", live.chargeActive ? t.lcarsBatIn : t.lcarsBatOut, live.chargeActive ? live.charge : live.discharge, batteryEntityId(m))}
         ${row(live.exportActive ? "grid rev" : "grid", live.exportActive ? t.lcarsGridOut : t.lcarsGridIn, live.exportActive ? live.gridExport : live.gridImport, gridEntityId(m))}
@@ -501,6 +502,7 @@ function renderLcars(m) {
           </div>
         </div>
         <div class="lc-status ${status}">${escapeHtml(t[`status${status[0].toUpperCase()}${status.slice(1)}`])}</div>
+        </div>
         <div class="sfc-sections">${standardSections(m)}</div>
       </div>
       <div class="lc-elbow bottom"></div>
@@ -772,6 +774,147 @@ function renderGalaxy(m) {
     <div class="sfc-sections">${standardSections(m)}</div>`;
 }
 
+// --------------------------------------------------------------------------
+// Gate: a gate control room. Nine chevrons show the battery level, the
+// dialing computer lists every flow, MALP telemetry is the energy section.
+// --------------------------------------------------------------------------
+
+// Four chevrons are the connection points for the panels, the grid, the
+// home and the battery (lines run to the corner readouts); the other five
+// show the battery level. Chevron i sits at -90° + 40° × i.
+const GATE_PORTS = { pv: 8, grid: 1, load: 3, battery: 6 };
+const GATE_LEVEL = [0, 2, 4, 5, 7];
+const GATE_CORNERS = { pv: [-272, -226], grid: [272, -226], load: [272, 220], battery: [-272, 220] };
+
+function gateRing(m, lit, active) {
+  const glyphs = ["M-5 -6 L5 -6 L0 6 Z", "M-6 0 A6 6 0 1 1 6 0", "M-5 -6 V6 M5 -6 V6 M-5 0 H5", "M0 -7 L6 6 L-6 6 Z", "M-6 -4 H6 M-3 4 H3 M0 -7 V7"];
+  let g = "";
+  for (let i = 0; i < 39; i++) {
+    const a = (i / 39) * Math.PI * 2;
+    const b = a + Math.PI / 39;
+    g += `<g transform="translate(${(Math.cos(a) * 214).toFixed(1)} ${(Math.sin(a) * 214).toFixed(1)}) rotate(${((a * 180) / Math.PI + 90).toFixed(1)})"><path d="${glyphs[i % 5]}" class="${i % 7 ? "" : "hi"}"/></g>`
+      + `<line x1="${(Math.cos(b) * 203).toFixed(1)}" y1="${(Math.sin(b) * 203).toFixed(1)}" x2="${(Math.cos(b) * 225).toFixed(1)}" y2="${(Math.sin(b) * 225).toFixed(1)}" class="gt-seam"/>`;
+  }
+  const { live, config } = m;
+  // Which ports are in use, which carry power now, and which way it flows
+  // (each line runs from the corner to the chevron).
+  const ports = {
+    pv: config.showSolar && [live.solarActive, false],
+    grid: [live.importActive || live.exportActive, live.exportActive],
+    load: [live.loadActive, true],
+    battery: config.showBattery && [live.chargeActive || live.dischargeActive, live.chargeActive],
+  };
+  const portOf = Object.fromEntries(Object.entries(GATE_PORTS).map(([kind, i]) => [i, kind]));
+  let chevrons = "";
+  let lines = "";
+  for (let i = 0; i < 9; i++) {
+    const angle = -90 + i * 40;
+    const a = (angle * Math.PI) / 180;
+    const kind = portOf[i];
+    const port = kind && ports[kind];
+    const cls = port ? `port ${kind} ${port[0] ? "on" : ""}` : kind ? "unused" : GATE_LEVEL.indexOf(i) < lit ? "on" : "";
+    chevrons += `<g class="gt-chevron ${cls}" transform="translate(${(Math.cos(a) * 252).toFixed(1)} ${(Math.sin(a) * 252).toFixed(1)}) rotate(${angle + 90})">
+      <path d="M-22 -14 L22 -14 L8 12 L-8 12 Z" class="gt-chevron-body"/><path d="M-13 -9 L13 -9 L0 9 Z" class="gt-chevron-light"/></g>`;
+    if (port) {
+      const [cx, cy] = GATE_CORNERS[kind];
+      const tip = [Math.cos(a) * 274, Math.sin(a) * 274];
+      lines += flowPath(`M${cx} ${cy} Q${((cx + tip[0]) / 2).toFixed(0)} ${cy} ${tip[0].toFixed(1)} ${tip[1].toFixed(1)}`, port[0], port[1], kind === "load" ? "load" : kind);
+    }
+  }
+  const spin = m.live.chargeActive ? "cw" : m.live.dischargeActive ? "ccw" : "";
+  const ripples = Array.from({ length: 6 }, (_, i) => `<circle r="${(i + 1) * 26}" style="--d:${loopPhase(6, i)}"/>`).join("");
+  return `
+    <svg class="gt-svg" viewBox="-300 -300 600 600" overflow="visible" aria-hidden="true">
+      <defs>
+        <radialGradient id="gt-eh" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#e6fbff" stop-opacity=".95"/><stop offset=".35" stop-color="#5fc8ff" stop-opacity=".75"/><stop offset=".8" stop-color="#1b5fb8" stop-opacity=".55"/><stop offset="1" stop-color="#0a2a5c" stop-opacity=".2"/></radialGradient>
+        <filter id="gt-glow"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      </defs>
+      <g class="gt-horizon ${active ? "open" : ""}"><circle r="190" class="gt-eh"/><g class="gt-ripples">${ripples}</g></g>
+      <circle r="220" class="gt-ring-base"/>
+      <circle r="246" class="gt-ring-edge"/><circle r="194" class="gt-ring-edge"/>
+      <circle r="214" class="gt-ring-track"/>
+      <g class="gt-glyphs ${spin}" style="--d:${loopPhase(180)}">${g}</g>
+      <g class="gt-lines" fill="none" stroke-linecap="round">${lines}</g>
+      ${chevrons}
+    </svg>`;
+}
+
+function renderGate(m) {
+  const { t, locale, live, config } = m;
+  const f = m.forecast;
+  const hub = inverterHub(m);
+  const soc = isNum(live.soc) ? clamp(live.soc, 0, 100) : null;
+  const pvCapacity = positiveNumber(config.pv_capacity);
+  // Chevrons: the battery level in nine steps; without a battery, the
+  // inverter's load (or the panels' share of their size).
+  const level = config.showBattery && isNum(soc) ? soc
+    : isNum(hub.share) ? hub.share
+      : pvCapacity ? clamp((live.solar / (pvCapacity * 1000)) * 100, 0, 100) : 0;
+  const lit = Math.round((level / 100) * GATE_LEVEL.length);
+  const atReserve = config.showBattery && isNum(soc) && soc <= f.minSoc + 1;
+  const gridValue = live.importActive ? live.gridImport : live.exportActive ? live.gridExport : Math.abs(live.grid);
+  const batteryFlow = live.dischargeActive ? live.discharge : live.charge;
+  const max = Math.max(1000, (pvCapacity || 0) * 1000, live.solar, live.load, live.charge, live.discharge, live.gridImport, live.gridExport);
+  const rows = [
+    config.showSolar && ["pv", t.solar, live.solar, live.solarActive, pvCapacity ? fill(t.gateOfCapacity, { pct: formatNumber((live.solar / (pvCapacity * 1000)) * 100, locale, 0), size: `${formatNumber(pvCapacity, locale, 1)} kWp` }) : "", m.ids.live.solar],
+    config.showBattery && ["battery", t.battery, batteryFlow, live.chargeActive || live.dischargeActive, batteryStatus(m), batteryEntityId(m)],
+    ["grid", t.grid, gridValue, live.importActive || live.exportActive, gridStatus(m), gridEntityId(m)],
+    ["load", t.home, live.load, live.loadActive, t.consumption, m.ids.live.load],
+    ["inverter", t.inverter, hub.power, hub.power > ACTIVE_W, isNum(hub.share) ? fill(t.gateOfCapacity, { pct: formatNumber(hub.share, locale, 0), size: formatPower(m.system.inverter.rated, locale) }) : "", "inverter"],
+  ].filter(Boolean);
+  const locked = rows.filter((r) => r[3]).length;
+  const status = atReserve ? ["alert", t.gateReserve]
+    : live.chargeActive ? ["on", t.gateInbound]
+      : live.dischargeActive ? ["on", t.gateOutbound]
+        : live.exportActive ? ["on", t.gateExport]
+          : live.importActive ? ["on", t.gateImport]
+            : ["", t.gateIdle];
+  const kv = (label, value) => `<div class="gt-kv"><small>${escapeHtml(label)}</small><b>${escapeHtml(value)}</b></div>`;
+  const own = isNum(m.today.load) && isNum(m.today.gridImport) && m.today.load > 0.05
+    ? formatPercent(clamp(((m.today.load - m.today.gridImport) / m.today.load) * 100, 0, 100), locale) : "—";
+  const corner = (cls, pos, label, value) => `<div class="gt-node ${cls}" style="${pos}">${escapeHtml(label)}<b>${escapeHtml(value)}</b></div>`;
+  return `
+    <header class="gt-top">
+      <span class="gt-tag">SGC-E</span>
+      <div class="gt-title"><h1>${escapeHtml(m.name)} · ${escapeHtml(t.gateTitle)}</h1><span>${escapeHtml(t.gateSub)} · ${escapeHtml(String(m.station || "—"))}</span></div>
+      <div class="gt-right"><span>${escapeHtml(m.now.toLocaleDateString(locale, { day: "numeric", month: "short" }))} · ${escapeHtml(clockText(m))}</span><span class="gt-live ${m.status.state}">${escapeHtml(m.t[m.status.state])}</span></div>
+    </header>
+    <div class="gt-layout ${config.wide ? "wide" : ""}">
+      <div class="gt-gate">
+        ${gateRing(m, lit, live.loadActive || live.solarActive)}
+        <button class="gt-center" data-action="inverter" title="${escapeHtml(t.inverterDetails)}">
+          ${config.showBattery ? `
+            <small>${escapeHtml(t.battery)}</small><b>${escapeHtml(formatPercent(soc, locale))}</b>
+            ${f.capacity ? `<span>${escapeHtml(`${isNum(f.stored) ? formatNumber(f.stored, locale, 1) : "—"} / ${formatEnergy(f.capacity, locale)}`)}</span>` : ""}
+            ${f.at ? `<em>${escapeHtml(`${f.mode === "charging" ? "▲" : "▼"} ${formatWhen(f.at, locale)}`)}</em>` : ""}` : `
+            <small>${escapeHtml(t.inverter)}</small><b>${escapeHtml(formatPower(hub.power, locale))}</b>`}
+        </button>
+        ${config.showSolar ? corner("pv", "left:0;top:4%", t.solar, formatPower(live.solar, locale)) : ""}
+        ${corner("grid", "right:0;top:4%", t.grid, formatPower(gridValue, locale))}
+        ${config.showBattery ? corner("battery", "left:0;bottom:4%", t.battery, `${live.dischargeActive ? "−" : live.chargeActive ? "+" : ""}${formatPower(batteryFlow, locale)}`) : ""}
+        ${corner("load", "right:0;bottom:4%", t.home, formatPower(live.load, locale))}
+      </div>
+      <div class="gt-panel gt-dial">
+        <div class="gt-ph"><span>${escapeHtml(t.gateDial)}</span><b>${escapeHtml(fill(t.gateLocked, { n: locked, total: rows.length }))}</b></div>
+        ${rows.map(([cls, label, value, active, note, entity], i) => `
+          <button class="gt-row ${cls}" ${entity === "inverter" ? 'data-action="inverter"' : entityAttr(entity)}>
+            <i class="gt-ch ${active ? "on" : ""}"></i>
+            <span><small>${escapeHtml(fill(t.gateChevron, { n: i + 1 }))}</small><strong>${escapeHtml(label)}</strong><i class="gt-bar"><i style="width:${clamp((value / max) * 100, active ? 2 : 0, 100).toFixed(0)}%"></i></i></span>
+            <span class="gt-v">${escapeHtml(formatPower(value, locale))}${note ? `<em>${escapeHtml(note)}</em>` : ""}</span>
+          </button>`).join("")}
+        <div class="gt-status ${status[0]}">◆ ${escapeHtml(status[1])} ◆</div>
+        <div class="gt-kvs">
+          ${config.showBattery ? kv(f.mode === "charging" ? t.chipFull : t.chipLasts, f.at ? formatWhen(f.at, locale) : "—") : kv(t.gridImport, formatEnergy(m.today.gridImport, locale))}
+          ${config.showBattery ? kv(t.stored, isNum(f.stored) ? formatEnergy(f.stored, locale) : "—") : kv(t.gridExport, formatEnergy(m.today.gridExport, locale))}
+          ${config.showBattery ? kv(t.gateReserveLabel, formatPercent(f.minSoc, locale)) : kv(t.consumption, formatEnergy(m.today.load, locale))}
+          ${kv(t.autarkyToday, own)}
+        </div>
+      </div>
+      <div class="gt-energy">${energySectionHtml(m)}</div>
+      <div class="sfc-sections">${inverterHtml(m)}${systemHtml(m)}${panelsHtml(m)}</div>
+    </div>`;
+}
+
 const THEME_RENDER = {
   diorama: renderDiorama,
   aurora: renderAurora,
@@ -781,4 +924,5 @@ const THEME_RENDER = {
   expanse: renderExpanse,
   foundation: renderFoundation,
   galaxy: renderGalaxy,
+  gate: renderGate,
 };

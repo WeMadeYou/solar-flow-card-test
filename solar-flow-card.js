@@ -10,7 +10,7 @@
 const CARD_VERSION = "1.2.0";
 const CARD_TAG = "solar-flow-card";
 const EDITOR_TAG = "solar-flow-card-editor";
-const THEMES = ["diorama", "aurora", "paper", "lcars", "atlantis", "expanse", "foundation", "galaxy"];
+const THEMES = ["diorama", "aurora", "paper", "lcars", "atlantis", "expanse", "foundation", "galaxy", "gate"];
 const PERIODS = ["today", "3d", "7d", "month", "all"];
 // A flow below this many watts counts as idle.
 const ACTIVE_W = 5;
@@ -155,6 +155,19 @@ const TRANSLATIONS = {
     "batteryCold": "The battery is cold: charging may be limited.",
     "batteryHot": "The battery is hot: charging may be limited.",
     "generatorRunning": "Generator running",
+    "gateTitle": "Energy command",
+    "gateSub": "Dialing computer · station",
+    "gateDial": "Dialing sequence",
+    "gateLocked": "{n} / {total} locked",
+    "gateChevron": "Chevron {n}",
+    "gateOfCapacity": "{pct}% of {size}",
+    "gateInbound": "Wormhole active · battery inbound",
+    "gateOutbound": "Wormhole active · battery outbound",
+    "gateExport": "Off-world transfer · grid export",
+    "gateImport": "Incoming wormhole · grid import",
+    "gateIdle": "Gate idle · all chevrons standing by",
+    "gateReserve": "Chevron 7 will not lock · battery at reserve",
+    "gateReserveLabel": "Reserve",
     "themeNames": {
       "diorama": "Diorama",
       "aurora": "Aurora",
@@ -163,7 +176,8 @@ const TRANSLATIONS = {
       "atlantis": "Atlantis",
       "expanse": "Expanse",
       "foundation": "Foundation",
-      "galaxy": "Far galaxy"
+      "galaxy": "Far galaxy",
+      "gate": "Gate Command"
     },
     "editorTitle": "Title",
     "editorLanguage": "Language",
@@ -185,6 +199,7 @@ const TRANSLATIONS = {
     "editorShowSystem": "Installation (phases, inverter load, battery)",
     "editorShowPanels": "Show panels (optimizers)",
     "editorShowWeather": "Weather in the Diorama sky",
+    "editorWide": "Wide layout (on a wide dashboard)",
     "editorSolar": "The installation has PV panels",
     "editorBattery": "The installation has a battery",
     "editorShowSelfSufficiency": "Show self-sufficiency",
@@ -334,6 +349,19 @@ const TRANSLATIONS = {
     "batteryCold": "De batterij is koud: opladen kan beperkt zijn.",
     "batteryHot": "De batterij is heet: opladen kan beperkt zijn.",
     "generatorRunning": "Generator draait",
+    "gateTitle": "Energiecommando",
+    "gateSub": "Kiescomputer · station",
+    "gateDial": "Kiesreeks",
+    "gateLocked": "{n} / {total} vergrendeld",
+    "gateChevron": "Chevron {n}",
+    "gateOfCapacity": "{pct}% van {size}",
+    "gateInbound": "Wormgat actief · batterij laadt",
+    "gateOutbound": "Wormgat actief · batterij levert",
+    "gateExport": "Transfer buiten de wereld · teruglevering",
+    "gateImport": "Inkomend wormgat · afname van het net",
+    "gateIdle": "Poort in rust · chevrons stand-by",
+    "gateReserve": "Chevron 7 vergrendelt niet · batterij op reserve",
+    "gateReserveLabel": "Reserve",
     "themeNames": {
       "diorama": "Diorama",
       "aurora": "Aurora",
@@ -342,7 +370,8 @@ const TRANSLATIONS = {
       "atlantis": "Atlantis",
       "expanse": "Expanse",
       "foundation": "Foundation",
-      "galaxy": "Ver sterrenstelsel"
+      "galaxy": "Ver sterrenstelsel",
+      "gate": "Poortcommando"
     },
     "editorTitle": "Titel",
     "editorLanguage": "Taal",
@@ -364,6 +393,7 @@ const TRANSLATIONS = {
     "editorShowSystem": "Installatie (fasen, omvormerbelasting, batterij)",
     "editorShowPanels": "Toon panelen (optimizers)",
     "editorShowWeather": "Weer in de Diorama-lucht",
+    "editorWide": "Brede indeling (op een breed dashboard)",
     "editorSolar": "De installatie heeft zonnepanelen",
     "editorBattery": "De installatie heeft een batterij",
     "editorShowSelfSufficiency": "Toon zelfvoorziening",
@@ -513,6 +543,19 @@ const TRANSLATIONS = {
     "batteryCold": "Bateria jest zimna: ładowanie może być ograniczone.",
     "batteryHot": "Bateria jest gorąca: ładowanie może być ograniczone.",
     "generatorRunning": "Agregat pracuje",
+    "gateTitle": "Centrum energii",
+    "gateSub": "Komputer wybierania · stacja",
+    "gateDial": "Sekwencja wybierania",
+    "gateLocked": "{n} / {total} zablokowane",
+    "gateChevron": "Szewron {n}",
+    "gateOfCapacity": "{pct}% z {size}",
+    "gateInbound": "Tunel aktywny · magazyn przyjmuje",
+    "gateOutbound": "Tunel aktywny · magazyn oddaje",
+    "gateExport": "Transfer poza świat · oddanie do sieci",
+    "gateImport": "Tunel przychodzący · pobór z sieci",
+    "gateIdle": "Wrota w spoczynku · szewrony w gotowości",
+    "gateReserve": "Szewron 7 nie zablokuje się · magazyn na rezerwie",
+    "gateReserveLabel": "Rezerwa",
     "themeNames": {
       "diorama": "Diorama",
       "aurora": "Aurora",
@@ -521,7 +564,8 @@ const TRANSLATIONS = {
       "atlantis": "Atlantis",
       "expanse": "Expanse",
       "foundation": "Fundacja",
-      "galaxy": "Odległa galaktyka"
+      "galaxy": "Odległa galaktyka",
+      "gate": "Centrum Wrót"
     },
     "editorTitle": "Tytuł",
     "editorLanguage": "Język",
@@ -543,6 +587,7 @@ const TRANSLATIONS = {
     "editorShowSystem": "Instalacja (fazy, obciążenie falownika, bateria)",
     "editorShowPanels": "Pokaż panele (optymalizatory)",
     "editorShowWeather": "Pogoda na niebie Dioramy",
+    "editorWide": "Szeroki układ (na szerokim dashboardzie)",
     "editorSolar": "Instalacja ma panele PV",
     "editorBattery": "Instalacja ma magazyn energii",
     "editorShowSelfSufficiency": "Pokaż samowystarczalność",
@@ -771,6 +816,7 @@ const THEME_FONTS = {
   expanse: "Rajdhani:wght@500;600;700&family=Share+Tech+Mono",
   foundation: "Cinzel:wght@400;600&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500",
   galaxy: "Orbitron:wght@500;700&family=Share+Tech+Mono&family=Oswald:wght@500",
+  gate: "Rajdhani:wght@500;600;700&family=Share+Tech+Mono",
 };
 
 // Fonts declared inside a shadow root are ignored, so add the theme's font
@@ -1576,7 +1622,7 @@ function inverterHtml(m) {
     <section class="sfc-section sfc-inverter">
       <div class="sfc-head">
         <div><span class="sfc-kicker">${MINI_ICONS.chip}</span><h3>${escapeHtml(t.inverterDetails)}</h3></div>
-        <button type="button" class="sfc-link" data-action="inverter">${escapeHtml(t.close)}</button>
+        ${m.config.wide ? "" : `<button type="button" class="sfc-link" data-action="inverter">${escapeHtml(t.close)}</button>`}
       </div>
       ${content}
     </section>`;
@@ -1688,6 +1734,9 @@ function systemHtml(m) {
 }
 
 function standardSections(m) {
+  // Wide: the energy section leads across the full width, the rest flow
+  // into balanced columns below it.
+  if (m.config.wide) return `${energySectionHtml(m)}<div class="sfc-wide-rest">${inverterHtml(m)}${forecastHtml(m)}${systemHtml(m)}${panelsHtml(m)}</div>`;
   return `${inverterHtml(m)}${forecastHtml(m)}${systemHtml(m)}${energySectionHtml(m)}${panelsHtml(m)}`;
 }
 
@@ -2420,7 +2469,8 @@ function renderLcars(m) {
         ${side.map(([cls, num, label, attr]) => `<button class="${cls}" ${attr}><small>${num}-${(label.length * 7) % 10}</small>${escapeHtml(label)}</button>`).join("")}
         <span class="lc-fill"></span>
       </nav>
-      <div class="lc-main">
+      <div class="lc-main ${m.config.wide ? "wide" : ""}">
+        <div class="lc-panel">
         ${m.config.showSolar ? row("pv", t.lcarsPvIn, live.solar, m.ids.live.solar) : ""}
         ${!m.config.showBattery ? "" : row(live.chargeActive ? "battery rev" : "battery", live.chargeActive ? t.lcarsBatIn : t.lcarsBatOut, live.chargeActive ? live.charge : live.discharge, batteryEntityId(m))}
         ${row(live.exportActive ? "grid rev" : "grid", live.exportActive ? t.lcarsGridOut : t.lcarsGridIn, live.exportActive ? live.gridExport : live.gridImport, gridEntityId(m))}
@@ -2439,6 +2489,7 @@ function renderLcars(m) {
           </div>
         </div>
         <div class="lc-status ${status}">${escapeHtml(t[`status${status[0].toUpperCase()}${status.slice(1)}`])}</div>
+        </div>
         <div class="sfc-sections">${standardSections(m)}</div>
       </div>
       <div class="lc-elbow bottom"></div>
@@ -2710,6 +2761,147 @@ function renderGalaxy(m) {
     <div class="sfc-sections">${standardSections(m)}</div>`;
 }
 
+// --------------------------------------------------------------------------
+// Gate: a gate control room. Nine chevrons show the battery level, the
+// dialing computer lists every flow, MALP telemetry is the energy section.
+// --------------------------------------------------------------------------
+
+// Four chevrons are the connection points for the panels, the grid, the
+// home and the battery (lines run to the corner readouts); the other five
+// show the battery level. Chevron i sits at -90° + 40° × i.
+const GATE_PORTS = { pv: 8, grid: 1, load: 3, battery: 6 };
+const GATE_LEVEL = [0, 2, 4, 5, 7];
+const GATE_CORNERS = { pv: [-272, -226], grid: [272, -226], load: [272, 220], battery: [-272, 220] };
+
+function gateRing(m, lit, active) {
+  const glyphs = ["M-5 -6 L5 -6 L0 6 Z", "M-6 0 A6 6 0 1 1 6 0", "M-5 -6 V6 M5 -6 V6 M-5 0 H5", "M0 -7 L6 6 L-6 6 Z", "M-6 -4 H6 M-3 4 H3 M0 -7 V7"];
+  let g = "";
+  for (let i = 0; i < 39; i++) {
+    const a = (i / 39) * Math.PI * 2;
+    const b = a + Math.PI / 39;
+    g += `<g transform="translate(${(Math.cos(a) * 214).toFixed(1)} ${(Math.sin(a) * 214).toFixed(1)}) rotate(${((a * 180) / Math.PI + 90).toFixed(1)})"><path d="${glyphs[i % 5]}" class="${i % 7 ? "" : "hi"}"/></g>`
+      + `<line x1="${(Math.cos(b) * 203).toFixed(1)}" y1="${(Math.sin(b) * 203).toFixed(1)}" x2="${(Math.cos(b) * 225).toFixed(1)}" y2="${(Math.sin(b) * 225).toFixed(1)}" class="gt-seam"/>`;
+  }
+  const { live, config } = m;
+  // Which ports are in use, which carry power now, and which way it flows
+  // (each line runs from the corner to the chevron).
+  const ports = {
+    pv: config.showSolar && [live.solarActive, false],
+    grid: [live.importActive || live.exportActive, live.exportActive],
+    load: [live.loadActive, true],
+    battery: config.showBattery && [live.chargeActive || live.dischargeActive, live.chargeActive],
+  };
+  const portOf = Object.fromEntries(Object.entries(GATE_PORTS).map(([kind, i]) => [i, kind]));
+  let chevrons = "";
+  let lines = "";
+  for (let i = 0; i < 9; i++) {
+    const angle = -90 + i * 40;
+    const a = (angle * Math.PI) / 180;
+    const kind = portOf[i];
+    const port = kind && ports[kind];
+    const cls = port ? `port ${kind} ${port[0] ? "on" : ""}` : kind ? "unused" : GATE_LEVEL.indexOf(i) < lit ? "on" : "";
+    chevrons += `<g class="gt-chevron ${cls}" transform="translate(${(Math.cos(a) * 252).toFixed(1)} ${(Math.sin(a) * 252).toFixed(1)}) rotate(${angle + 90})">
+      <path d="M-22 -14 L22 -14 L8 12 L-8 12 Z" class="gt-chevron-body"/><path d="M-13 -9 L13 -9 L0 9 Z" class="gt-chevron-light"/></g>`;
+    if (port) {
+      const [cx, cy] = GATE_CORNERS[kind];
+      const tip = [Math.cos(a) * 274, Math.sin(a) * 274];
+      lines += flowPath(`M${cx} ${cy} Q${((cx + tip[0]) / 2).toFixed(0)} ${cy} ${tip[0].toFixed(1)} ${tip[1].toFixed(1)}`, port[0], port[1], kind === "load" ? "load" : kind);
+    }
+  }
+  const spin = m.live.chargeActive ? "cw" : m.live.dischargeActive ? "ccw" : "";
+  const ripples = Array.from({ length: 6 }, (_, i) => `<circle r="${(i + 1) * 26}" style="--d:${loopPhase(6, i)}"/>`).join("");
+  return `
+    <svg class="gt-svg" viewBox="-300 -300 600 600" overflow="visible" aria-hidden="true">
+      <defs>
+        <radialGradient id="gt-eh" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#e6fbff" stop-opacity=".95"/><stop offset=".35" stop-color="#5fc8ff" stop-opacity=".75"/><stop offset=".8" stop-color="#1b5fb8" stop-opacity=".55"/><stop offset="1" stop-color="#0a2a5c" stop-opacity=".2"/></radialGradient>
+        <filter id="gt-glow"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      </defs>
+      <g class="gt-horizon ${active ? "open" : ""}"><circle r="190" class="gt-eh"/><g class="gt-ripples">${ripples}</g></g>
+      <circle r="220" class="gt-ring-base"/>
+      <circle r="246" class="gt-ring-edge"/><circle r="194" class="gt-ring-edge"/>
+      <circle r="214" class="gt-ring-track"/>
+      <g class="gt-glyphs ${spin}" style="--d:${loopPhase(180)}">${g}</g>
+      <g class="gt-lines" fill="none" stroke-linecap="round">${lines}</g>
+      ${chevrons}
+    </svg>`;
+}
+
+function renderGate(m) {
+  const { t, locale, live, config } = m;
+  const f = m.forecast;
+  const hub = inverterHub(m);
+  const soc = isNum(live.soc) ? clamp(live.soc, 0, 100) : null;
+  const pvCapacity = positiveNumber(config.pv_capacity);
+  // Chevrons: the battery level in nine steps; without a battery, the
+  // inverter's load (or the panels' share of their size).
+  const level = config.showBattery && isNum(soc) ? soc
+    : isNum(hub.share) ? hub.share
+      : pvCapacity ? clamp((live.solar / (pvCapacity * 1000)) * 100, 0, 100) : 0;
+  const lit = Math.round((level / 100) * GATE_LEVEL.length);
+  const atReserve = config.showBattery && isNum(soc) && soc <= f.minSoc + 1;
+  const gridValue = live.importActive ? live.gridImport : live.exportActive ? live.gridExport : Math.abs(live.grid);
+  const batteryFlow = live.dischargeActive ? live.discharge : live.charge;
+  const max = Math.max(1000, (pvCapacity || 0) * 1000, live.solar, live.load, live.charge, live.discharge, live.gridImport, live.gridExport);
+  const rows = [
+    config.showSolar && ["pv", t.solar, live.solar, live.solarActive, pvCapacity ? fill(t.gateOfCapacity, { pct: formatNumber((live.solar / (pvCapacity * 1000)) * 100, locale, 0), size: `${formatNumber(pvCapacity, locale, 1)} kWp` }) : "", m.ids.live.solar],
+    config.showBattery && ["battery", t.battery, batteryFlow, live.chargeActive || live.dischargeActive, batteryStatus(m), batteryEntityId(m)],
+    ["grid", t.grid, gridValue, live.importActive || live.exportActive, gridStatus(m), gridEntityId(m)],
+    ["load", t.home, live.load, live.loadActive, t.consumption, m.ids.live.load],
+    ["inverter", t.inverter, hub.power, hub.power > ACTIVE_W, isNum(hub.share) ? fill(t.gateOfCapacity, { pct: formatNumber(hub.share, locale, 0), size: formatPower(m.system.inverter.rated, locale) }) : "", "inverter"],
+  ].filter(Boolean);
+  const locked = rows.filter((r) => r[3]).length;
+  const status = atReserve ? ["alert", t.gateReserve]
+    : live.chargeActive ? ["on", t.gateInbound]
+      : live.dischargeActive ? ["on", t.gateOutbound]
+        : live.exportActive ? ["on", t.gateExport]
+          : live.importActive ? ["on", t.gateImport]
+            : ["", t.gateIdle];
+  const kv = (label, value) => `<div class="gt-kv"><small>${escapeHtml(label)}</small><b>${escapeHtml(value)}</b></div>`;
+  const own = isNum(m.today.load) && isNum(m.today.gridImport) && m.today.load > 0.05
+    ? formatPercent(clamp(((m.today.load - m.today.gridImport) / m.today.load) * 100, 0, 100), locale) : "—";
+  const corner = (cls, pos, label, value) => `<div class="gt-node ${cls}" style="${pos}">${escapeHtml(label)}<b>${escapeHtml(value)}</b></div>`;
+  return `
+    <header class="gt-top">
+      <span class="gt-tag">SGC-E</span>
+      <div class="gt-title"><h1>${escapeHtml(m.name)} · ${escapeHtml(t.gateTitle)}</h1><span>${escapeHtml(t.gateSub)} · ${escapeHtml(String(m.station || "—"))}</span></div>
+      <div class="gt-right"><span>${escapeHtml(m.now.toLocaleDateString(locale, { day: "numeric", month: "short" }))} · ${escapeHtml(clockText(m))}</span><span class="gt-live ${m.status.state}">${escapeHtml(m.t[m.status.state])}</span></div>
+    </header>
+    <div class="gt-layout ${config.wide ? "wide" : ""}">
+      <div class="gt-gate">
+        ${gateRing(m, lit, live.loadActive || live.solarActive)}
+        <button class="gt-center" data-action="inverter" title="${escapeHtml(t.inverterDetails)}">
+          ${config.showBattery ? `
+            <small>${escapeHtml(t.battery)}</small><b>${escapeHtml(formatPercent(soc, locale))}</b>
+            ${f.capacity ? `<span>${escapeHtml(`${isNum(f.stored) ? formatNumber(f.stored, locale, 1) : "—"} / ${formatEnergy(f.capacity, locale)}`)}</span>` : ""}
+            ${f.at ? `<em>${escapeHtml(`${f.mode === "charging" ? "▲" : "▼"} ${formatWhen(f.at, locale)}`)}</em>` : ""}` : `
+            <small>${escapeHtml(t.inverter)}</small><b>${escapeHtml(formatPower(hub.power, locale))}</b>`}
+        </button>
+        ${config.showSolar ? corner("pv", "left:0;top:4%", t.solar, formatPower(live.solar, locale)) : ""}
+        ${corner("grid", "right:0;top:4%", t.grid, formatPower(gridValue, locale))}
+        ${config.showBattery ? corner("battery", "left:0;bottom:4%", t.battery, `${live.dischargeActive ? "−" : live.chargeActive ? "+" : ""}${formatPower(batteryFlow, locale)}`) : ""}
+        ${corner("load", "right:0;bottom:4%", t.home, formatPower(live.load, locale))}
+      </div>
+      <div class="gt-panel gt-dial">
+        <div class="gt-ph"><span>${escapeHtml(t.gateDial)}</span><b>${escapeHtml(fill(t.gateLocked, { n: locked, total: rows.length }))}</b></div>
+        ${rows.map(([cls, label, value, active, note, entity], i) => `
+          <button class="gt-row ${cls}" ${entity === "inverter" ? 'data-action="inverter"' : entityAttr(entity)}>
+            <i class="gt-ch ${active ? "on" : ""}"></i>
+            <span><small>${escapeHtml(fill(t.gateChevron, { n: i + 1 }))}</small><strong>${escapeHtml(label)}</strong><i class="gt-bar"><i style="width:${clamp((value / max) * 100, active ? 2 : 0, 100).toFixed(0)}%"></i></i></span>
+            <span class="gt-v">${escapeHtml(formatPower(value, locale))}${note ? `<em>${escapeHtml(note)}</em>` : ""}</span>
+          </button>`).join("")}
+        <div class="gt-status ${status[0]}">◆ ${escapeHtml(status[1])} ◆</div>
+        <div class="gt-kvs">
+          ${config.showBattery ? kv(f.mode === "charging" ? t.chipFull : t.chipLasts, f.at ? formatWhen(f.at, locale) : "—") : kv(t.gridImport, formatEnergy(m.today.gridImport, locale))}
+          ${config.showBattery ? kv(t.stored, isNum(f.stored) ? formatEnergy(f.stored, locale) : "—") : kv(t.gridExport, formatEnergy(m.today.gridExport, locale))}
+          ${config.showBattery ? kv(t.gateReserveLabel, formatPercent(f.minSoc, locale)) : kv(t.consumption, formatEnergy(m.today.load, locale))}
+          ${kv(t.autarkyToday, own)}
+        </div>
+      </div>
+      <div class="gt-energy">${energySectionHtml(m)}</div>
+      <div class="sfc-sections">${inverterHtml(m)}${systemHtml(m)}${panelsHtml(m)}</div>
+    </div>`;
+}
+
 const THEME_RENDER = {
   diorama: renderDiorama,
   aurora: renderAurora,
@@ -2719,6 +2911,7 @@ const THEME_RENDER = {
   expanse: renderExpanse,
   foundation: renderFoundation,
   galaxy: renderGalaxy,
+  gate: renderGate,
 };
 
 
@@ -2877,6 +3070,25 @@ const BASE_CSS = `
   .sfc-chart-hint { margin: 2px 0 0; color: var(--sfc-muted); font-size: 10px; }
   .sfc-chart-empty { display: grid; place-items: center; height: 110px; border: 1px dashed var(--sfc-border); border-radius: 12px; color: var(--sfc-muted); font-size: 12px; }
 
+  .sfc-wide-rest { display: grid; gap: inherit; }
+  /* Wide layout (wide: true), from about 880 px of card width */
+  @container (min-width: 880px) {
+    .sfc-wide { display: grid; grid-template-columns: minmax(380px, 38%) minmax(0, 1fr); align-items: start; }
+    /* Top row: the main view and the energy section; below, the other
+       sections flow into balanced columns (no gaps when one is missing or tall). */
+    .sfc-wide > .sfc-sections, .lc-main.wide > .sfc-sections { display: contents; }
+    .sfc-wide > .sfc-sections > .sfc-energy { margin: 16px 16px 16px 4px; }
+    .sfc-wide-rest { grid-column: 1 / -1; }
+    .sfc-wide .sfc-wide-rest { padding: 0 16px 2px; }
+    .sfc-wide-rest, .gt-layout.wide > .sfc-sections { display: block; columns: 320px; column-gap: 14px; }
+    .sfc-wide-rest > *, .gt-layout.wide > .sfc-sections > * { break-inside: avoid; margin-bottom: 14px; }
+    :is(.sfc-wide, .lc-main.wide, .gt-layout.wide) .sfc-readings { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+    :is(.sfc-wide, .lc-main.wide, .gt-layout.wide) .sfc-strings { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+    .sfc-wide-main > :last-child { margin-bottom: 16px; }
+    .lc-main.wide { display: grid; grid-template-columns: minmax(340px, 40%) minmax(0, 1fr); column-gap: 18px; align-items: start; }
+    .lc-main.wide > .sfc-sections { padding-top: 0; }
+  }
+
   /* Installation */
   .sfc-phases { display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); gap: 8px; }
   .sfc-phase, .sfc-meter { position: relative; min-width: 0; display: grid; gap: 2px; padding: 9px 11px; text-align: left;
@@ -2914,12 +3126,12 @@ const BASE_CSS = `
   @keyframes sfc-dash { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -180; } }
   .no-anim .sfc-flow, .no-anim .atl-pulse, .no-anim .aur-ring, .no-anim .lc-track i,
     .no-anim .exp-spin, .no-anim .fnd-orbit, .no-anim .fnd-sphere, .no-anim .gal-warp, .no-anim .gal-target, .no-anim .gal-cross,
-    .no-anim .dio-cloud, .no-anim .dio-star, .no-anim .dio-glow, .no-anim .dio-rain line, .no-anim .dio-snow circle, .no-anim .dio-fog rect, .no-anim .dio-flash { animation: none !important; }
+    .no-anim .dio-cloud, .no-anim .dio-star, .no-anim .dio-glow, .no-anim .dio-rain line, .no-anim .dio-snow circle, .no-anim .dio-fog rect, .no-anim .dio-flash, .no-anim .gt-ripples circle, .no-anim .gt-glyphs, .no-anim .gt-status, .no-anim .gt-chevron-light { animation: none !important; }
   /* Reduced motion: flows keep moving, slower; decorative effects stop. */
   @media (prefers-reduced-motion: reduce) {
     .sfc-flow { animation-duration: calc(var(--sfc-dash-time, 18s) * 3); }
     .atl-pulse, .aur-ring, .lc-track i, .lc-status, .exp-spin, .fnd-orbit, .fnd-sphere, .gal-warp, .gal-target, .gal-cross,
-    .dio-cloud, .dio-star, .dio-glow, .dio-rain line, .dio-snow circle, .dio-fog rect, .dio-flash { animation: none !important; }
+    .dio-cloud, .dio-star, .dio-glow, .dio-rain line, .dio-snow circle, .dio-fog rect, .dio-flash, .gt-ripples circle, .gt-glyphs, .gt-status, .gt-chevron-light { animation: none !important; }
   }
 
   .sfc-empty { padding: 28px; text-align: center; }
@@ -3395,6 +3607,108 @@ const THEME_CSS = {
     .sfc-tab { font-size: 11px; }
     .sfc-tile small, .sfc-summary-item small { text-transform: uppercase; letter-spacing: .04em; font-size: 10px; }
   `,
+  gate: `
+    .sfc {
+      --sfc-font: "Rajdhani", "Arial Narrow", sans-serif; --sfc-num-font: "Share Tech Mono", ui-monospace, monospace; --sfc-heading-weight: 700;
+      --gt-cyan: #6fd3ff; --gt-amber: #ff8f1f; --gt-line: #173149;
+      --sfc-bg: radial-gradient(60% 50% at 50% 30%, #0b1a2a 0%, #04070b 70%);
+      --sfc-surface: linear-gradient(180deg, rgba(13,28,44,.9), rgba(6,13,21,.9)); --sfc-border: #173149; --sfc-text: #cfe8ff; --sfc-muted: #5f87a6;
+      --sfc-pv: #ffc23d; --sfc-load: #ff8f6b; --sfc-battery: #48e0c8; --sfc-grid: #8fa8ff;
+      --sfc-accent: #6fd3ff; --sfc-accent-soft: rgba(111,211,255,.12); --sfc-tile-bg: rgba(4,10,16,.7); --sfc-track: #0e2233;
+      --sfc-tab-bg: transparent; --sfc-tab-on-bg: #6fd3ff; --sfc-tab-on: #04070b; --sfc-tip-bg: #08111b; --sfc-badge-bg: rgba(111,211,255,.1);
+      --sfc-flow-base: rgba(111,211,255,.12); --sfc-flow-w: 2; --sfc-dash: 3 9; --sfc-dash-time: 14s;
+      --sfc-radius: 14px; --sfc-section-radius: 0; --sfc-tile-radius: 0; --sfc-tabs-radius: 0; --sfc-tab-radius: 0; --sfc-icon-radius: 0;
+      --sfc-frame: #1d3550;
+      background: var(--sfc-bg);
+    }
+    ha-card.sfc::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(111,211,255,.03) 0 1px, transparent 1px 3px); }
+    .gt-top { position: relative; display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--gt-line); background: linear-gradient(90deg, #0a1726, #06101a); }
+    .gt-tag { padding: 3px 7px; background: var(--gt-amber); color: #04070b; font: 12px var(--sfc-num-font); letter-spacing: .1em; }
+    .gt-title { min-width: 0; }
+    .gt-title h1 { margin: 0; font-size: clamp(15px, 3.6cqw, 22px); letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .gt-title span { display: block; font: 11px var(--sfc-num-font); color: var(--sfc-muted); letter-spacing: .12em; text-transform: uppercase; }
+    .gt-right { margin-left: auto; display: grid; justify-items: end; gap: 2px; font: 12px var(--sfc-num-font); color: var(--sfc-muted); white-space: nowrap; }
+    .gt-live { color: #48e08b; text-transform: uppercase; } .gt-live::before { content: "● "; }
+    .gt-live.delayed { color: var(--gt-amber); } .gt-live.offline { color: #ff4433; }
+    .gt-layout { position: relative; display: grid; gap: 14px; padding: 14px 16px 0; }
+    .gt-layout > .sfc-sections { padding: 0 0 16px; }
+    .gt-energy > .sfc-section { margin: 0; }
+    /* The corner readouts sit on the corners of the gate's square. */
+    .gt-gate { position: relative; display: grid; place-items: center; width: 100%; max-width: 560px; justify-self: center; }
+    .gt-svg { width: 100%; }
+    .gt-eh { fill: url(#gt-eh); opacity: .12; transition: opacity .6s; }
+    .gt-horizon.open .gt-eh { opacity: 1; }
+    .gt-ripples circle { fill: none; stroke: #bff0ff; stroke-width: 1.5; opacity: 0; transform-box: fill-box; transform-origin: center; }
+    .gt-horizon.open .gt-ripples circle { animation: gt-ripple 6s ease-in-out infinite; animation-delay: var(--d); }
+    @keyframes gt-ripple { 0%, 100% { opacity: .1; transform: scale(.96); } 50% { opacity: .35; transform: scale(1.04); } }
+    .gt-ring-base { fill: none; stroke: #2c3e4f; stroke-width: 56; }
+    .gt-ring-edge { fill: none; stroke: #405668; stroke-width: 4; }
+    .gt-ring-track { fill: none; stroke: #1d2b38; stroke-width: 22; }
+    .gt-glyphs path { fill: none; stroke: #5a7b93; stroke-width: 1.6; } .gt-glyphs path.hi { stroke: #9fe6ff; }
+    .gt-seam { stroke: #15212c; stroke-width: 2; }
+    .gt-glyphs { transform-box: view-box; transform-origin: 0 0; }
+    .gt-glyphs.cw { animation: gt-spin 180s linear infinite; animation-delay: var(--d); }
+    .gt-glyphs.ccw { animation: gt-spin 180s linear infinite reverse; animation-delay: var(--d); }
+    @keyframes gt-spin { to { transform: rotate(360deg); } }
+    .gt-chevron-body { fill: #3b4652; stroke: #5d6b78; stroke-width: 2; }
+    .gt-chevron-light { fill: #3a2410; }
+    .gt-chevron.on .gt-chevron-light { fill: var(--gt-amber); filter: drop-shadow(0 0 6px var(--gt-amber)); }
+    .gt-chevron.unused { opacity: .45; }
+    /* Connection chevrons: the flow's colour, a slow pulse while power flows. */
+    .gt-chevron.port .gt-chevron-light { fill: color-mix(in srgb, var(--c) 30%, #1a1208); }
+    .gt-chevron.port.on .gt-chevron-light { fill: var(--c); animation: gt-port 3.2s ease-in-out infinite; }
+    .gt-chevron.port.pv { --c: var(--sfc-pv); } .gt-chevron.port.grid { --c: var(--sfc-grid); }
+    .gt-chevron.port.load { --c: var(--sfc-load); } .gt-chevron.port.battery { --c: var(--sfc-battery); }
+    @keyframes gt-port { 0%, 100% { filter: drop-shadow(0 0 2px var(--c)); opacity: .8; } 50% { filter: drop-shadow(0 0 9px var(--c)); opacity: 1; } }
+    .gt-lines .sfc-flow-base { stroke-width: 2; } .gt-lines .sfc-flow { stroke-width: 2.4; }
+    .gt-center { position: absolute; display: grid; justify-items: center; gap: 2px; padding: 0; border: 0; background: none; text-align: center; }
+    .gt-center small { font: clamp(10px, 2.4cqw, 13px) var(--sfc-num-font); letter-spacing: .3em; color: #bfe9ff; text-transform: uppercase; }
+    .gt-center b { font: 600 clamp(34px, 10cqw, 64px)/1 var(--sfc-font); color: #fff; text-shadow: 0 0 18px rgba(111,211,255,.9); }
+    .gt-center span { font: clamp(11px, 2.6cqw, 15px) var(--sfc-num-font); color: #d9f3ff; }
+    .gt-center em { font: clamp(11px, 2.6cqw, 15px) var(--sfc-num-font); font-style: normal; color: var(--gt-amber); }
+    .gt-node { position: absolute; font: 11px var(--sfc-num-font); letter-spacing: .12em; color: var(--sfc-muted); text-transform: uppercase; }
+    .gt-node[style*="right"] { text-align: right; }
+    .gt-node b { display: block; font: clamp(15px, 3.6cqw, 22px) var(--sfc-num-font); }
+    .gt-node.pv b { color: var(--sfc-pv); } .gt-node.grid b { color: var(--sfc-grid); } .gt-node.battery b { color: var(--sfc-battery); } .gt-node.load b { color: var(--sfc-load); }
+    .gt-panel { position: relative; padding: 12px; border: 1px solid var(--gt-line); background: var(--sfc-surface); }
+    .gt-panel::after, .sfc-section::after { content: ""; position: absolute; top: -1px; left: -1px; width: 16px; height: 16px; border-top: 2px solid var(--gt-cyan); border-left: 2px solid var(--gt-cyan); pointer-events: none; }
+    .sfc-section { position: relative; }
+    .gt-ph { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 9px; font: 11px var(--sfc-num-font); color: var(--sfc-muted); letter-spacing: .14em; text-transform: uppercase; }
+    .gt-ph b { color: var(--gt-cyan); font-weight: 400; }
+    .gt-row { width: 100%; display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 10px; align-items: center; margin-bottom: 6px; padding: 6px 8px;
+      border: 1px solid var(--gt-line); background: rgba(4,10,16,.7); text-align: left; --c: var(--gt-cyan); }
+    .gt-row.pv { --c: var(--sfc-pv); } .gt-row.battery { --c: var(--sfc-battery); } .gt-row.grid { --c: var(--sfc-grid); } .gt-row.load { --c: var(--sfc-load); }
+    .gt-ch { width: 22px; height: 18px; clip-path: polygon(0 0, 100% 0, 50% 100%); background: #2a1a0a; }
+    .gt-ch.on { background: var(--gt-amber); box-shadow: 0 0 10px var(--gt-amber); }
+    .gt-row small { display: block; font: 10px var(--sfc-num-font); color: var(--sfc-muted); letter-spacing: .12em; text-transform: uppercase; }
+    .gt-row strong { display: block; font-size: 15px; letter-spacing: .06em; text-transform: uppercase; }
+    .gt-bar { display: block; height: 3px; margin-top: 4px; background: #0e2233; } .gt-bar i { display: block; height: 100%; background: var(--c); }
+    .gt-v { font: clamp(15px, 3.4cqw, 19px) var(--sfc-num-font); text-align: right; white-space: nowrap; }
+    .gt-v em { display: block; font-size: 10px; font-style: normal; color: var(--sfc-muted); }
+    .gt-status { margin: 4px 0 10px; padding: 7px; text-align: center; font: 12px var(--sfc-num-font); letter-spacing: .16em; text-transform: uppercase; border: 1px solid #24506f; color: var(--gt-cyan); }
+    .gt-status.on { background: var(--gt-amber); border-color: var(--gt-amber); color: #04070b; }
+    .gt-status.alert { background: #ff4433; border-color: #ff4433; color: #fff; animation: gt-alert 3s ease-in-out infinite; }
+    @keyframes gt-alert { 50% { opacity: .7; } }
+    .gt-kvs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .gt-kv { padding: 6px 8px; border: 1px solid var(--gt-line); background: rgba(4,10,16,.7); min-width: 0; }
+    .gt-kv small { display: block; font: 10px var(--sfc-num-font); color: var(--sfc-muted); letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .gt-kv b { font: 400 17px var(--sfc-num-font); }
+    .sfc-head h3 { font-size: 13px; letter-spacing: .16em; text-transform: uppercase; }
+    .sfc-tab { font-family: var(--sfc-num-font); font-size: 12px; border: 1px solid var(--gt-line); }
+    .sfc-tile small, .sfc-summary-item small { font-family: var(--sfc-num-font); text-transform: uppercase; letter-spacing: .06em; font-size: 10px; }
+    .sfc-tile strong, .sfc-summary-item strong { font-weight: 400; }
+    .sfc-panel { border-radius: 0; }
+    @container (min-width: 1000px) {
+      .gt-layout.wide { grid-template-columns: minmax(340px, 34%) minmax(0, 1fr); grid-template-areas: "dial gate" "energy energy" "sections sections"; align-items: start; padding-top: 16px; }
+      .gt-layout.wide .gt-dial { grid-area: dial; }
+      .gt-layout.wide .gt-gate { grid-area: gate; width: 100%; max-width: 640px; justify-self: center; }
+      .gt-layout.wide .gt-energy { grid-area: energy; }
+      .gt-layout.wide > .sfc-sections { grid-area: sections; }
+    }
+    @container (min-width: 1400px) {
+      .gt-layout.wide { grid-template-columns: minmax(340px, 25%) minmax(0, 1fr) minmax(440px, 36%); grid-template-areas: "dial gate energy" "sections sections sections"; }
+    }
+  `,
 };
 
 
@@ -3427,6 +3741,17 @@ function saveHiddenSeries(hidden) {
   } catch (error) {
     // Not persisted; the choice still applies until the page reloads.
   }
+}
+
+// Wide layout: the theme's main view on the left, the sections beside it in
+// a grid that flows, so a missing section leaves no gap. Below ~880 px the
+// card falls back to the normal stacked layout. LCARS and Gate arrange
+// their own columns.
+function wideLayout(theme, html) {
+  if (theme === "lcars" || theme === "gate") return html;
+  const at = html.lastIndexOf('<div class="sfc-sections">');
+  if (at < 0) return html;
+  return `<div class="sfc-wide"><div class="sfc-wide-main">${html.slice(0, at)}</div>${html.slice(at)}</div>`;
 }
 
 class SolarFlowCard extends HTMLElement {
@@ -3624,7 +3949,10 @@ class SolarFlowCard extends HTMLElement {
       const forecast = batteryForecast(live, bank?.capacity && !positiveNumber(config.battery_capacity) ? { ...config, battery_capacity: bank.capacity } : config);
       const panels = showSolar ? panelData(this._hass, resolved, config) : null;
       const weather = theme === "diorama" ? weatherData(this._hass, config) : null;
-      const inverter = this._inverterOpen ? inverterReadings(resolved) : null;
+      // The wide layout has room for everything: inverter details stay open.
+      const wide = config.wide === true;
+      const inverterOpen = wide || this._inverterOpen;
+      const inverter = inverterOpen ? inverterReadings(resolved) : null;
       const system = config.show_system !== false ? systemData(this._hass, resolved, config) : null;
       if (system && !showBattery) Object.assign(system, { battery: [], batteryWarn: null });
       const since = period === "all" && energy.buckets?.length
@@ -3639,7 +3967,7 @@ class SolarFlowCard extends HTMLElement {
       const signature = JSON.stringify([
         language, config, period, [...this._hiddenSeries], live, status.state, today, energy.totals, Boolean(energy.loading),
         chart && [Boolean(chart.loading), Boolean(chart.error), chart.at], forecast.mode, Math.round(forecast.hours * 60 || 0),
-        panels?.panels.map((p) => [p.today, p.power]), system, bank, weather && [weather.condition, weather.temperature], this._inverterOpen,
+        panels?.panels.map((p) => [p.today, p.power]), system, bank, weather && [weather.condition, weather.temperature], inverterOpen,
         inverter?.map((d) => [[...d.strings.values()].map((s) => Object.values(s).map((r) => r.value)), d.temperatures.map((r) => r.value), d.battery.map((r) => r.value), d.grid.map((r) => r.value)]),
         Math.floor(now.getTime() / 60000),
       ]);
@@ -3662,6 +3990,7 @@ class SolarFlowCard extends HTMLElement {
           showSolar,
           showSystem: config.show_system !== false,
           showBattery,
+          wide,
         },
         ids,
         live,
@@ -3679,14 +4008,14 @@ class SolarFlowCard extends HTMLElement {
         system,
         bank,
         weather,
-        inverterOpen: this._inverterOpen,
+        inverterOpen,
         hiddenSeries: this._hiddenSeries,
       };
       model.systemStatus = systemStatus(status, forecast, panels, system);
 
       this.shadowRoot.innerHTML = `
         <style>${BASE_CSS}${THEME_CSS[theme]}</style>
-        <ha-card class="sfc theme-${theme} ${config.animation === false ? "no-anim" : ""}">${THEME_RENDER[theme](model)}</ha-card>`;
+        <ha-card class="sfc theme-${theme} ${config.animation === false ? "no-anim" : ""}">${wide ? wideLayout(theme, THEME_RENDER[theme](model)) : THEME_RENDER[theme](model)}</ha-card>`;
       this._wire(model);
     } catch (error) {
       console.error("Solar Flow Card render error", error);
@@ -3710,6 +4039,10 @@ class SolarFlowCard extends HTMLElement {
     root.querySelectorAll('[data-action="inverter"]').forEach((element) => {
       element.addEventListener("click", (event) => {
         event.stopPropagation();
+        if (model.config.wide) {
+          root.querySelector(".sfc-inverter")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          return;
+        }
         this._inverterOpen = !this._inverterOpen;
         this._signature = "";
         this._render();
@@ -3751,6 +4084,8 @@ const EDITOR_NUMBERS = [
   ["price_export", "editorPriceExport", "0.01"],
   ["co2_factor", "editorCo2", "0.01"],
 ];
+// Switches that are off unless set: [config key, label key].
+const EDITOR_OPTIN = [["wide", "editorWide"]];
 const EDITOR_SWITCHES = [
   ["show_solar", "editorSolar"],
   ["show_battery", "editorBattery"],
@@ -3813,7 +4148,7 @@ class SolarFlowCardEditor extends HTMLElement {
           color: var(--primary-text-color); background: var(--card-background-color);
           border: 1px solid var(--divider-color); border-radius: 10px;
         }
-        .themes { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+        .themes { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }
         .themes button { padding: 10px 4px; border-radius: 10px; border: 1px solid var(--divider-color); background: var(--card-background-color);
           color: var(--primary-text-color); font: inherit; font-size: 12px; cursor: pointer; }
         .themes button.on { border-color: var(--primary-color); box-shadow: inset 0 0 0 1px var(--primary-color); font-weight: 700; }
@@ -3851,6 +4186,9 @@ class SolarFlowCardEditor extends HTMLElement {
         ${EDITOR_SWITCHES.map(([key, label]) => `
           <div class="switch"><label for="${key}" style="color:inherit">${escapeHtml(t[label])}</label>
             <input id="${key}" type="checkbox" ${this._config[key] === false ? "" : "checked"} /></div>`).join("")}
+        ${EDITOR_OPTIN.map(([key, label]) => `
+          <div class="switch"><label for="${key}" style="color:inherit">${escapeHtml(t[label])}</label>
+            <input id="${key}" type="checkbox" ${this._config[key] === true ? "checked" : ""} /></div>`).join("")}
         <p class="hint">${escapeHtml(t.editorHint)}</p>
       </div>`;
     const root = this.shadowRoot;
@@ -3869,6 +4207,9 @@ class SolarFlowCardEditor extends HTMLElement {
       const number = Number.parseFloat(e.target.value);
       this._set(key, Number.isFinite(number) ? number : undefined);
     }));
+    EDITOR_OPTIN.forEach(([key]) => root.getElementById(key)?.addEventListener("change", (e) =>
+      this._set(key, e.target.checked ? true : undefined)
+    ));
     EDITOR_SWITCHES.forEach(([key]) => root.getElementById(key)?.addEventListener("change", (e) =>
       this._set(key, e.target.checked ? undefined : false)
     ));
@@ -3883,7 +4224,7 @@ if (!window.customCards.some((card) => card.type === CARD_TAG)) {
   window.customCards.push({
     type: CARD_TAG,
     name: "Solar Flow Card",
-    description: "Solar, battery, grid and home power flow with charts, forecasts and five themes.",
+    description: "Solar, battery, grid and home power flow with charts, forecasts and nine themes.",
     preview: true,
     documentationURL: "https://github.com/gratak/solar-flow-card",
   });
