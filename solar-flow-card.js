@@ -203,6 +203,8 @@ const TRANSLATIONS = {
     "editorPvCapacity": "PV size (kWp)",
     "editorPvPanels": "Number of panels",
     "editorPanelsPerString": "Panels per string",
+    "editorStringPanels": "PV{n} · now {volts}",
+    "editorStringsHint": "Panels on each string. Without optimizers the card estimates each panel from its string's power; leave unused strings empty.",
     "editorInverterRating": "Inverter rated power (kW)",
     "editorPriceImport": "Import price per kWh",
     "editorPriceExport": "Export price per kWh",
@@ -413,6 +415,8 @@ const TRANSLATIONS = {
     "editorPvCapacity": "PV-grootte (kWp)",
     "editorPvPanels": "Aantal panelen",
     "editorPanelsPerString": "Panelen per string",
+    "editorStringPanels": "PV{n} · nu {volts}",
+    "editorStringsHint": "Panelen per string. Zonder optimizers schat de kaart elk paneel uit het vermogen van zijn string; laat ongebruikte strings leeg.",
     "editorInverterRating": "Nominaal vermogen omvormer (kW)",
     "editorPriceImport": "Inkoopprijs per kWh",
     "editorPriceExport": "Verkoopprijs per kWh",
@@ -623,6 +627,8 @@ const TRANSLATIONS = {
     "editorPvCapacity": "Moc instalacji PV (kWp)",
     "editorPvPanels": "Liczba paneli",
     "editorPanelsPerString": "Paneli na string",
+    "editorStringPanels": "PV{n} · teraz {volts}",
+    "editorStringsHint": "Liczba paneli na każdym stringu. Bez optymalizatorów karta szacuje każdy panel z mocy jego stringu; nieużywane stringi zostaw puste.",
     "editorInverterRating": "Moc znamionowa falownika (kW)",
     "editorPriceImport": "Cena zakupu za kWh",
     "editorPriceExport": "Cena sprzedaży za kWh",
@@ -4415,12 +4421,21 @@ const EDITOR_NUMBERS = [
   ["battery_min_soc", "editorBatteryMinSoc", "1"],
   ["pv_capacity", "editorPvCapacity", "0.1"],
   ["pv_panels", "editorPvPanels", "1"],
-  ["panels_per_string", "editorPanelsPerString", "1"],
   ["inverter_power_rating", "editorInverterRating", "0.1"],
   ["price_import", "editorPriceImport", "0.01"],
   ["price_export", "editorPriceExport", "0.01"],
   ["co2_factor", "editorCo2", "0.01"],
 ];
+// The inverter's PV strings, for one "panels on this string" field each.
+function editorStrings(hass, config) {
+  try {
+    const device = inverterReadings(resolveEntities(hass, config)).find((d) => d.strings.size);
+    return device ? [...device.strings.entries()].sort((a, b) => a[0] - b[0]).map(([index, s]) => ({ index, voltage: s.V?.value ?? null })) : [];
+  } catch (error) {
+    return [];
+  }
+}
+
 // Switches that are off unless set: [config key, label key].
 const EDITOR_OPTIN = [["wide", "editorWide"], ["show_insights", "editorInsights"]];
 const EDITOR_SWITCHES = [
@@ -4470,6 +4485,25 @@ class SolarFlowCardEditor extends HTMLElement {
     this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: next }, bubbles: true, composed: true }));
   }
 
+  // Panels on each PV string the inverter reports (or one field when it
+  // reports none), for the per-panel estimate without optimizers.
+  _stringsHtml(t) {
+    const setting = this._config.panels_per_string;
+    const valueAt = (i) => (Array.isArray(setting) ? setting[i] ?? "" : setting ?? "");
+    const strings = editorStrings(this._hass, this._config);
+    const fields = strings.length
+      ? strings.map((s, i) => `
+          <label><span>${escapeHtml(fill(t.editorStringPanels, { n: s.index, volts: isNum(s.voltage) ? `${Math.round(s.voltage)} V` : "—" }))}</span>
+            <input data-string="${i}" type="number" min="0" step="1" inputmode="numeric" value="${escapeHtml(String(valueAt(i)))}" /></label>`).join("")
+      : `<label><span>${escapeHtml(t.editorPanelsPerString)}</span><input id="panels_per_string" type="number" min="0" step="1" inputmode="numeric" value="${escapeHtml(String(Array.isArray(setting) ? setting[0] ?? "" : setting ?? ""))}" /></label>`;
+    return `
+      <div class="strings">
+        <span class="title">${escapeHtml(t.editorPanelsPerString)}</span>
+        <div class="grid">${fields}</div>
+        <p class="hint">${escapeHtml(t.editorStringsHint)}</p>
+      </div>`;
+  }
+
   _render() {
     if (!this.shadowRoot) return;
     const t = stringsFor(languageOf(this._hass, this._config));
@@ -4493,6 +4527,8 @@ class SolarFlowCardEditor extends HTMLElement {
         .switch { display: flex; justify-content: space-between; align-items: center; gap: 12px; color: var(--primary-text-color); font-size: 14px; }
         input[type="checkbox"] { width: 19px; height: 19px; accent-color: var(--primary-color); }
         .hint { margin: 0; color: var(--secondary-text-color); font-size: 12px; }
+        .strings { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid var(--divider-color); border-radius: 10px; }
+        .strings .title { font-size: 13px; font-weight: 600; color: var(--primary-text-color); }
       </style>
       <div class="editor">
         <label><span>${escapeHtml(t.editorTheme)}</span>
@@ -4520,6 +4556,7 @@ class SolarFlowCardEditor extends HTMLElement {
             <label><span>${escapeHtml(t[label])}</span><input id="${key}" type="number" min="0" step="${step}" inputmode="decimal" value="${value(key)}" /></label>`).join("")}
           <label><span>${escapeHtml(t.editorCurrency)}</span><input id="currency" type="text" value="${value("currency")}" placeholder="${escapeHtml(t.currency)}" /></label>
         </div>
+        ${this._stringsHtml(t)}
         ${EDITOR_SWITCHES.map(([key, label]) => `
           <div class="switch"><label for="${key}" style="color:inherit">${escapeHtml(t[label])}</label>
             <input id="${key}" type="checkbox" ${this._config[key] === false ? "" : "checked"} /></div>`).join("")}
@@ -4540,6 +4577,16 @@ class SolarFlowCardEditor extends HTMLElement {
     root.getElementById("title")?.addEventListener("change", (e) => this._set("title", e.target.value.trim() || undefined));
     root.getElementById("currency")?.addEventListener("change", (e) => this._set("currency", e.target.value.trim() || undefined));
     root.getElementById("station_id")?.addEventListener("change", (e) => this._set("station_id", e.target.value || undefined));
+    // Panels per string: one field per string gives a list, the single field a number.
+    root.querySelectorAll("[data-string]").forEach((input) => input.addEventListener("change", () => {
+      const counts = [...root.querySelectorAll("[data-string]")].map((el) => Math.max(0, Math.round(Number.parseFloat(el.value)) || 0));
+      while (counts.length && !counts[counts.length - 1]) counts.pop();
+      this._set("panels_per_string", counts.length ? counts : undefined);
+    }));
+    root.getElementById("panels_per_string")?.addEventListener("change", (e) => {
+      const number = Math.round(Number.parseFloat(e.target.value));
+      this._set("panels_per_string", number > 0 ? number : undefined);
+    });
     EDITOR_NUMBERS.forEach(([key]) => root.getElementById(key)?.addEventListener("change", (e) => {
       const number = Number.parseFloat(e.target.value);
       this._set(key, Number.isFinite(number) ? number : undefined);
