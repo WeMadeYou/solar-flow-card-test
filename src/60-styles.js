@@ -1,6 +1,9 @@
 
 const BASE_CSS = `
   :host { display: block; }
+  /* background: glass – translucent card that lets the dashboard background
+     show through, blurred so the readings stay legible. */
+  ha-card.sfc.glass { background: var(--sfc-glass, rgba(6, 12, 20, .38)); backdrop-filter: blur(6px) saturate(1.25); -webkit-backdrop-filter: blur(6px) saturate(1.25); }
   ha-card.sfc {
     display: block;
     box-sizing: border-box;
@@ -255,6 +258,7 @@ const THEME_CSS = {
   // ---------------------------------------------------------------- Diorama
   diorama: `
     .sfc {
+      --sfc-glass: rgba(255, 255, 255, .55);
       --sfc-font: "Nunito", system-ui, sans-serif;
       --sfc-bg: #ffffff; --sfc-surface: #f5f8fb; --sfc-border: #e3eaf1; --sfc-text: #24364a; --sfc-muted: #6a7d92;
       --sfc-pv: #f5a400; --sfc-load: #f26b5b; --sfc-battery: #1fbf86; --sfc-grid: #5b8def;
@@ -362,6 +366,7 @@ const THEME_CSS = {
   // ------------------------------------------------------------------ Paper
   paper: `
     .sfc {
+      --sfc-glass: rgba(255, 255, 255, .55);
       --sfc-font: "Inter", system-ui, sans-serif; --sfc-heading-font: "Fraunces", Georgia, serif; --sfc-num-font: "Fraunces", Georgia, serif;
       --sfc-heading-weight: 600;
       --sfc-bg: #f6f1e7; --sfc-surface: transparent; --sfc-border: #ddd3c2; --sfc-text: #2a2722; --sfc-muted: #8a8173;
