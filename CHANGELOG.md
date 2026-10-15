@@ -1,7 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.1.0
 
+- Dutch translation, thanks to @furian88.
 - Home consumption is calculated when there is no consumption sensor: panels + grid (+ import, − export) + battery (+ discharge, − charge). Works for the live value, the power chart and the daily/period energy, so setups that only have PV and grid sensors (e.g. SolarEdge over Modbus) no longer need a helper sensor.
 - Battery forecast: a time on another day shows the weekday ("Fri 17:13" instead of "17:13"), and a rate so slow that the battery would take more than 2 days (a trickle of charge in the evening) shows "Charging slowly" without a time instead of "Full in 4 days, about 17:13".
 - Demo: the clock follows the scenario (noon 12:30, evening 19:30, night 03:00…), so the Diorama sky and the forecast times match the data.

@@ -33,7 +33,7 @@ DeyeCloud sensors are found automatically; any other inverter works by pointing 
 - **Installation**: power on each phase (L1/L2/L3) with grid power and voltage and the spread between phases, inverter load against its rated power, battery temperature, voltage and current with a warning when the battery is too cold or hot to charge fully, and the generator while it runs.
 - **Inverter details** (tap the inverter or the house): PV strings, temperatures, battery and grid readings.
 - **Panels**: one tile per optimizer with today's production; the weakest panel is highlighted when it falls below 85% of the median.
-- English and Polish, with a visual editor; [more languages welcome](CONTRIBUTING.md#add-or-improve-a-translation).
+- English, Polish and Dutch, with a visual editor; [more languages welcome](CONTRIBUTING.md#add-or-improve-a-translation).
 
 History comes from Home Assistant itself (recorder history and long-term statistics), so the card adds no requests to your inverter's cloud.
 
@@ -90,7 +90,7 @@ co2_factor: 0.7
 |---|---|---|
 | `theme` | `diorama` | `diorama`, `aurora`, `paper`, `lcars`, `atlantis`, `expanse`, `foundation` or `galaxy`. |
 | `title` | station name | Card title. |
-| `language` | Home Assistant language | `en` or `pl`; also in the visual editor. |
+| `language` | Home Assistant language | `en`, `pl` or `nl`; also in the visual editor. |
 | `period` | `today` | Tab shown when the dashboard opens: `today`, `3d`, `7d`, `month` or `all`. |
 | `station_id` | first station | DeyeCloud station, when the account has several. |
 | `animation` | `true` | Animated flows. |
@@ -182,7 +182,7 @@ The 3D, 7D, month and all-time totals and bars come from the long-term statistic
 
 ## Translations
 
-The card speaks English and Polish. Every language is one JSON file in [`translations/`](translations/); adding yours takes a copy of `en.json` and no programming. See [CONTRIBUTING.md](CONTRIBUTING.md#add-or-improve-a-translation).
+The card speaks English, Polish and Dutch (thanks to @furian88). Every language is one JSON file in [`translations/`](translations/); adding yours takes a copy of `en.json` and no programming. See [CONTRIBUTING.md](CONTRIBUTING.md#add-or-improve-a-translation).
 
 ## Development
 
