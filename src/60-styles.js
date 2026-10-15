@@ -719,8 +719,31 @@ const THEME_CSS = {
     .gt-energy > .sfc-section { margin: 0; }
     /* The corner readouts sit on the corners of the gate's square. */
     .gt-gate { position: relative; display: grid; place-items: center; width: 100%; max-width: 560px; justify-self: center; }
+    .gt-full { display: none; }
+    .gt-compact { max-width: 620px; }
+    .gt-compact .gt-center b { font-size: clamp(26px, 7cqw, 46px); }
+    .gt-compact .gt-center small, .gt-compact .gt-center span, .gt-compact .gt-center em { font-size: clamp(9px, 2.1cqw, 12px); }
+    .gt-label { position: absolute; transform: translateX(-50%); display: grid; justify-items: center; padding: 0; border: 0; background: none; white-space: nowrap;
+      font: 10px var(--sfc-num-font); letter-spacing: .12em; color: var(--sfc-muted); text-transform: uppercase; }
+    .gt-label b { font: clamp(13px, 3.4cqw, 19px) var(--sfc-num-font); }
+    .gt-label.pv b { color: var(--sfc-pv); } .gt-label.grid b { color: var(--sfc-grid); } .gt-label.battery b { color: var(--sfc-battery); } .gt-label.load b { color: var(--sfc-load); }
+    /* Corner pictures: solar cells, a zero point module, a dial home device, the mountain base. */
+    .gt-icon { opacity: .75; transition: opacity .4s; } .gt-icon.on { opacity: 1; }
+    .gt-icon-cells path { fill: #13304a; stroke: var(--sfc-pv); stroke-width: 1.2; }
+    .gt-icon.pv.on .gt-icon-cells path { fill: color-mix(in srgb, var(--sfc-pv) 28%, #13304a); filter: drop-shadow(0 0 3px var(--sfc-pv)); }
+    .gt-icon-stand { stroke: #5d6b78; stroke-width: 3; fill: none; }
+    .gt-zpm-glass { fill: rgba(255,170,80,.08); stroke: #ffb35c; stroke-width: 1.6; }
+    .gt-zpm-band { fill: #b48a3c; } .gt-zpm-edge { stroke: rgba(255,230,190,.5); stroke-width: 1; }
+    .gt-icon.battery.on .gt-zpm-core { filter: drop-shadow(0 0 6px #ff9a3c); }
+    .gt-dhd-base { fill: #2a3540; stroke: #5d6b78; stroke-width: 1.5; }
+    .gt-dhd-top { fill: #3b4652; stroke: #6c7a88; stroke-width: 1.5; }
+    .gt-dhd-keys ellipse { fill: #8a6a3a; } .gt-icon.grid.on .gt-dhd-keys ellipse { fill: #ffb35c; }
+    .gt-dhd-dome { fill: #7a1d14; } .gt-icon.grid.on .gt-dhd-dome { fill: #ff4433; filter: drop-shadow(0 0 6px #ff4433); }
+    .gt-sgc-mountain { fill: #22303c; stroke: #4c5d6c; stroke-width: 1.5; }
+    .gt-sgc-door { fill: #3b4652; stroke: #6c7a88; stroke-width: 1.5; } .gt-sgc-door-line { stroke: #6c7a88; }
+    .gt-sgc-lights { stroke: #3a4a58; stroke-width: 2.5; } .gt-icon.load.on .gt-sgc-lights { stroke: var(--sfc-load); filter: drop-shadow(0 0 3px var(--sfc-load)); }
     .gt-svg { width: 100%; }
-    .gt-eh { fill: url(#gt-eh); opacity: .12; transition: opacity .6s; }
+    .gt-eh { opacity: .12; transition: opacity .6s; }
     .gt-horizon.open .gt-eh { opacity: 1; }
     .gt-ripples circle { fill: none; stroke: #bff0ff; stroke-width: 1.5; opacity: 0; transform-box: fill-box; transform-origin: center; }
     .gt-horizon.open .gt-ripples circle { animation: gt-ripple 6s ease-in-out infinite; animation-delay: var(--d); }
@@ -786,6 +809,8 @@ const THEME_CSS = {
       .gt-layout.wide { grid-template-columns: minmax(340px, 34%) minmax(0, 1fr); grid-template-areas: "dial gate" "energy energy" "sections sections"; align-items: start; padding-top: 16px; }
       .gt-layout.wide .gt-dial { grid-area: dial; }
       .gt-layout.wide .gt-gate { grid-area: gate; width: 100%; max-width: 640px; justify-self: center; }
+      .gt-layout.wide .gt-full { display: grid; }
+      .gt-layout.wide .gt-compact { display: none; }
       .gt-layout.wide .gt-energy { grid-area: energy; }
       .gt-layout.wide > .sfc-sections { grid-area: sections; }
     }

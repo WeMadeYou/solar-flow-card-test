@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- **Gate Command** theme (`gate`): a gate control room. Four chevrons are the connection points of the panels, battery, grid and home, linked to the corner readouts and pulsing gently while power flows; the other five show the battery level. A dialing computer lists every flow with a status line, the event horizon ripples while power flows and the glyph ring turns slowly while the battery charges or discharges. Compact by default, wide with `wide: true`.
+- **Gate Command** theme (`gate`): a gate control room with a dialing computer that lists every flow and a status line; the event horizon ripples while power flows and the glyph ring turns slowly while the battery charges or discharges. Compact: a smaller gate whose four chevrons are the connection points of pictures in the corners (solar cells, a zero point module filled to the battery level, a dial home device for the grid, the mountain base for the home), linked by flow lines and pulsing gently while power flows; the other five chevrons show the battery level. Wide (`wide: true`): the full gate with all nine chevrons for the battery level, the dialing computer and the chart side by side.
 - **Wide layout** for every theme (`wide: true`, also in the editor): the main view and the chart side by side, the other sections open below in balanced columns, with the inverter details shown without a click. A missing section (no panels, no battery) leaves no gap. Below about 880 px of card width the card stays compact.
 - The theme picker in the editor wraps to fit nine themes.
 
