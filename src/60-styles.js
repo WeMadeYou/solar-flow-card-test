@@ -754,10 +754,15 @@ const THEME_CSS = {
     .gt-zpm-glass { fill: rgba(255,170,80,.08); stroke: #ffb35c; stroke-width: 1.6; }
     .gt-zpm-band { fill: #b48a3c; } .gt-zpm-edge { stroke: rgba(255,230,190,.5); stroke-width: 1; }
     .gt-icon.battery.on .gt-zpm-core { filter: drop-shadow(0 0 6px #ff9a3c); }
-    .gt-dhd-base { fill: #2a3540; stroke: #5d6b78; stroke-width: 1.5; }
-    .gt-dhd-top { fill: #3b4652; stroke: #6c7a88; stroke-width: 1.5; }
-    .gt-dhd-keys ellipse { fill: #8a6a3a; } .gt-icon.grid.on .gt-dhd-keys ellipse { fill: #ffb35c; }
-    .gt-dhd-dome { fill: #7a1d14; } .gt-icon.grid.on .gt-dhd-dome { fill: #ff4433; filter: drop-shadow(0 0 6px #ff4433); }
+    .gt-dhd-foot { fill: #1c252e; }
+    .gt-dhd-stand { fill: #2a3540; stroke: #4c5d6c; stroke-width: 1.2; }
+    .gt-dhd-rim { fill: #222c35; stroke: #5d6b78; stroke-width: 1.2; }
+    .gt-dhd-top { fill: #3b4652; stroke: #6c7a88; stroke-width: 1; }
+    .gt-dhd-keys rect { fill: #6e5530; stroke: #2a2014; stroke-width: .5; }
+    .gt-icon.grid.on .gt-dhd-keys.outer rect { fill: #e39a45; } .gt-icon.grid.on .gt-dhd-keys.inner rect { fill: #c9853a; }
+    .gt-dhd-dome { fill: #6e1a12; stroke: #3a0d08; stroke-width: 1; }
+    .gt-icon.grid.on .gt-dhd-dome { fill: #ff3b2a; filter: drop-shadow(0 0 7px #ff4433); }
+    .gt-dhd-shine { fill: rgba(255,255,255,.35); }
     .gt-sgc-mountain { fill: #22303c; stroke: #4c5d6c; stroke-width: 1.5; }
     .gt-sgc-door { fill: #3b4652; stroke: #6c7a88; stroke-width: 1.5; } .gt-sgc-door-line { stroke: #6c7a88; }
     .gt-sgc-lights { stroke: #3a4a58; stroke-width: 2.5; } .gt-icon.load.on .gt-sgc-lights { stroke: var(--sfc-load); filter: drop-shadow(0 0 3px var(--sfc-load)); }
@@ -776,7 +781,13 @@ const THEME_CSS = {
     .gt-glyphs.cw { animation: gt-spin 180s linear infinite; animation-delay: var(--d); }
     .gt-glyphs.ccw { animation: gt-spin 180s linear infinite reverse; animation-delay: var(--d); }
     @keyframes gt-spin { to { transform: rotate(360deg); } }
-    .gt-chevron-body { fill: #3b4652; stroke: #5d6b78; stroke-width: 2; }
+    /* Chevrons: a metal arrowhead housing, a clamp that drops into place
+       when the chevron locks, and the triangular light. */
+    .gt-chevron-body { fill: #3e4955; stroke: #6b7987; stroke-width: 1.5; }
+    .gt-chevron-rib { fill: none; stroke: #8996a3; stroke-width: 1; opacity: .6; }
+    .gt-chevron-recess { fill: #1a2027; }
+    .gt-chevron-clamp { fill: #4a5562; stroke: #6b7987; stroke-width: 1.2; transition: transform .6s; transform-box: fill-box; }
+    .gt-chevron.on .gt-chevron-clamp, .gt-chevron.port.on .gt-chevron-clamp { transform: translateY(4px); fill: #5b6672; }
     .gt-chevron-light { fill: #3a2410; }
     .gt-chevron.on .gt-chevron-light { fill: var(--gt-amber); filter: drop-shadow(0 0 6px var(--gt-amber)); }
     .gt-chevron.unused { opacity: .45; }
@@ -827,7 +838,7 @@ const THEME_CSS = {
     @container (min-width: 1000px) {
       .gt-layout.wide { grid-template-columns: minmax(340px, 34%) minmax(0, 1fr); grid-template-areas: "dial gate" "energy energy" "sections sections"; align-items: start; padding-top: 16px; }
       .gt-layout.wide .gt-dial { grid-area: dial; }
-      .gt-layout.wide .gt-gate { grid-area: gate; width: 100%; max-width: 640px; justify-self: center; }
+      .gt-layout.wide .gt-gate { grid-area: gate; width: 100%; max-width: 760px; justify-self: center; }
       .gt-layout.wide .gt-full { display: grid; }
       .gt-layout.wide .gt-compact { display: none; }
       .gt-layout.wide .gt-energy { grid-area: energy; }
