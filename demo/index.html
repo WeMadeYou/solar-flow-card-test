@@ -16,7 +16,7 @@
 <body>
   <div class="bar">
     <strong>Solar Flow Card <small id="version"></small></strong>
-    <label>Theme <select id="theme"><option>all</option><option>diorama</option><option>aurora</option><option>paper</option><option>lcars</option><option>atlantis</option><option>expanse</option><option>foundation</option><option>galaxy</option><option>gate</option></select></label>
+    <label>Theme <select id="theme"><option>all</option><option>diorama</option><option>aurora</option><option>paper</option><option>lcars</option><option>atlantis</option><option>expanse</option><option>foundation</option><option>galaxy</option><option>gate</option><option>reactor</option></select></label>
     <label>Scenario <select id="scenario"></select></label>
     <label>Language <select id="language"><option>pl</option><option>en</option><option>nl</option></select></label>
     <label>PV <select id="solar"><option value="1">yes</option><option value="0">no (EMS)</option></select></label>
@@ -74,7 +74,7 @@
     }, { capture: true });
 
     function render() {
-      const themes = $("theme").value === "all" ? ["diorama", "aurora", "paper", "lcars", "atlantis", "expanse", "foundation", "galaxy", "gate"] : [$("theme").value];
+      const themes = $("theme").value === "all" ? ["diorama", "aurora", "paper", "lcars", "atlantis", "expanse", "foundation", "galaxy", "gate", "reactor"] : [$("theme").value];
       window.setDemoHour(SCENARIOS[$("scenario").value].hour);
       const hass = createHass({ scenario: $("scenario").value, language: $("language").value, weather: $("weather").value || undefined, optimizers: $("panels").value !== "est" });
       const cards = $("cards");

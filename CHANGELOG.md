@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.0-beta
+
+A test release: install it from HACS with "Show beta versions" turned on.
+
+- **Reactor** theme (`reactor`): a helmet HUD around an arc reactor with copper coils on a ring of light. One light segment per 10% of solar power against the installation's size (`pv_capacity`, else the inverter's rating), an overdrive glow above 80%, inner arcs that turn while the battery charges (one way) or discharges (the other). The weather shows on the visor glass: sun glare, stars, rain drops running down, snow with frost, fog, lightning. Gauges for the battery level and the solar share, an atmospheric scan line and a status (overdrive, nominal output, reserve power, grid assist, standby). Compact and wide.
+- `show_weather` / `weather_entity` apply to the Reactor theme too.
+
 ## 1.3.0-beta.4
 
 - Wide layout in Home Assistant: the sections were all placed in the right column, leaving the space under the main view empty. The card measured the columns before Home Assistant's card frame had laid them out; it now waits for the layout.

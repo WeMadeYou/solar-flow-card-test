@@ -10,7 +10,7 @@
 
 ![Solar Flow Card themes](docs/themes.gif)
 
-A Home Assistant dashboard card for solar installations with a battery: live power flow, charts, a battery forecast, inverter details and per-panel production, in nine themes, compact or wide.
+A Home Assistant dashboard card for solar installations with a battery: live power flow, charts, a battery forecast, inverter details and per-panel production, in ten themes, compact or wide.
 
 DeyeCloud sensors are found automatically; any other inverter works by pointing the card at its entities.
 
@@ -25,6 +25,12 @@ DeyeCloud sensors are found automatically; any other inverter works by pointing 
 **Gate Command**, wide (`wide: true`):
 
 ![Gate Command, wide](docs/gate-wide.png)
+
+**Reactor**, compact and wide:
+
+| Reactor | Reactor, wide |
+|---|---|
+| ![Reactor](docs/reactor.png) | ![Reactor, wide](docs/reactor-wide.png) |
 
 ## Features
 
@@ -55,6 +61,7 @@ History comes from Home Assistant itself (recorder history and long-term statist
 | `foundation` | A radiant of slowly turning golden orbits around the inverter, with a battery forecast written below. |
 | `galaxy` | A targeting computer flying down a trench, with the moment told as an opening crawl; the target turns red at the battery reserve. |
 | `gate` | A gate control room with a dialing computer listing every flow. Compact: a smaller gate whose four chevrons are the connection points of pictures in the corners (solar cells, a zero point module filled to the battery level, a dial home device for the grid, the mountain base for the home); they pulse while power flows, the other five show the battery level. Wide: the full gate with all nine chevrons for the battery level, the dialing computer and the chart side by side. |
+| `reactor` | A helmet HUD around an arc reactor. Its light segments glow with the solar power (one of ten per 10% of the installation's size, `pv_capacity`), with an overdrive glow above 80%; the inner arcs turn while the battery charges or discharges. The weather shows on the visor: sun glare, stars at night, rain running down the glass, snow, fog and lightning. Gauges for the battery level and the solar share, and a status line (nominal output, reserve power, grid assist). |
 
 ## Installation
 
@@ -94,7 +101,7 @@ co2_factor: 0.7
 
 | Option | Default | Description |
 |---|---|---|
-| `theme` | `diorama` | `diorama`, `aurora`, `paper`, `lcars`, `atlantis`, `expanse`, `foundation`, `galaxy` or `gate`. |
+| `theme` | `diorama` | `diorama`, `aurora`, `paper`, `lcars`, `atlantis`, `expanse`, `foundation`, `galaxy`, `gate` or `reactor`. |
 | `title` | station name | Card title. |
 | `language` | Home Assistant language | `en`, `pl` or `nl`; also in the visual editor. |
 | `wide` | `false` | Wide layout for a wide dashboard (a panel view or a full-width section): the main view and the chart side by side, every section open below in columns, inverter details included. Below about 880 px of card width the card stays compact. Also in the editor. |
@@ -103,8 +110,8 @@ co2_factor: 0.7
 | `station_id` | first station | DeyeCloud station, when the account has several. |
 | `animation` | `true` | Animated flows. |
 | `load_fonts` | `true` | Load the theme's font from Google Fonts; `false` uses system fonts. |
-| `show_weather` | `true` | Diorama: draw the weather of a Home Assistant weather entity in the sky, with the temperature next to the clock. |
-| `weather_entity` | first `weather.*` entity | Weather entity for the Diorama sky. |
+| `show_weather` | `true` | Diorama and Reactor: draw the weather of a Home Assistant weather entity (the Diorama sky, the Reactor visor), with the temperature next to the clock. |
+| `weather_entity` | first `weather.*` entity | Weather entity for the Diorama and Reactor themes. |
 
 ### Your installation
 

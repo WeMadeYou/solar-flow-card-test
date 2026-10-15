@@ -172,7 +172,8 @@
     "expanse": "Expanse",
     "foundation": "Fundacja",
     "galaxy": "Odległa galaktyka",
-    "gate": "Centrum Wrót"
+    "gate": "Centrum Wrót",
+    "reactor": "Reaktor"
   },
   "editorTitle": "Tytuł",
   "editorLanguage": "Język",
@@ -196,7 +197,7 @@
   "editorShowForecast": "Pokaż prognozę magazynu",
   "editorShowSystem": "Instalacja (fazy, obciążenie falownika, bateria)",
   "editorShowPanels": "Pokaż panele (optymalizatory)",
-  "editorShowWeather": "Pogoda na niebie Dioramy",
+  "editorShowWeather": "Pogoda w motywach Diorama i Reaktor",
   "editorWide": "Szeroki układ (na szerokim dashboardzie)",
   "editorInsights": "Dziś w skrócie i porównanie",
   "editorSolar": "Instalacja ma panele PV",
@@ -208,5 +209,31 @@
   "editorShowYield": "Pokaż uzysk na kWp",
   "editorAnimation": "Animacje",
   "editorFonts": "Wczytuj czcionki motywu (Google Fonts)",
-  "editorHint": "Czujniki DeyeCloud są wykrywane automatycznie. Inne falowniki: wskaż encje w YAML (patrz README)."
+  "editorHint": "Czujniki DeyeCloud są wykrywane automatycznie. Inne falowniki: wskaż encje w YAML (patrz README).",
+  "reactorTitle": "Reaktor · system zasilania",
+  "reactorScan": "Skan atmosfery",
+  "reactorTelemetry": "Telemetria",
+  "reactorOverdrive": "Overdrive",
+  "reactorNominal": "Moc nominalna",
+  "reactorReserve": "Tryb rezerwowy",
+  "reactorGrid": "Wsparcie z sieci",
+  "reactorStandby": "Czuwanie",
+  "reactorPvShare": "{pct}% mocy PV",
+  "weatherNames": {
+    "sunny": "Słonecznie",
+    "clear-night": "Bezchmurna noc",
+    "partlycloudy": "Częściowe zachmurzenie",
+    "cloudy": "Pochmurno",
+    "fog": "Mgła",
+    "rainy": "Deszcz",
+    "pouring": "Ulewa",
+    "snowy": "Śnieg",
+    "snowy-rainy": "Deszcz ze śniegiem",
+    "hail": "Grad",
+    "lightning": "Burza",
+    "lightning-rainy": "Burza z deszczem",
+    "windy": "Wietrznie",
+    "windy-variant": "Wietrznie, pochmurno",
+    "exceptional": "Wyjątkowe warunki"
+  }
 }

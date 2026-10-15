@@ -307,7 +307,7 @@ class SolarFlowCard extends HTMLElement {
       const readings = inverterReadings(resolved);
       const panels = showSolar ? panelData(this._hass, resolved, config) || estimatePanels(readings, config, today) : null;
       const insights = this._insights(resolved, today, forecast);
-      const weather = theme === "diorama" ? weatherData(this._hass, config) : null;
+      const weather = theme === "diorama" || theme === "reactor" ? weatherData(this._hass, config) : null;
       // The wide layout has room for everything: inverter details stay open.
       const wide = config.wide === true;
       const inverterOpen = wide || this._inverterOpen;
