@@ -775,7 +775,7 @@ const THEME_CSS = {
     .gt-ring-base { fill: none; stroke: #2c3e4f; stroke-width: 56; }
     .gt-ring-edge { fill: none; stroke: #405668; stroke-width: 4; }
     .gt-ring-track { fill: none; stroke: #1d2b38; stroke-width: 22; }
-    .gt-glyphs path { fill: none; stroke: #5a7b93; stroke-width: 1.6; } .gt-glyphs path.hi { stroke: #9fe6ff; }
+    .gt-glyphs path { fill: #7896ad; fill-rule: evenodd; } .gt-glyphs path.origin { fill: #b9ecff; }
     .gt-seam { stroke: #15212c; stroke-width: 2; }
     .gt-glyphs { transform-box: view-box; transform-origin: 0 0; }
     .gt-glyphs.cw { animation: gt-spin 180s linear infinite; animation-delay: var(--d); }
