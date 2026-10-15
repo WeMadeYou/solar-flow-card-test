@@ -883,7 +883,9 @@ const THEME_CSS = {
     .rx-right { text-align: right; }
     .rx-wx { margin-top: 3px; padding: 0; border: 0; background: none; color: #ffd27a; font: 600 13px var(--sfc-font); cursor: pointer; }
     .night .rx-wx { color: #9cc8ff; }
-    .rx-visor { position: relative; aspect-ratio: 520 / 540; margin: -10px -16px 0; }
+    /* The readouts scale with the visor (cqw of the visor), so they keep their
+       place inside the frame at every card width. */
+    .rx-visor { position: relative; aspect-ratio: 520 / 560; margin: -10px -16px 0; container-type: inline-size; }
     .rx-visor > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
     .rx-frame { fill: rgba(79,216,255,.025); stroke: rgba(79,216,255,.35); stroke-width: 1.2; }
     .rx-ticks { stroke: #4fd8ff; stroke-width: 1; transform-box: view-box; transform-origin: 260px 250px; animation: rx-spin var(--spin, 60s) linear infinite; animation-delay: var(--p-spin, 0s); }
@@ -938,18 +940,18 @@ const THEME_CSS = {
     @keyframes rx-flashseg { 0% { opacity: 0; } 30% { opacity: .9; } 100% { opacity: 0; } }
     @keyframes rx-in { from { opacity: 0; } to { opacity: 1; } }
     @keyframes rx-type { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
-    .rx-node, .rx-inv { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; padding: 6px 12px 5px; border: 0; background: none; color: inherit; cursor: pointer; white-space: nowrap; }
+    .rx-node, .rx-inv { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; padding: 1.15cqw 2.3cqw 1cqw; border: 0; background: none; color: inherit; cursor: pointer; white-space: nowrap; }
     .rx-node::before, .rx-node::after { content: ""; position: absolute; inset: 0; pointer-events: none; border: 1.6px solid var(--c);
       clip-path: polygon(0 0, 12px 0, 12px 1.6px, 1.6px 1.6px, 1.6px 10px, 0 10px, 0 calc(100% - 10px), 1.6px calc(100% - 10px), 1.6px calc(100% - 1.6px), 12px calc(100% - 1.6px), 12px 100%, 0 100%,
         0 0, 100% 0, 100% 10px, calc(100% - 1.6px) 10px, calc(100% - 1.6px) 1.6px, calc(100% - 12px) 1.6px, calc(100% - 12px) 0,
         100% 100%, calc(100% - 12px) 100%, calc(100% - 12px) calc(100% - 1.6px), calc(100% - 1.6px) calc(100% - 1.6px), calc(100% - 1.6px) calc(100% - 10px), 100% calc(100% - 10px)); }
     .rx-node::after { display: none; }
     .rx-node.pv { --c: var(--sfc-pv); } .rx-node.battery { --c: var(--sfc-battery); } .rx-node.grid { --c: var(--sfc-grid); } .rx-node.load { --c: var(--sfc-load); }
-    .rx-node small { color: var(--c); font-size: 10px; letter-spacing: .24em; text-transform: uppercase; }
-    .rx-node b { font: 700 clamp(17px, 4.4cqw, 24px)/1.05 var(--sfc-num-font); color: #e9fbff; text-shadow: 0 0 10px rgba(79,216,255,.35); }
-    .rx-node em { color: var(--c); opacity: .8; font-size: 10.5px; font-style: normal; }
-    .rx-inv b { font: 700 clamp(16px, 4cqw, 21px)/1 var(--sfc-num-font); color: #e9fbff; }
-    .rx-inv small { color: #4fd8ff; font-size: 9px; letter-spacing: .22em; text-transform: uppercase; }
+    .rx-node small { color: var(--c); font-size: max(7px, 1.9cqw); letter-spacing: .24em; text-transform: uppercase; }
+    .rx-node b { font: 700 max(13px, 4.6cqw)/1.05 var(--sfc-num-font); color: #e9fbff; text-shadow: 0 0 10px rgba(79,216,255,.35); }
+    .rx-node em { color: var(--c); opacity: .8; font-size: max(7.5px, 2cqw); font-style: normal; }
+    .rx-inv b { font: 700 max(12px, 4cqw)/1 var(--sfc-num-font); color: #e9fbff; }
+    .rx-inv small { color: #4fd8ff; font-size: max(7px, 1.75cqw); letter-spacing: .22em; text-transform: uppercase; }
     .rx-scan { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 4px; padding: 8px 12px;
       border: 1px solid rgba(79,216,255,.22); background: rgba(4,16,26,.7);
       clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px)); }

@@ -3436,7 +3436,7 @@ function reactorWeather(m) {
   } else if (clear) {
     g += '<circle class="rx-sun" cx="440" cy="36" r="80" fill="url(#rx-flare)"/><circle cx="360" cy="112" r="8" fill="#ffe7b0" opacity=".22"/><circle cx="318" cy="150" r="14" fill="#9fe6ff" opacity=".1"/>';
   }
-  if (w?.grey) g += `<rect width="520" height="540" fill="#7d8a99" opacity="${(w.grey * 0.35).toFixed(2)}"/>`;
+  if (w?.grey) g += `<rect width="520" height="560" fill="#7d8a99" opacity="${(w.grey * 0.35).toFixed(2)}"/>`;
   if (w?.fog) g += '<g class="rx-fog"><ellipse cx="160" cy="190" rx="260" ry="60" fill="url(#rx-haze)"/><ellipse cx="380" cy="390" rx="280" ry="70" fill="url(#rx-haze)"/></g>';
   if (w?.rain) {
     const n = w.rain > 1 ? 60 : 32;
@@ -3445,9 +3445,9 @@ function reactorWeather(m) {
   }
   if (w?.snow) {
     glass += `<g class="rx-snow">${Array.from({ length: 36 }, (_, i) => `<circle style="--d:-${((i * 0.53) % 7).toFixed(2)}s" cx="${(i * 131) % 520}" cy="${(i * 53) % 300}" r="${i % 3 ? 1.5 : 2.3}"/>`).join("")}</g>`;
-    glass += '<rect width="520" height="540" fill="url(#rx-frost)"/>';
+    glass += '<rect width="520" height="560" fill="url(#rx-frost)"/>';
   }
-  if (w?.lightning) glass += '<rect class="rx-flash" width="520" height="540" fill="#dfe9ff"/>';
+  if (w?.lightning) glass += '<rect class="rx-flash" width="520" height="560" fill="#dfe9ff"/>';
   return { phase, sky: g, glass };
 }
 
@@ -3479,7 +3479,7 @@ function renderReactor(m) {
     ? [t.weatherNames?.[w.condition] || w.condition, isNum(w.temperature) ? `${formatNumber(w.temperature, locale, 0)}${w.unit}` : "", config.showSolar ? fill(t.reactorPvShare, { pct }) : ""].filter(Boolean).map(escapeHtml).join(" · ")
     : liveSentence(m) || escapeHtml(config.showSolar ? fill(t.reactorPvShare, { pct }) : t.reactorStandby);
   const ticks = Array.from({ length: 72 }, (_, i) => `<line x1="${cx}" y1="${cy - 136}" x2="${cx}" y2="${cy - 136 + (i % 6 ? 4 : 10)}" transform="rotate(${i * 5} ${cx} ${cy})" opacity="${i % 6 ? 0.35 : 0.8}"/>`).join("");
-  const pos = (x, y) => `left:${((x / 520) * 100).toFixed(2)}%;top:${((y / 540) * 100).toFixed(2)}%`;
+  const pos = (x, y) => `left:${((x / 520) * 100).toFixed(2)}%;top:${((y / 560) * 100).toFixed(2)}%`;
   const node = (cls, x, y, label, value, note, attr) => `
     <button class="rx-node ${cls}" style="${pos(x, y)}" ${attr}>
       <i></i><small>${escapeHtml(label)}</small><b>${escapeHtml(value)}</b>${note ? `<em>${escapeHtml(note)}</em>` : ""}
@@ -3497,7 +3497,7 @@ function renderReactor(m) {
           ${w ? `<button class="rx-wx" ${entityAttr(w.entityId)}>${escapeHtml(REACTOR_WEATHER_ICON[w.condition] || "")} ${isNum(w.temperature) ? escapeHtml(`${formatNumber(w.temperature, locale, 0)}${w.unit}`) : ""}</button>` : ""}</div>
       </header>
       <div class="rx-visor">
-        <svg viewBox="0 0 520 540" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <svg viewBox="0 0 520 560" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
           <defs>
             <linearGradient id="rx-cu" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6b2f0e"/><stop offset=".35" stop-color="#c9773d"/><stop offset=".55" stop-color="#e8a36a"/><stop offset="1" stop-color="#6b2f0e"/></linearGradient>
             <radialGradient id="rx-seg" cx="260" cy="250" r="101" gradientUnits="userSpaceOnUse"><stop offset=".3" stop-color="#fff"/><stop offset=".62" stop-color="#bfefff"/><stop offset="1" stop-color="#4cc2ff"/></radialGradient>
@@ -3511,8 +3511,8 @@ function renderReactor(m) {
             <filter id="rx-tex"><feTurbulence type="fractalNoise" baseFrequency="1.2" numOctaves="2" result="n"/><feColorMatrix in="n" values="0 0 0 0 .35  0 0 0 0 .38  0 0 0 0 .42  0 0 0 .55 0"/><feComposite in2="SourceGraphic" operator="in"/></filter>
           </defs>
           ${sky.sky}
-          <rect width="520" height="540" fill="url(#rx-hex)"/>
-          <path class="rx-frame" pathLength="1" d="M14 30Q260 -10 506 30L510 470Q260 600 10 470Z"/>
+          <rect width="520" height="560" fill="url(#rx-hex)"/>
+          <path class="rx-frame" pathLength="1" d="M8 26Q260 -12 512 26L514 470C420 580 100 580 6 470Z"/>
           <g class="rx-boot-ticks"><g class="rx-ticks">${ticks}</g></g>
           ${/* The gauges stop above the battery and grid flow lines. */ ""}
           ${config.showBattery ? `<path class="rx-track" d="${arc(156, 330, 240)}"/>${soc >= 1 ? `<path class="rx-gauge battery" pathLength="1" d="${arc(156, 240, 240 + 0.9 * soc)}"/>` : ""}` : ""}
@@ -3523,16 +3523,16 @@ function renderReactor(m) {
             ${config.showSolar ? flowPath("M260 92 L260 112", live.solarActive, false, "pv") : ""}
             ${config.showBattery ? flowPath("M118 410 Q124 362 172 338", live.chargeActive || live.dischargeActive, live.chargeActive, "battery") : ""}
             ${flowPath("M402 410 Q396 362 348 338", live.importActive || live.exportActive, live.exportActive, "grid")}
-            ${flowPath("M260 420 L260 470", live.loadActive, false, "load")}
+            ${flowPath("M260 418 L260 462", live.loadActive, false, "load")}
           </g>
           <g class="rx-reactor">${reactorCore(heat, live)}</g>
           ${isNum(m.intro) ? `<g class="rx-bootseg">${Array.from({ length: 10 }, (_, i) => { const a = i * 36; const P2 = (rr, aa) => P(rr, aa).map((v) => v.toFixed(1)).join(" "); return `<path style="--i:${i}" d="M${P2(101, a + 7)}A101 101 0 0 1 ${P2(101, a + 29)}L${P2(63, a + 29)}A63 63 0 0 0 ${P2(63, a + 7)}Z"/>`; }).join("")}</g>` : ""}
           ${sky.glass}
         </svg>
         ${config.showSolar ? node("pv", 260, 60, t.sun, formatPower(live.solar, locale), "", entityAttr(m.ids.live.solar)) : ""}
-        ${config.showBattery ? node("battery", 96, 442, batteryLabel(m), formatPower(batteryFlow, locale), [batteryStatus(m), batteryWhenShort(m)].filter(Boolean).join(" "), entityAttr(batteryEntityId(m))) : ""}
-        ${node("grid", 424, 442, t.grid, formatPower(gridValue, locale), gridStatus(m), entityAttr(gridEntityId(m)))}
-        ${node("load", 260, 500, t.home, formatPower(live.load, locale), "", entityAttr(m.ids.live.load))}
+        ${config.showBattery ? node("battery", 104, 440, batteryLabel(m), formatPower(batteryFlow, locale), [batteryStatus(m), batteryWhenShort(m)].filter(Boolean).join(" "), entityAttr(batteryEntityId(m))) : ""}
+        ${node("grid", 416, 440, t.grid, formatPower(gridValue, locale), gridStatus(m), entityAttr(gridEntityId(m)))}
+        ${node("load", 260, 488, t.home, formatPower(live.load, locale), "", entityAttr(m.ids.live.load))}
         <button class="rx-inv" style="${pos(260, 396)}" data-action="inverter" title="${escapeHtml(t.inverterDetails)}">
           <b>${escapeHtml(formatPower(hub.power, locale))}</b><small>${escapeHtml(t.inverter)}${isNum(hub.share) ? ` · ${escapeHtml(formatPercent(hub.share, locale))}` : ""}</small>
         </button>
@@ -4443,7 +4443,9 @@ const THEME_CSS = {
     .rx-right { text-align: right; }
     .rx-wx { margin-top: 3px; padding: 0; border: 0; background: none; color: #ffd27a; font: 600 13px var(--sfc-font); cursor: pointer; }
     .night .rx-wx { color: #9cc8ff; }
-    .rx-visor { position: relative; aspect-ratio: 520 / 540; margin: -10px -16px 0; }
+    /* The readouts scale with the visor (cqw of the visor), so they keep their
+       place inside the frame at every card width. */
+    .rx-visor { position: relative; aspect-ratio: 520 / 560; margin: -10px -16px 0; container-type: inline-size; }
     .rx-visor > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
     .rx-frame { fill: rgba(79,216,255,.025); stroke: rgba(79,216,255,.35); stroke-width: 1.2; }
     .rx-ticks { stroke: #4fd8ff; stroke-width: 1; transform-box: view-box; transform-origin: 260px 250px; animation: rx-spin var(--spin, 60s) linear infinite; animation-delay: var(--p-spin, 0s); }
@@ -4498,18 +4500,18 @@ const THEME_CSS = {
     @keyframes rx-flashseg { 0% { opacity: 0; } 30% { opacity: .9; } 100% { opacity: 0; } }
     @keyframes rx-in { from { opacity: 0; } to { opacity: 1; } }
     @keyframes rx-type { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
-    .rx-node, .rx-inv { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; padding: 6px 12px 5px; border: 0; background: none; color: inherit; cursor: pointer; white-space: nowrap; }
+    .rx-node, .rx-inv { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; padding: 1.15cqw 2.3cqw 1cqw; border: 0; background: none; color: inherit; cursor: pointer; white-space: nowrap; }
     .rx-node::before, .rx-node::after { content: ""; position: absolute; inset: 0; pointer-events: none; border: 1.6px solid var(--c);
       clip-path: polygon(0 0, 12px 0, 12px 1.6px, 1.6px 1.6px, 1.6px 10px, 0 10px, 0 calc(100% - 10px), 1.6px calc(100% - 10px), 1.6px calc(100% - 1.6px), 12px calc(100% - 1.6px), 12px 100%, 0 100%,
         0 0, 100% 0, 100% 10px, calc(100% - 1.6px) 10px, calc(100% - 1.6px) 1.6px, calc(100% - 12px) 1.6px, calc(100% - 12px) 0,
         100% 100%, calc(100% - 12px) 100%, calc(100% - 12px) calc(100% - 1.6px), calc(100% - 1.6px) calc(100% - 1.6px), calc(100% - 1.6px) calc(100% - 10px), 100% calc(100% - 10px)); }
     .rx-node::after { display: none; }
     .rx-node.pv { --c: var(--sfc-pv); } .rx-node.battery { --c: var(--sfc-battery); } .rx-node.grid { --c: var(--sfc-grid); } .rx-node.load { --c: var(--sfc-load); }
-    .rx-node small { color: var(--c); font-size: 10px; letter-spacing: .24em; text-transform: uppercase; }
-    .rx-node b { font: 700 clamp(17px, 4.4cqw, 24px)/1.05 var(--sfc-num-font); color: #e9fbff; text-shadow: 0 0 10px rgba(79,216,255,.35); }
-    .rx-node em { color: var(--c); opacity: .8; font-size: 10.5px; font-style: normal; }
-    .rx-inv b { font: 700 clamp(16px, 4cqw, 21px)/1 var(--sfc-num-font); color: #e9fbff; }
-    .rx-inv small { color: #4fd8ff; font-size: 9px; letter-spacing: .22em; text-transform: uppercase; }
+    .rx-node small { color: var(--c); font-size: max(7px, 1.9cqw); letter-spacing: .24em; text-transform: uppercase; }
+    .rx-node b { font: 700 max(13px, 4.6cqw)/1.05 var(--sfc-num-font); color: #e9fbff; text-shadow: 0 0 10px rgba(79,216,255,.35); }
+    .rx-node em { color: var(--c); opacity: .8; font-size: max(7.5px, 2cqw); font-style: normal; }
+    .rx-inv b { font: 700 max(12px, 4cqw)/1 var(--sfc-num-font); color: #e9fbff; }
+    .rx-inv small { color: #4fd8ff; font-size: max(7px, 1.75cqw); letter-spacing: .22em; text-transform: uppercase; }
     .rx-scan { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 4px; padding: 8px 12px;
       border: 1px solid rgba(79,216,255,.22); background: rgba(4,16,26,.7);
       clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px)); }
