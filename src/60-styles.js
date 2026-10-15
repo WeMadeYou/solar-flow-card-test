@@ -159,19 +159,20 @@ const BASE_CSS = `
   .sfc-wide-rest { display: grid; gap: inherit; }
   /* Wide layout (wide: true), from about 880 px of card width */
   @container (min-width: 880px) {
-    .sfc-wide { display: grid; grid-template-columns: minmax(380px, 38%) minmax(0, 1fr); align-items: start; }
-    /* Top row: the main view and the energy section; below, the other
-       sections flow into balanced columns (no gaps when one is missing or tall). */
+    .sfc-wide { display: grid; grid-template-columns: minmax(380px, 38%) minmax(0, 1fr); grid-template-rows: auto 1fr; align-items: start; }
+    /* Two columns down the whole card: the main view on the left, the energy
+       section on the right; the other sections go to whichever column is
+       shorter (see balanceWide), so neither ends with a big gap. */
     .sfc-wide > .sfc-sections, .lc-main.wide > .sfc-sections { display: contents; }
-    .sfc-wide > .sfc-sections > .sfc-energy { margin: 16px 16px 16px 4px; }
-    .sfc-wide-rest { grid-column: 1 / -1; }
-    .sfc-wide .sfc-wide-rest { padding: 0 16px 2px; }
-    .sfc-wide-rest, .gt-layout.wide > .sfc-sections { display: block; columns: 320px; column-gap: 14px; }
-    .sfc-wide-rest > *, .gt-layout.wide > .sfc-sections > * { break-inside: avoid; margin-bottom: 14px; }
+    .sfc-wide-main { grid-row: 1 / span 2; }
+    .sfc-wide > .sfc-sections > .sfc-energy { margin: 16px 16px 14px 4px; }
+    .sfc-wide-rest { grid-column: 2; align-content: start; gap: 14px; padding: 0 16px 16px 4px; }
+    .gt-layout.wide > .sfc-sections { display: block; columns: 320px; column-gap: 14px; }
+    .gt-layout.wide > .sfc-sections > * { break-inside: avoid; margin-bottom: 14px; }
     :is(.sfc-wide, .lc-main.wide, .gt-layout.wide) .sfc-readings { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
     :is(.sfc-wide, .lc-main.wide, .gt-layout.wide) .sfc-strings { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
     .sfc-wide-main > :last-child { margin-bottom: 16px; }
-    .sfc-wide-fill:not(:empty) { display: grid; gap: 14px; padding: 4px 4px 0 16px; }
+    .sfc-wide-fill:not(:empty) { display: grid; gap: 14px; padding: 0 4px 0 16px; }
     .lc-main.wide { display: grid; grid-template-columns: minmax(340px, 40%) minmax(0, 1fr); column-gap: 18px; align-items: start; }
     .lc-main.wide > .sfc-sections { padding-top: 0; }
   }
