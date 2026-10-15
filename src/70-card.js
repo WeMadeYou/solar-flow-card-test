@@ -323,6 +323,9 @@ class SolarFlowCard extends HTMLElement {
       };
       if (bank && !ids.live.soc && !ids.live.battery) ids.live.soc = bank.items[0].entityId;
       const now = new Date();
+      this._introAt ??= Date.now();
+      const introElapsed = (Date.now() - this._introAt) / 1000;
+      const introAt = introElapsed < 2.6 ? introElapsed : null;
       const signature = JSON.stringify([
         language, config, period, [...this._hiddenSeries], live, status.state, today, energy.totals, Boolean(energy.loading),
         chart && [Boolean(chart.loading), Boolean(chart.error), chart.at], forecast.mode, Math.round(forecast.hours * 60 || 0),
@@ -370,6 +373,9 @@ class SolarFlowCard extends HTMLElement {
         weather,
         inverterOpen,
         hiddenSeries: this._hiddenSeries,
+        // Seconds since the card was first shown, during its start-up
+        // animation (re-renders continue it), then null.
+        intro: introAt,
       };
       model.systemStatus = systemStatus(status, forecast, panels, system);
 

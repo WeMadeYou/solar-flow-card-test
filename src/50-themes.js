@@ -1194,9 +1194,13 @@ function renderReactor(m) {
     <button class="rx-node ${cls}" style="${pos(x, y)}" ${attr}>
       <i></i><small>${escapeHtml(label)}</small><b>${escapeHtml(value)}</b>${note ? `<em>${escapeHtml(note)}</em>` : ""}
     </button>`;
-  const spinTime = (60 / (1 + heat * 4)).toFixed(1);
+  // Animations continue across re-renders: each starts at the phase it
+  // would have reached by now (as in Foundation), so nothing jumps back.
+  const spin = [60, 40, 24, 15][Math.min(3, Math.floor(heat * 4))];
+  const phases = { spin, seg: 3.2, over: 1.2, holes: 2.4, arc6: 6, arc9: 9, core: 2.6, halo: 3.4, rays: 40, star: 4, sun: 6, fog: 60, rain: 1.4, drip: 9, snow: 7, flash: 9, mode: 2 };
+  const phaseVars = Object.entries(phases).map(([k, sec]) => `--p-${k}:${loopPhase(sec)}`).join(";");
   return `
-    <div class="rx-stage ${heat >= 0.8 && config.showSolar ? "over" : ""} ${sky.phase}" style="--spin:${spinTime}s">
+    <div class="rx-stage ${heat >= 0.8 && config.showSolar ? "over" : ""} ${sky.phase} ${isNum(m.intro) ? "boot" : ""}" style="--spin:${spin}s;${phaseVars};--bt:${isNum(m.intro) ? m.intro.toFixed(2) : 0}s">
       <header class="rx-header">
         <div><small>${escapeHtml(t.reactorTitle)}</small><h1>${escapeHtml(m.name)}</h1></div>
         <div class="rx-right"><small>${escapeHtml(clockText(m))} · ${escapeHtml(m.t[m.status.state])}</small>
@@ -1218,10 +1222,10 @@ function renderReactor(m) {
           </defs>
           ${sky.sky}
           <rect width="520" height="540" fill="url(#rx-hex)"/>
-          <path class="rx-frame" d="M30 70Q260 14 490 70L506 450Q260 540 14 450Z"/>
-          <g class="rx-ticks">${ticks}</g>
-          ${config.showBattery ? `<path class="rx-track" d="${arc(156, 330, 210)}"/>${soc >= 1 ? `<path class="rx-gauge battery" d="${arc(156, 210, 210 + 1.2 * soc)}"/>` : ""}` : ""}
-          ${config.showSolar ? `<path class="rx-track" d="${arc(156, 30, 150)}"/>${pct >= 1 ? `<path class="rx-gauge pv" d="${arc(156, 150, 150 - 1.2 * pct)}"/>` : ""}` : ""}
+          <path class="rx-frame" pathLength="1" d="M30 70Q260 14 490 70L506 450Q260 540 14 450Z"/>
+          <g class="rx-boot-ticks"><g class="rx-ticks">${ticks}</g></g>
+          ${config.showBattery ? `<path class="rx-track" d="${arc(156, 330, 210)}"/>${soc >= 1 ? `<path class="rx-gauge battery" pathLength="1" d="${arc(156, 210, 210 + 1.2 * soc)}"/>` : ""}` : ""}
+          ${config.showSolar ? `<path class="rx-track" d="${arc(156, 30, 150)}"/>${pct >= 1 ? `<path class="rx-gauge pv" pathLength="1" d="${arc(156, 150, 150 - 1.2 * pct)}"/>` : ""}` : ""}
           ${config.showBattery ? `<text class="rx-gtext battery" x="${(P(156, 333)[0] - 6).toFixed(0)}" y="${P(156, 333)[1].toFixed(0)}" text-anchor="end">SOC ${escapeHtml(formatPercent(live.soc, locale))}</text>` : ""}
           ${config.showSolar ? `<text class="rx-gtext pv" x="${(P(156, 27)[0] + 6).toFixed(0)}" y="${P(156, 27)[1].toFixed(0)}">PV ${pct}%</text>` : ""}
           <g fill="none" stroke-linecap="round">
@@ -1230,7 +1234,8 @@ function renderReactor(m) {
             ${flowPath("M402 410 Q396 362 348 338", live.importActive || live.exportActive, live.exportActive, "grid")}
             ${flowPath("M260 420 L260 470", live.loadActive, false, "load")}
           </g>
-          ${reactorCore(heat, live)}
+          <g class="rx-reactor">${reactorCore(heat, live)}</g>
+          ${isNum(m.intro) ? `<g class="rx-bootseg">${Array.from({ length: 10 }, (_, i) => { const a = i * 36; const P2 = (rr, aa) => P(rr, aa).map((v) => v.toFixed(1)).join(" "); return `<path style="--i:${i}" d="M${P2(101, a + 7)}A101 101 0 0 1 ${P2(101, a + 29)}L${P2(63, a + 29)}A63 63 0 0 0 ${P2(63, a + 7)}Z"/>`; }).join("")}</g>` : ""}
           ${sky.glass}
         </svg>
         ${config.showSolar ? node("pv", 260, 60, t.sun, formatPower(live.solar, locale), "", entityAttr(m.ids.live.solar)) : ""}
