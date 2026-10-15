@@ -283,6 +283,8 @@ function periodSummary(totals, config, t, locale) {
   return items;
 }
 
+const FORECAST_MAX_HOURS = 48;
+
 // Time until full while charging, until the reserve while discharging.
 function batteryForecast(live, config) {
   const capacity = positiveNumber(config.battery_capacity);
@@ -297,6 +299,13 @@ function batteryForecast(live, config) {
   } else if (live.discharge > 50 && soc > minSoc) {
     forecast.mode = "discharging";
     forecast.hours = (((soc - minSoc) / 100) * capacity) / (live.discharge / 1000);
+  }
+  // Beyond two days the rate is too small for a useful time (a trickle of
+  // charge in the evening); report the direction without one.
+  if (forecast.hours > FORECAST_MAX_HOURS) {
+    forecast.slow = forecast.mode;
+    forecast.mode = "idle";
+    delete forecast.hours;
   }
   if (forecast.hours !== undefined) forecast.at = new Date(Date.now() + forecast.hours * 3600000);
   return forecast;

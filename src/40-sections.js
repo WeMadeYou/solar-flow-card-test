@@ -97,10 +97,13 @@ function forecastHtml(m) {
   let detail = "";
   if (f.mode === "charging") {
     headline = fill(t.fullIn, { d: formatDuration(f.hours, t) });
-    detail = fill(t.fullAt, { time: formatClock(f.at, locale) });
+    detail = fill(t.fullAt, { time: formatWhen(f.at, locale) });
   } else if (f.mode === "discharging") {
     headline = fill(t.lastsFor, { d: formatDuration(f.hours, t) });
-    detail = fill(t.lastsUntil, { time: formatClock(f.at, locale), soc: formatNumber(f.minSoc, locale, 0) });
+    detail = fill(t.lastsUntil, { time: formatWhen(f.at, locale), soc: formatNumber(f.minSoc, locale, 0) });
+  } else if (f.slow) {
+    headline = f.slow === "charging" ? t.slowCharge : t.slowDischarge;
+    detail = t.slowDetail;
   }
   return `
     <section class="sfc-section sfc-forecast" ${m.ids.live.soc ? `data-entity="${escapeHtml(m.ids.live.soc)}"` : ""}>

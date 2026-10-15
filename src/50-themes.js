@@ -32,8 +32,8 @@ function gridStatus(m) {
 
 function batteryWhen(m) {
   const f = m.forecast;
-  if (f.mode === "charging") return { label: m.t.chipFull, value: formatClock(f.at, m.locale) };
-  if (f.mode === "discharging") return { label: m.t.chipLasts, value: formatClock(f.at, m.locale) };
+  if (f.mode === "charging") return { label: m.t.chipFull, value: formatWhen(f.at, m.locale) };
+  if (f.mode === "discharging") return { label: m.t.chipLasts, value: formatWhen(f.at, m.locale) };
   if (isNum(f.stored)) return { label: m.t.chipStored, value: formatEnergy(f.stored, m.locale) };
   return { label: m.t.battery, value: formatPercent(f.soc, m.locale) };
 }
@@ -226,7 +226,7 @@ function renderAurora(m) {
   const soc = isNum(live.soc) ? clamp(live.soc, 0, 100) : 0;
   const socArc = `<svg class="aur-soc" viewBox="0 0 110 110"><circle cx="55" cy="55" r="52"/><circle class="on" cx="55" cy="55" r="52" stroke-dasharray="${(soc / 100 * 326.7).toFixed(1)} 326.7" transform="rotate(-90 55 55)"/></svg>`;
   const f = m.forecast;
-  const batteryNote = f.mode === "charging" || f.mode === "discharging" ? `${f.mode === "charging" ? t.chipFull : t.chipLasts} ${formatClock(f.at, locale)}` : batteryStatus(m);
+  const batteryNote = f.mode === "charging" || f.mode === "discharging" ? `${f.mode === "charging" ? t.chipFull : t.chipLasts} ${formatWhen(f.at, locale)}` : batteryStatus(m);
   const batteryFlow = live.dischargeActive ? -live.discharge : live.charge;
   const gridValue = live.importActive ? live.gridImport : live.exportActive ? live.gridExport : Math.abs(live.grid);
   const flowLabel = (x, y, cls, active, value) => active
@@ -369,8 +369,8 @@ function liveSentence(m) {
       : fill(t.paperMix, { parts: parts.map(([name, pct]) => `${name} <em>${pct}%</em>`).join(", ") });
   }
   const f = m.forecast;
-  if (f.mode === "discharging") lede += ` ${fill(t.paperLasts, { time: `<em>${formatClock(f.at, locale)}</em>` })}`;
-  if (f.mode === "charging") lede += ` ${fill(t.paperFull, { time: `<em>${formatClock(f.at, locale)}</em>` })}`;
+  if (f.mode === "discharging") lede += ` ${fill(t.paperLasts, { time: `<em>${formatWhen(f.at, locale)}</em>` })}`;
+  if (f.mode === "charging") lede += ` ${fill(t.paperFull, { time: `<em>${formatWhen(f.at, locale)}</em>` })}`;
   if (live.exportActive) lede += ` ${fill(t.paperExport, { power: `<em>${formatPower(live.gridExport, locale)}</em>` })}`;
   return lede.trim().replace(/<(?!\/?em>)/g, "&lt;");
 }
@@ -440,7 +440,7 @@ function renderLcars(m) {
             ${m.config.showBattery ? `
             <div><span>${escapeHtml(t.stateOfCharge)}</span><b>${escapeHtml(formatPercent(live.soc, locale))}</b></div>
             <div><span>${escapeHtml(t.stored)}</span><b>${escapeHtml(isNum(f.stored) ? formatEnergy(f.stored, locale) : "—")}</b></div>
-            <div><span>${escapeHtml(f.mode === "charging" ? t.chipFull : t.autonomy)}</span><b>${escapeHtml(f.at ? formatClock(f.at, locale) : "—")}</b></div>` : `
+            <div><span>${escapeHtml(f.mode === "charging" ? t.chipFull : t.autonomy)}</span><b>${escapeHtml(f.at ? formatWhen(f.at, locale) : "—")}</b></div>` : `
             <div><span>${escapeHtml(t.consumption)}</span><b>${escapeHtml(formatEnergy(m.today.load, locale))}</b></div>
             <div><span>${escapeHtml(t.gridImport)}</span><b>${escapeHtml(formatEnergy(m.today.gridImport, locale))}</b></div>
             <div><span>${escapeHtml(t.gridExport)}</span><b>${escapeHtml(formatEnergy(m.today.gridExport, locale))}</b></div>`}
@@ -510,7 +510,7 @@ function renderAtlantis(m) {
         <small>${escapeHtml(t.battery)}</small><b>${escapeHtml(formatPercent(live.soc, locale))}</b>
         <small>${escapeHtml(isNum(f.stored) ? formatEnergy(f.stored, locale) : batteryStatus(m))}</small>` : `
         <small>${escapeHtml(t.autarkyToday)}</small><b>${escapeHtml(isNum(own) ? formatPercent(own, locale) : "—")}</b>`}
-        ${m.config.showBattery && f.at ? `<small class="atl-when" title="${escapeHtml(f.mode === "charging" ? t.chipFull : t.chipLasts)}">${f.mode === "charging" ? "▲" : "▼"} ${escapeHtml(formatClock(f.at, locale))}</small>` : ""}
+        ${m.config.showBattery && f.at ? `<small class="atl-when" title="${escapeHtml(f.mode === "charging" ? t.chipFull : t.chipLasts)}">${f.mode === "charging" ? "▲" : "▼"} ${escapeHtml(formatWhen(f.at, locale))}</small>` : ""}
       </button>
       ${m.config.showSolar ? label("left:50%;top:3%", "", formatPower(live.solar, locale), t.sun, m.ids.live.solar, "pv") : ""}
       ${!m.config.showBattery ? "" : label("left:10%;top:50%", live.chargeActive ? t.absorbing : live.dischargeActive ? t.supplying : t.idle, formatPower(batteryFlow, locale), "", batteryEntityId(m))}
@@ -578,7 +578,7 @@ function renderExpanse(m) {
     ${m.config.showBattery ? `
     <button class="exp-soc" ${entityAttr(batteryEntityId(m))}>
       <span class="exp-soc-head"><small>${escapeHtml(t.stateOfCharge)}</small><b>${escapeHtml(formatPercent(live.soc, locale))}</b>
-        <em>${escapeHtml(f.at ? `${f.mode === "charging" ? t.chipFull : t.chipLasts} ${formatClock(f.at, locale)}` : isNum(f.stored) ? formatEnergy(f.stored, locale) : "")}</em></span>
+        <em>${escapeHtml(f.at ? `${f.mode === "charging" ? t.chipFull : t.chipLasts} ${formatWhen(f.at, locale)}` : isNum(f.stored) ? formatEnergy(f.stored, locale) : "")}</em></span>
       <span class="exp-soc-bar">${segments}</span>
     </button>` : ""}
     <div class="sfc-sections">${standardSections(m)}</div>`;
@@ -610,9 +610,9 @@ function renderFoundation(m) {
   const forecast = !m.config.showBattery
     ? liveSentence(m) || escapeHtml(t.galaxyQuiet)
     : f.mode === "discharging"
-      ? fill(t.paperLasts, { time: `<em>${formatClock(f.at, locale)}</em>` })
+      ? fill(t.paperLasts, { time: `<em>${formatWhen(f.at, locale)}</em>` })
       : f.mode === "charging"
-        ? fill(t.paperFull, { time: `<em>${formatClock(f.at, locale)}</em>` })
+        ? fill(t.paperFull, { time: `<em>${formatWhen(f.at, locale)}</em>` })
         : escapeHtml(t.foundationSteady);
   return `
     <div class="fnd-dust"></div>
