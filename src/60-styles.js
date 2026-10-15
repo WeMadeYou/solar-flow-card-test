@@ -234,13 +234,16 @@ const BASE_CSS = `
   .no-anim .sfc-flow, .no-anim .atl-pulse, .no-anim .aur-ring, .no-anim .lc-track i,
     .no-anim .exp-spin, .no-anim .fnd-orbit, .no-anim .fnd-sphere, .no-anim .gal-warp, .no-anim .gal-target, .no-anim .gal-cross,
     .no-anim .dio-cloud, .no-anim .dio-star, .no-anim .dio-glow, .no-anim .dio-rain line, .no-anim .dio-snow circle, .no-anim .dio-fog rect, .no-anim .dio-flash, .no-anim .gt-ripples circle, .no-anim .gt-glyphs, .no-anim .gt-status, .no-anim .gt-chevron-light,
-    .no-anim .rx-ticks, .no-anim .rx-seg, .no-anim .rx-holes rect, .no-anim .rx-arcs, .no-anim .rx-core, .no-anim .rx-halo, .no-anim .rx-rays, .no-anim .rx-star, .no-anim .rx-sun, .no-anim .rx-fog rect, .no-anim .rx-rain line, .no-anim .rx-drops g, .no-anim .rx-snow circle, .no-anim .rx-flash, .no-anim .rx-mode { animation: none !important; }
+    .no-anim .rx-ticks, .no-anim .rx-seg, .no-anim .rx-holes rect, .no-anim .rx-arcs, .no-anim .rx-core, .no-anim .rx-halo, .no-anim .rx-rays, .no-anim .rx-star, .no-anim .rx-sun, .no-anim .rx-fog > *, .no-anim .rx-rain line, .no-anim .rx-drops g, .no-anim .rx-snow circle, .no-anim .rx-flash, .no-anim .rx-mode,
+    .no-anim .boot :is(.rx-frame, .rx-reactor, .rx-boot-ticks, .rx-gauge, .rx-node, .rx-inv, .rx-gtext), .no-anim .boot .rx-scan p, .no-anim .rx-bootseg path { animation: none !important; }
+    .no-anim .rx-bootseg { display: none; }
   /* Reduced motion: flows keep moving, slower; decorative effects stop. */
   @media (prefers-reduced-motion: reduce) {
     .sfc-flow { animation-duration: calc(var(--sfc-dash-time, 18s) * 3); }
     .atl-pulse, .aur-ring, .lc-track i, .lc-status, .exp-spin, .fnd-orbit, .fnd-sphere, .gal-warp, .gal-target, .gal-cross,
     .dio-cloud, .dio-star, .dio-glow, .dio-rain line, .dio-snow circle, .dio-fog rect, .dio-flash, .gt-ripples circle, .gt-glyphs, .gt-status, .gt-chevron-light,
-    .rx-ticks, .rx-seg, .rx-holes rect, .rx-arcs, .rx-core, .rx-halo, .rx-rays, .rx-star, .rx-sun, .rx-fog rect, .rx-rain line, .rx-drops g, .rx-snow circle, .rx-flash, .rx-mode { animation: none !important; }
+    .rx-ticks, .rx-seg, .rx-holes rect, .rx-arcs, .rx-core, .rx-halo, .rx-rays, .rx-star, .rx-sun, .rx-fog > *, .rx-rain line, .rx-drops g, .rx-snow circle, .rx-flash, .rx-mode, .boot :is(.rx-frame, .rx-reactor, .rx-boot-ticks, .rx-gauge, .rx-node, .rx-inv, .rx-gtext), .boot .rx-scan p, .rx-bootseg path { animation: none !important; }
+    .rx-bootseg { display: none; }
   }
 
   .sfc-empty { padding: 28px; text-align: center; }
@@ -883,42 +886,58 @@ const THEME_CSS = {
     .rx-visor { position: relative; aspect-ratio: 520 / 540; margin: -26px -16px 0; }
     .rx-visor > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
     .rx-frame { fill: rgba(79,216,255,.025); stroke: rgba(79,216,255,.35); stroke-width: 1.2; }
-    .rx-ticks { stroke: #4fd8ff; stroke-width: 1; transform-box: view-box; transform-origin: 260px 250px; animation: rx-spin var(--spin, 60s) linear infinite; }
+    .rx-ticks { stroke: #4fd8ff; stroke-width: 1; transform-box: view-box; transform-origin: 260px 250px; animation: rx-spin var(--spin, 60s) linear infinite; animation-delay: var(--p-spin, 0s); }
     .rx-track { fill: none; stroke: #123447; stroke-width: 7; }
     .rx-gauge { fill: none; stroke-width: 7; stroke-linecap: round; filter: drop-shadow(0 0 4px currentColor); }
     .rx-gauge.battery { stroke: var(--sfc-battery); color: var(--sfc-battery); } .rx-gauge.pv { stroke: var(--sfc-pv); color: var(--sfc-pv); }
     .rx-gtext { font: 700 11px var(--sfc-font); letter-spacing: .18em; }
     .rx-gtext.battery { fill: var(--sfc-battery); } .rx-gtext.pv { fill: var(--sfc-pv); }
     .rx-seg { fill: #16303d; }
-    .rx-seg.on { fill: url(#rx-seg); filter: url(#rx-glow); animation: rx-seg 3.2s ease-in-out infinite; animation-delay: calc(var(--i) * -.32s); }
-    .over .rx-seg.on { animation-duration: 1.2s; animation-delay: calc(var(--i) * .12s); }
+    .rx-seg.on { fill: url(#rx-seg); filter: url(#rx-glow); animation: rx-seg 3.2s ease-in-out infinite; animation-delay: calc(var(--p-seg, 0s) + var(--i) * -.32s); }
+    .over .rx-seg.on { animation-duration: 1.2s; animation-delay: calc(var(--p-over, 0s) + var(--i) * .12s); }
     @keyframes rx-seg { 50% { opacity: .72; } }
-    .rx-holes rect { fill: #bdf2ff; animation: rx-seg 2.4s ease-in-out infinite; }
+    .rx-holes rect { fill: #bdf2ff; animation: rx-seg 2.4s ease-in-out infinite; animation-delay: var(--p-holes, 0s); }
     .rx-arcs path { fill: url(#rx-seg); filter: url(#rx-glow); }
     .rx-arcs { transform-box: view-box; transform-origin: 260px 250px; }
-    .rx-arcs.charging { animation: rx-spin 6s linear infinite; }
-    .rx-arcs.discharging { animation: rx-spin 9s linear infinite reverse; }
-    .rx-core { animation: rx-core 2.6s ease-in-out infinite; }
+    .rx-arcs.charging { animation: rx-spin 6s linear infinite; animation-delay: var(--p-arc6, 0s); }
+    .rx-arcs.discharging { animation: rx-spin 9s linear infinite reverse; animation-delay: var(--p-arc9, 0s); }
+    .rx-core { animation: rx-core 2.6s ease-in-out infinite; animation-delay: var(--p-core, 0s); }
     @keyframes rx-core { 50% { opacity: .82; } }
     .rx-mesh { fill: none; stroke: #e9fdff; stroke-width: .7; opacity: .8; }
-    .rx-halo { animation: rx-core 3.4s ease-in-out infinite; }
-    .rx-rays { stroke: #c9f8ff; transform-box: view-box; transform-origin: 260px 250px; animation: rx-spin 40s linear infinite; }
+    .rx-halo { animation: rx-core 3.4s ease-in-out infinite; animation-delay: var(--p-halo, 0s); }
+    .rx-rays { stroke: #c9f8ff; transform-box: view-box; transform-origin: 260px 250px; animation: rx-spin 40s linear infinite; animation-delay: var(--p-rays, 0s); }
     @keyframes rx-spin { to { transform: rotate(360deg); } }
-    .rx-star { fill: #fff; animation: rx-twinkle 4s ease-in-out infinite; animation-delay: var(--d); }
+    .rx-star { fill: #fff; animation: rx-twinkle 4s ease-in-out infinite; animation-delay: calc(var(--p-star, 0s) + var(--d)); }
     @keyframes rx-twinkle { 50% { opacity: .3; } }
-    .rx-sun { animation: rx-core 6s ease-in-out infinite; }
-    .rx-fog rect { animation: rx-fog 30s ease-in-out infinite alternate; }
+    .rx-sun { animation: rx-core 6s ease-in-out infinite; animation-delay: var(--p-sun, 0s); }
+    .rx-fog > * { animation: rx-fog 30s ease-in-out infinite alternate; animation-delay: var(--p-fog, 0s); }
     @keyframes rx-fog { to { transform: translateX(160px); } }
-    .rx-rain line { stroke: #9cc8ff; stroke-opacity: .3; stroke-width: 1.1; animation: rx-fall 1.4s linear infinite; animation-delay: var(--d); }
+    .rx-rain line { stroke: #9cc8ff; stroke-opacity: .3; stroke-width: 1.1; animation: rx-fall 1.4s linear infinite; animation-delay: calc(var(--p-rain, 0s) + var(--d)); }
     @keyframes rx-fall { from { transform: translate(0, -60px); } to { transform: translate(-20px, 120px); } }
-    .rx-drops g { animation: rx-drip 9s ease-in infinite; animation-delay: var(--d); }
+    .rx-drops g { animation: rx-drip 9s ease-in infinite; animation-delay: calc(var(--p-drip, 0s) + var(--d)); }
     .rx-drops circle { fill: rgba(207,232,255,.08); stroke: rgba(207,232,255,.4); stroke-width: .7; }
     .rx-drops path { fill: none; stroke: rgba(207,232,255,.2); }
     @keyframes rx-drip { 0% { transform: translateY(0); opacity: 0; } 10% { opacity: 1; } 70% { transform: translateY(26px); opacity: 1; } 100% { transform: translateY(60px); opacity: 0; } }
-    .rx-snow circle { fill: #fff; opacity: .8; animation: rx-snow 7s linear infinite; animation-delay: var(--d); }
+    .rx-snow circle { fill: #fff; opacity: .8; animation: rx-snow 7s linear infinite; animation-delay: calc(var(--p-snow, 0s) + var(--d)); }
     @keyframes rx-snow { from { transform: translate(0, -40px); } to { transform: translate(14px, 300px); } }
-    .rx-flash { opacity: 0; animation: rx-flash 9s linear infinite; }
+    .rx-flash { opacity: 0; animation: rx-flash 9s linear infinite; animation-delay: var(--p-flash, 0s); }
     @keyframes rx-flash { 0%, 92%, 96%, 100% { opacity: 0; } 93% { opacity: .35; } 95% { opacity: .12; } }
+    /* Start-up, only the first time the card is shown: the visor frame draws
+       in, the reactor powers up segment by segment, then the readouts appear. */
+    .rx-reactor, .rx-boot-ticks { transform-box: view-box; transform-origin: 260px 250px; }
+    .boot .rx-frame { stroke-dasharray: 1; animation: rx-draw 1s ease-out calc(0s - var(--bt)) both; }
+    .boot .rx-reactor { animation: rx-power .8s cubic-bezier(.2,.8,.2,1) calc(.15s - var(--bt)) both; }
+    .boot .rx-boot-ticks { animation: rx-ticks-in 1.1s ease-out calc(.3s - var(--bt)) both; }
+    .boot .rx-gauge { stroke-dasharray: 1; animation: rx-draw .9s ease-out calc(1.1s - var(--bt)) both; }
+    .rx-bootseg path { fill: #fff; opacity: 0; filter: url(#rx-glow); animation: rx-flashseg .5s ease-out both; animation-delay: calc(.7s + var(--i) * .07s - var(--bt)); }
+    .boot :is(.rx-node, .rx-inv, .rx-gtext) { animation: rx-in .5s ease-out calc(1.3s - var(--bt)) both; }
+    .boot .rx-scan p { animation: rx-type 1s steps(30) calc(1.5s - var(--bt)) both; }
+    @keyframes rx-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+    @keyframes rx-power { from { transform: scale(.6); opacity: 0; } 60% { opacity: 1; } to { transform: scale(1); opacity: 1; } }
+    @keyframes rx-ticks-in { from { transform: rotate(-120deg); opacity: 0; } to { transform: rotate(0); opacity: 1; } }
+    @keyframes rx-flashseg { 0% { opacity: 0; } 30% { opacity: .9; } 100% { opacity: 0; } }
+    @keyframes rx-in { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes rx-type { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
     .rx-node, .rx-inv { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; padding: 6px 12px 5px; border: 0; background: none; color: inherit; cursor: pointer; white-space: nowrap; }
     .rx-node::before, .rx-node::after { content: ""; position: absolute; inset: 0; pointer-events: none; border: 1.6px solid var(--c);
       clip-path: polygon(0 0, 12px 0, 12px 1.6px, 1.6px 1.6px, 1.6px 10px, 0 10px, 0 calc(100% - 10px), 1.6px calc(100% - 10px), 1.6px calc(100% - 1.6px), 12px calc(100% - 1.6px), 12px 100%, 0 100%,
@@ -939,7 +958,7 @@ const THEME_CSS = {
     .rx-scan em { font-style: normal; color: #fff; }
     .rx-mode { flex: none; font: 700 11px var(--sfc-heading-font); letter-spacing: .14em; text-transform: uppercase; color: #4fd8ff; }
     .rx-mode.pv { color: var(--sfc-pv); text-shadow: 0 0 10px rgba(255,200,87,.6); } .rx-mode.battery { color: var(--sfc-battery); }
-    .rx-mode.grid { color: #ffab4a; animation: rx-twinkle 2s ease-in-out infinite; } .rx-mode.idle { color: var(--sfc-muted); }
+    .rx-mode.grid { color: #ffab4a; animation: rx-twinkle 2s ease-in-out infinite; animation-delay: var(--p-mode, 0s); } .rx-mode.idle { color: var(--sfc-muted); }
     .sfc-sections { position: relative; z-index: 1; }
     .sfc-section { position: relative; border: 0; box-shadow: inset 0 0 0 1px rgba(79,216,255,.16);
       clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));

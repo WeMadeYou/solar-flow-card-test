@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.4.0-beta.2
+
+- Reactor: the animations carry on across re-renders (every minute and on each new reading) instead of starting over, as the Foundation orbits do.
+- Reactor: a start-up sequence the first time the card is shown: the visor frame draws in, the reactor powers up segment by segment, the gauges fill and the readouts appear. With `animation: false` or reduced motion it is skipped.
+
 ## 1.4.0-beta
 
 A test release: install it from HACS with "Show beta versions" turned on.
