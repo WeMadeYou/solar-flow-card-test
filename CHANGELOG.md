@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Several batteries: the `batteries:` option (name, soc, power, capacity, optional voltage, temperature and `invert`). The themes show one combined battery (summed power, charge weighted by capacity, total capacity for the forecast, also in the power chart); the Installation section shows each battery with its charge, power, voltage and temperature, and warns when one of them is too cold or hot. The demo has a "two batteries" setting.
+
 - Diorama follows the weather of a Home Assistant weather entity (`weather_entity`, otherwise the first one found; `show_weather: false` turns it off, also in the editor): drifting clouds, a grey sky when overcast, rain, snow, fog and lightning; twinkling stars on clear nights; the temperature next to the clock.
 - Foundation: the orbits stay still and the planets travel all the way round them, instead of the whole ellipses swinging; the sphere breathes more slowly.
 - Far galaxy: a calmer trench (slower, fainter), slower flow dots and a gentle pulse instead of a blink at the battery reserve.

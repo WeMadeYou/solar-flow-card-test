@@ -195,10 +195,33 @@ function panelsHtml(m) {
 // Sections every theme shows below its main view.
 // Installation: power per phase, inverter load, battery (BMS) and generator.
 function systemHtml(m) {
-  const data = m.system;
-  if (!m.config.showSystem || !data) return "";
+  const bank = m.config.showBattery && m.bank?.items.length > 1 ? m.bank : null;
+  if (!m.config.showSystem || !(m.system || bank)) return "";
+  const data = { phases: null, inverter: null, battery: [], batteryWarn: null, generator: null, ...m.system };
+  if (bank) {
+    // The bank's own readings replace the inverter's combined battery ones.
+    const temps = bank.items.map((b) => b.temperature).filter(isNum);
+    data.battery = [];
+    data.batteryWarn = temps.some((v) => v < BATTERY_COLD) ? "cold" : temps.some((v) => v > BATTERY_HOT) ? "hot" : data.batteryWarn;
+  }
   const { t, locale } = m;
   const attr = (entityId) => (entityId ? `data-entity="${escapeHtml(entityId)}"` : "");
+  // Each battery of a bank: charge with a bar, then power, voltage and temperature.
+  const batteries = bank ? `
+    <div class="sfc-phases sfc-bank" style="--n:${Math.min(bank.items.length, 3)}">
+      ${bank.items.map((b) => `
+        <button class="sfc-phase sfc-bat" ${attr(b.entityId)}>
+          <small>${escapeHtml(b.name)}</small>
+          <strong>${escapeHtml(formatPercent(b.soc, locale))}</strong>
+          <i style="--p:${isNum(b.soc) ? clamp(b.soc, 0, 100).toFixed(0) : 0}%"></i>
+          <span>${escapeHtml([
+            isNum(b.power) && (Math.abs(b.power) <= ACTIVE_W ? t.idle : `${b.power > 0 ? "−" : "+"}${formatPower(Math.abs(b.power), locale)}`),
+            isNum(b.voltage) && `${formatNumber(b.voltage, locale, 1)} V`,
+            isNum(b.temperature) && `${formatNumber(b.temperature, locale, 1)} °C`,
+            b.capacity && formatEnergy(b.capacity, locale),
+          ].filter(Boolean).join(" · "))}</span>
+        </button>`).join("")}
+    </div>` : "";
   const phases = data.phases ? `
     <div class="sfc-phases" style="--n:${data.phases.length}">
       ${data.phases.map((p) => `
@@ -235,6 +258,7 @@ function systemHtml(m) {
         <div><span class="sfc-kicker">${MINI_ICONS.phase}</span><h3>${escapeHtml(t.systemTitle)}</h3></div>
         ${isNum(data.phaseSpread) && data.phases ? `<span class="sfc-hint">${escapeHtml(fill(t.phaseSpread, { power: formatPower(data.phaseSpread, locale) }))}</span>` : ""}
       </div>
+      ${batteries}
       ${phases}
       ${meters ? `<div class="sfc-meters">${meters}</div>` : ""}
       ${warn}
@@ -469,7 +493,7 @@ function powerSpec(period) {
 
 async function loadPowerHistory(hass, spec, live) {
   const sources = Object.fromEntries(
-    ["solar", "load", "battery", "charge", "discharge", "gridImport", "gridExport", "grid", "soc"]
+    ["solar", "load", "battery", "charge", "discharge", "gridImport", "gridExport", "grid", "soc", ...Object.keys(live).filter((name) => name.startsWith("bank_"))]
       .map((name) => [name, live[name]?.entityId])
       .filter(([, id]) => id)
   );

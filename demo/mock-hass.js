@@ -44,6 +44,15 @@ export function createHass({ scenario = "afternoon", language = "pl", weather } 
     entity_id: "weather.home", state: condition, last_updated: now, last_changed: now,
     attributes: { friendly_name: "Home", temperature: { "clear-night": 6, snowy: -2, "snowy-rainy": 1 }[condition] ?? 14, temperature_unit: "°C" },
   };
+  // Two separate batteries for the "two batteries" demo (10 + 13.5 kWh).
+  const bank = [["lfp", 10, live.batterySOC + 8, 0.45, 51.6, 21], ["hv", 13.5, live.batterySOC - 6, 0.55, 204.8, 24]];
+  for (const [id, , soc, share, voltage, temp] of bank) {
+    const plain = (key, value, unit) => { states[`sensor.${id}_${key}`] = { entity_id: `sensor.${id}_${key}`, state: String(value), attributes: { unit_of_measurement: unit }, last_updated: now, last_changed: now }; };
+    plain("soc", Math.max(0, Math.min(100, soc)), "%");
+    plain("power", live.batteryPower * share, "W");
+    plain("voltage", voltage, "V");
+    plain("temperature", temp, "°C");
+  }
   const units = { batterySOC: "%" };
   for (const key of ["generationPower", "consumptionPower", "gridPower", "purchasePower", "wirePower", "chargePower", "dischargePower", "batteryPower", "batterySOC"]) {
     add(`sensor.deye_${key.toLowerCase()}`, live[key] ?? 0, { sensor_type: "station_latest", metric_key: key, unit_of_measurement: units[key] || "W" });
