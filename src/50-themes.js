@@ -1224,8 +1224,9 @@ function renderReactor(m) {
           <rect width="520" height="540" fill="url(#rx-hex)"/>
           <path class="rx-frame" pathLength="1" d="M30 70Q260 14 490 70L506 450Q260 540 14 450Z"/>
           <g class="rx-boot-ticks"><g class="rx-ticks">${ticks}</g></g>
-          ${config.showBattery ? `<path class="rx-track" d="${arc(156, 330, 210)}"/>${soc >= 1 ? `<path class="rx-gauge battery" pathLength="1" d="${arc(156, 210, 210 + 1.2 * soc)}"/>` : ""}` : ""}
-          ${config.showSolar ? `<path class="rx-track" d="${arc(156, 30, 150)}"/>${pct >= 1 ? `<path class="rx-gauge pv" pathLength="1" d="${arc(156, 150, 150 - 1.2 * pct)}"/>` : ""}` : ""}
+          ${/* The gauges stop above the battery and grid flow lines. */ ""}
+          ${config.showBattery ? `<path class="rx-track" d="${arc(156, 330, 240)}"/>${soc >= 1 ? `<path class="rx-gauge battery" pathLength="1" d="${arc(156, 240, 240 + 0.9 * soc)}"/>` : ""}` : ""}
+          ${config.showSolar ? `<path class="rx-track" d="${arc(156, 30, 120)}"/>${pct >= 1 ? `<path class="rx-gauge pv" pathLength="1" d="${arc(156, 120, 120 - 0.9 * pct)}"/>` : ""}` : ""}
           ${config.showBattery ? `<text class="rx-gtext battery" x="${(P(156, 333)[0] - 6).toFixed(0)}" y="${P(156, 333)[1].toFixed(0)}" text-anchor="end">SOC ${escapeHtml(formatPercent(live.soc, locale))}</text>` : ""}
           ${config.showSolar ? `<text class="rx-gtext pv" x="${(P(156, 27)[0] + 6).toFixed(0)}" y="${P(156, 27)[1].toFixed(0)}">PV ${pct}%</text>` : ""}
           <g fill="none" stroke-linecap="round">
