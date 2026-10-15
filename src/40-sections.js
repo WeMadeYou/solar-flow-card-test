@@ -300,10 +300,10 @@ function insightsHtml(m) {
     ${rows.length ? `
     <section class="sfc-section sfc-compare">
       <div class="sfc-head"><div><span class="sfc-kicker">kWh</span><h3>${escapeHtml(t.compareTitle)}</h3></div></div>
-      <table class="sfc-compare-table">
+      <div class="sfc-compare-scroll"><table class="sfc-compare-table">
         <thead><tr><th></th><th>${escapeHtml(t.periodToday)}</th><th>${escapeHtml(t.colYesterday)}</th><th></th><th>${escapeHtml(t.colAvg7)}</th><th>${escapeHtml(t.colMonth)}</th></tr></thead>
         <tbody>${rows.map((row) => `<tr class="${row.name}"><th><i></i>${escapeHtml(labels[row.name])}</th>${cell(row.today)}${cell(row.yesterday)}${trend(row)}${cell(row.average)}${cell(row.month)}</tr>`).join("")}</tbody>
-      </table>
+      </table></div>
     </section>` : ""}`;
 }
 

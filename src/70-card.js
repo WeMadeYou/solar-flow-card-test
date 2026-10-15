@@ -38,7 +38,26 @@ function wideLayout(theme, html) {
   if (theme === "lcars" || theme === "gate") return html;
   const at = html.lastIndexOf('<div class="sfc-sections">');
   if (at < 0) return html;
-  return `<div class="sfc-wide"><div class="sfc-wide-main">${html.slice(0, at)}</div>${html.slice(at)}</div>`;
+  return `<div class="sfc-wide"><div class="sfc-wide-main">${html.slice(0, at)}<div class="sfc-wide-fill"></div></div>${html.slice(at)}</div>`;
+}
+
+// The energy section beside the main view is usually taller than it. Move
+// the following sections, in order, into the space under the main view
+// while they fit, so the left column has no empty gap.
+function balanceWide(root) {
+  const wide = root.querySelector(".sfc-wide");
+  const main = wide?.querySelector(":scope > .sfc-wide-main");
+  const fill = main?.querySelector(":scope > .sfc-wide-fill");
+  const energy = wide?.querySelector(":scope > .sfc-sections > .sfc-energy");
+  const rest = wide?.querySelector(".sfc-wide-rest");
+  if (!fill || !energy || !rest || getComputedStyle(wide).display !== "grid") return;
+  const limit = energy.getBoundingClientRect().bottom + 8;
+  for (const section of [...rest.children]) {
+    if (main.getBoundingClientRect().bottom > limit - 60) break;
+    const next = section.nextSibling;
+    fill.append(section);
+    if (main.getBoundingClientRect().bottom > limit) rest.insertBefore(section, next);
+  }
 }
 
 class SolarFlowCard extends HTMLElement {
@@ -74,6 +93,25 @@ class SolarFlowCard extends HTMLElement {
     if (!THEMES.includes(this._config.theme)) this._config.theme = "diorama";
     this._signature = "";
     this._render();
+  }
+
+  connectedCallback() {
+    // The wide layout depends on the card's width: lay it out again on resize.
+    if (!this._resizeObserver && typeof ResizeObserver !== "undefined") {
+      this._resizeObserver = new ResizeObserver(() => {
+        const width = Math.round(this.getBoundingClientRect().width);
+        if (width === this._width) return;
+        this._width = width;
+        if (this._config?.wide !== true) return;
+        this._signature = "";
+        this._render();
+      });
+    }
+    this._resizeObserver?.observe(this);
+  }
+
+  disconnectedCallback() {
+    this._resizeObserver?.disconnect();
   }
 
   set hass(hass) {
@@ -334,6 +372,7 @@ class SolarFlowCard extends HTMLElement {
         <style>${BASE_CSS}${THEME_CSS[theme]}</style>
         <ha-card class="sfc theme-${theme} ${config.animation === false ? "no-anim" : ""}">${wide ? wideLayout(theme, THEME_RENDER[theme](model)) : THEME_RENDER[theme](model)}</ha-card>`;
       this._wire(model);
+      if (wide) balanceWide(this.shadowRoot);
     } catch (error) {
       console.error("Solar Flow Card render error", error);
       this.shadowRoot.innerHTML = `<style>${BASE_CSS}${THEME_CSS.diorama}</style>

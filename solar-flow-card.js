@@ -7,7 +7,7 @@
  * Built from src/*.js by scripts/build.mjs. Edit the sources, not this file.
  */
 (() => {
-const CARD_VERSION = "1.3.0-beta.2";
+const CARD_VERSION = "1.3.0-beta.3";
 const CARD_TAG = "solar-flow-card";
 const EDITOR_TAG = "solar-flow-card-editor";
 const THEMES = ["diorama", "aurora", "paper", "lcars", "atlantis", "expanse", "foundation", "galaxy", "gate"];
@@ -1934,10 +1934,10 @@ function insightsHtml(m) {
     ${rows.length ? `
     <section class="sfc-section sfc-compare">
       <div class="sfc-head"><div><span class="sfc-kicker">kWh</span><h3>${escapeHtml(t.compareTitle)}</h3></div></div>
-      <table class="sfc-compare-table">
+      <div class="sfc-compare-scroll"><table class="sfc-compare-table">
         <thead><tr><th></th><th>${escapeHtml(t.periodToday)}</th><th>${escapeHtml(t.colYesterday)}</th><th></th><th>${escapeHtml(t.colAvg7)}</th><th>${escapeHtml(t.colMonth)}</th></tr></thead>
         <tbody>${rows.map((row) => `<tr class="${row.name}"><th><i></i>${escapeHtml(labels[row.name])}</th>${cell(row.today)}${cell(row.yesterday)}${trend(row)}${cell(row.average)}${cell(row.month)}</tr>`).join("")}</tbody>
-      </table>
+      </table></div>
     </section>` : ""}`;
 }
 
@@ -3440,6 +3440,7 @@ const BASE_CSS = `
     :is(.sfc-wide, .lc-main.wide, .gt-layout.wide) .sfc-readings { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
     :is(.sfc-wide, .lc-main.wide, .gt-layout.wide) .sfc-strings { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
     .sfc-wide-main > :last-child { margin-bottom: 16px; }
+    .sfc-wide-fill:not(:empty) { display: grid; gap: 14px; padding: 4px 4px 0 16px; }
     .lc-main.wide { display: grid; grid-template-columns: minmax(340px, 40%) minmax(0, 1fr); column-gap: 18px; align-items: start; }
     .lc-main.wide > .sfc-sections { padding-top: 0; }
   }
@@ -3460,6 +3461,8 @@ const BASE_CSS = `
   .sfc-compare-table tr.gridImport, .sfc-compare-table tr.gridExport { --sfc-c: var(--sfc-grid); }
   .sfc-compare-table td.good { color: #2bb673; font-size: 11px; } .sfc-compare-table td.bad { color: #e5534b; font-size: 11px; }
   .sfc-compare-table tr:last-child > * { border-bottom: 0; }
+  .sfc-compare-table thead th { white-space: normal; vertical-align: bottom; }
+  .sfc-compare-scroll { overflow-x: auto; }
 
   /* Installation */
   .sfc-phases { display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); gap: 8px; }
@@ -4159,7 +4162,26 @@ function wideLayout(theme, html) {
   if (theme === "lcars" || theme === "gate") return html;
   const at = html.lastIndexOf('<div class="sfc-sections">');
   if (at < 0) return html;
-  return `<div class="sfc-wide"><div class="sfc-wide-main">${html.slice(0, at)}</div>${html.slice(at)}</div>`;
+  return `<div class="sfc-wide"><div class="sfc-wide-main">${html.slice(0, at)}<div class="sfc-wide-fill"></div></div>${html.slice(at)}</div>`;
+}
+
+// The energy section beside the main view is usually taller than it. Move
+// the following sections, in order, into the space under the main view
+// while they fit, so the left column has no empty gap.
+function balanceWide(root) {
+  const wide = root.querySelector(".sfc-wide");
+  const main = wide?.querySelector(":scope > .sfc-wide-main");
+  const fill = main?.querySelector(":scope > .sfc-wide-fill");
+  const energy = wide?.querySelector(":scope > .sfc-sections > .sfc-energy");
+  const rest = wide?.querySelector(".sfc-wide-rest");
+  if (!fill || !energy || !rest || getComputedStyle(wide).display !== "grid") return;
+  const limit = energy.getBoundingClientRect().bottom + 8;
+  for (const section of [...rest.children]) {
+    if (main.getBoundingClientRect().bottom > limit - 60) break;
+    const next = section.nextSibling;
+    fill.append(section);
+    if (main.getBoundingClientRect().bottom > limit) rest.insertBefore(section, next);
+  }
 }
 
 class SolarFlowCard extends HTMLElement {
@@ -4195,6 +4217,25 @@ class SolarFlowCard extends HTMLElement {
     if (!THEMES.includes(this._config.theme)) this._config.theme = "diorama";
     this._signature = "";
     this._render();
+  }
+
+  connectedCallback() {
+    // The wide layout depends on the card's width: lay it out again on resize.
+    if (!this._resizeObserver && typeof ResizeObserver !== "undefined") {
+      this._resizeObserver = new ResizeObserver(() => {
+        const width = Math.round(this.getBoundingClientRect().width);
+        if (width === this._width) return;
+        this._width = width;
+        if (this._config?.wide !== true) return;
+        this._signature = "";
+        this._render();
+      });
+    }
+    this._resizeObserver?.observe(this);
+  }
+
+  disconnectedCallback() {
+    this._resizeObserver?.disconnect();
   }
 
   set hass(hass) {
@@ -4455,6 +4496,7 @@ class SolarFlowCard extends HTMLElement {
         <style>${BASE_CSS}${THEME_CSS[theme]}</style>
         <ha-card class="sfc theme-${theme} ${config.animation === false ? "no-anim" : ""}">${wide ? wideLayout(theme, THEME_RENDER[theme](model)) : THEME_RENDER[theme](model)}</ha-card>`;
       this._wire(model);
+      if (wide) balanceWide(this.shadowRoot);
     } catch (error) {
       console.error("Solar Flow Card render error", error);
       this.shadowRoot.innerHTML = `<style>${BASE_CSS}${THEME_CSS.diorama}</style>
