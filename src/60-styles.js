@@ -171,6 +171,7 @@ const BASE_CSS = `
     :is(.sfc-wide, .lc-main.wide, .gt-layout.wide) .sfc-readings { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
     :is(.sfc-wide, .lc-main.wide, .gt-layout.wide) .sfc-strings { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
     .sfc-wide-main > :last-child { margin-bottom: 16px; }
+    .sfc-wide-fill:not(:empty) { display: grid; gap: 14px; padding: 4px 4px 0 16px; }
     .lc-main.wide { display: grid; grid-template-columns: minmax(340px, 40%) minmax(0, 1fr); column-gap: 18px; align-items: start; }
     .lc-main.wide > .sfc-sections { padding-top: 0; }
   }
@@ -191,6 +192,8 @@ const BASE_CSS = `
   .sfc-compare-table tr.gridImport, .sfc-compare-table tr.gridExport { --sfc-c: var(--sfc-grid); }
   .sfc-compare-table td.good { color: #2bb673; font-size: 11px; } .sfc-compare-table td.bad { color: #e5534b; font-size: 11px; }
   .sfc-compare-table tr:last-child > * { border-bottom: 0; }
+  .sfc-compare-table thead th { white-space: normal; vertical-align: bottom; }
+  .sfc-compare-scroll { overflow-x: auto; }
 
   /* Installation */
   .sfc-phases { display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); gap: 8px; }
