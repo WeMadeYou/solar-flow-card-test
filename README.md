@@ -144,7 +144,7 @@ co2_factor: 0.7
 
 ### Other inverters
 
-Set the entities the card should use. Every key is optional; use either separate import/export (charge/discharge) sensors or one signed sensor.
+Set the entities the card should use. Every key is optional; use either separate import/export (charge/discharge) sensors or one signed sensor. Without a consumption sensor (`load_power`, `load_energy`) the card calculates it: panels + grid import − grid export + battery discharge − battery charge.
 
 ```yaml
 type: custom:solar-flow-card

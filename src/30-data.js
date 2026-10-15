@@ -117,7 +117,13 @@ function liveValues(resolved, config) {
     else gridExport = -grid;
   }
   const solar = positive(live.solar);
-  const load = positive(live.load);
+  // No consumption sensor: the home takes what the panels, the grid and the
+  // battery deliver (grid and battery signed: + import, + discharge).
+  const hasGrid = [live.grid, live.gridImport, live.gridExport].some((entry) => value(entry) !== null);
+  const loadComputed = value(live.load) === null && (value(live.solar) !== null || hasGrid);
+  const load = loadComputed
+    ? Math.max(0, solar + (gridImport - gridExport) + (discharge - charge))
+    : positive(live.load);
   return {
     solar,
     load,
@@ -128,6 +134,7 @@ function liveValues(resolved, config) {
     battery: discharge - charge,
     grid: gridImport - gridExport,
     soc: value(live.soc),
+    loadComputed,
     solarActive: solar > ACTIVE_W,
     loadActive: load > ACTIVE_W,
     chargeActive: charge > ACTIVE_W,
@@ -149,10 +156,19 @@ function liveStatus(resolved) {
   return { state: Date.now() - at.getTime() <= 3 * 60 * 1000 ? "live" : "delayed", at };
 }
 
+// Home consumption from the other flows, for installations without a
+// consumption sensor: what the panels, the grid and the battery deliver
+// minus what goes back to the grid and into the battery.
+function deriveLoadEnergy(values) {
+  if (isNum(values.load) || !(isNum(values.solar) || isNum(values.gridImport))) return values;
+  const v = (name) => (isNum(values[name]) ? values[name] : 0);
+  return { ...values, load: Math.max(0, v("solar") + v("gridImport") - v("gridExport") + v("discharge") - v("charge")) };
+}
+
 function todayEnergy(resolved) {
   const values = {};
   for (const name of ENERGY_ORDER) values[name] = stateNumber(resolved.energy[name]?.stateObj);
-  return values;
+  return deriveLoadEnergy(values);
 }
 
 // Long-term statistics query for a period other than today.

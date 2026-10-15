@@ -711,7 +711,13 @@ function liveValues(resolved, config) {
     else gridExport = -grid;
   }
   const solar = positive(live.solar);
-  const load = positive(live.load);
+  // No consumption sensor: the home takes what the panels, the grid and the
+  // battery deliver (grid and battery signed: + import, + discharge).
+  const hasGrid = [live.grid, live.gridImport, live.gridExport].some((entry) => value(entry) !== null);
+  const loadComputed = value(live.load) === null && (value(live.solar) !== null || hasGrid);
+  const load = loadComputed
+    ? Math.max(0, solar + (gridImport - gridExport) + (discharge - charge))
+    : positive(live.load);
   return {
     solar,
     load,
@@ -722,6 +728,7 @@ function liveValues(resolved, config) {
     battery: discharge - charge,
     grid: gridImport - gridExport,
     soc: value(live.soc),
+    loadComputed,
     solarActive: solar > ACTIVE_W,
     loadActive: load > ACTIVE_W,
     chargeActive: charge > ACTIVE_W,
@@ -743,10 +750,19 @@ function liveStatus(resolved) {
   return { state: Date.now() - at.getTime() <= 3 * 60 * 1000 ? "live" : "delayed", at };
 }
 
+// Home consumption from the other flows, for installations without a
+// consumption sensor: what the panels, the grid and the battery deliver
+// minus what goes back to the grid and into the battery.
+function deriveLoadEnergy(values) {
+  if (isNum(values.load) || !(isNum(values.solar) || isNum(values.gridImport))) return values;
+  const v = (name) => (isNum(values[name]) ? values[name] : 0);
+  return { ...values, load: Math.max(0, v("solar") + v("gridImport") - v("gridExport") + v("discharge") - v("charge")) };
+}
+
 function todayEnergy(resolved) {
   const values = {};
   for (const name of ENERGY_ORDER) values[name] = stateNumber(resolved.energy[name]?.stateObj);
-  return values;
+  return deriveLoadEnergy(values);
 }
 
 // Long-term statistics query for a period other than today.
@@ -3064,7 +3080,7 @@ class SolarFlowCard extends HTMLElement {
       loadStatistics(this._hass, spec, resolved.energy)
     );
     if (!entry.data) return { totals: {}, loading: entry.loading, error: entry.error, spec };
-    const buckets = withLiveToday(entry.data.buckets, spec, today);
+    const buckets = withLiveToday(entry.data.buckets, spec, today).map(deriveLoadEnergy);
     return { totals: sumBuckets(buckets), buckets, spec, loading: entry.loading, error: entry.error };
   }
 
@@ -3113,11 +3129,21 @@ class SolarFlowCard extends HTMLElement {
       grid = series.gridImport;
     }
     const noBattery = this._config.show_battery === false;
+    // No consumption sensor: the same balance as liveValues(), point by point.
+    let load = series.load || null;
+    if (!load && (series.solar || grid)) {
+      const length = (series.solar || grid).length;
+      load = Array.from({ length }, (_, i) => {
+        const [s, g, b] = [series.solar?.[i], grid?.[i], battery?.[i]];
+        if (!isNum(s) && !isNum(g) && !isNum(b)) return null;
+        return Math.max(0, Math.max(0, isNum(s) ? s : 0) + (isNum(g) ? g : 0) + (isNum(b) ? b : 0));
+      });
+    }
     return {
       kind: "power",
       spec,
       solar: this._config.show_solar === false ? null : series.solar || null,
-      load: series.load || null,
+      load,
       battery: noBattery ? null : battery,
       grid,
       soc: noBattery ? null : series.soc || null,
