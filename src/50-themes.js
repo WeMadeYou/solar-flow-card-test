@@ -991,7 +991,7 @@ function renderGate(m) {
         </div>
       </div>
       <div class="gt-energy">${energySectionHtml(m)}</div>
-      <div class="sfc-sections">${inverterHtml(m)}${systemHtml(m)}${panelsHtml(m)}</div>
+      <div class="sfc-sections">${inverterHtml(m)}${insightsHtml(m)}${systemHtml(m)}${panelsHtml(m)}</div>
     </div>`;
 }
 

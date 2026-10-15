@@ -117,16 +117,39 @@ class SolarFlowCard extends HTMLElement {
     return { totals: sumBuckets(buckets), buckets, spec, loading: entry.loading, error: entry.error };
   }
 
+  // Recorder history of the power sensors for today or the last 3 days,
+  // shared by the chart and the day's highlights.
+  _powerHistory(resolved, period) {
+    const live = { ...resolved.live, ...bankHistorySources(this._hass, this._config) };
+    const ids = Object.values(live).filter(Boolean).map((entry) => entry.entityId);
+    if (!ids.length || typeof this._hass.callWS !== "function") return null;
+    const spec = powerSpec(period);
+    const entry = this._fetch(`history|${period}|${ids.join(",")}|${spec.start.toDateString()}`, spec.ttl, () =>
+      loadPowerHistory(this._hass, spec, live)
+    );
+    return { entry, spec };
+  }
+
+  // Today at a glance and the comparison with yesterday, the week and the
+  // month. Shown in the wide layout, or anywhere with show_insights: true.
+  _insights(resolved, today, forecast) {
+    const config = this._config;
+    if (config.show_insights === false || !(config.wide === true || config.show_insights === true)) return null;
+    const history = this._powerHistory(resolved, "today");
+    const day = history?.entry.data ? dayHighlights(this._powerChartData(history.entry.data.series, history.spec), history.spec, today, forecast) : null;
+    const week = this._periodEnergy(resolved, "7d", today);
+    const month = this._periodEnergy(resolved, "month", today);
+    const compare = comparisonRows(today, week, month);
+    if (!day && !compare) return { loading: Boolean(history?.entry.loading || week.loading) };
+    return { day, compare, at: [history?.entry.at, week.buckets?.length, month.buckets?.length] };
+  }
+
   _chartState(resolved, period, energy) {
     if (this._config.show_chart === false) return null;
     if (period === "today" || period === "3d") {
-      const live = { ...resolved.live, ...bankHistorySources(this._hass, this._config) };
-      const ids = Object.values(live).filter(Boolean).map((entry) => entry.entityId);
-      if (!ids.length || typeof this._hass.callWS !== "function") return null;
-      const spec = powerSpec(period);
-      const entry = this._fetch(`history|${period}|${ids.join(",")}|${spec.start.toDateString()}`, spec.ttl, () =>
-        loadPowerHistory(this._hass, spec, live)
-      );
+      const history = this._powerHistory(resolved, period);
+      if (!history) return null;
+      const { entry, spec } = history;
       return {
         loading: entry.loading,
         error: entry.error,
@@ -235,6 +258,7 @@ class SolarFlowCard extends HTMLElement {
       const chart = this._chartState(resolved, period, energy);
       const forecast = batteryForecast(live, bank?.capacity && !positiveNumber(config.battery_capacity) ? { ...config, battery_capacity: bank.capacity } : config);
       const panels = showSolar ? panelData(this._hass, resolved, config) : null;
+      const insights = this._insights(resolved, today, forecast);
       const weather = theme === "diorama" ? weatherData(this._hass, config) : null;
       // The wide layout has room for everything: inverter details stay open.
       const wide = config.wide === true;
@@ -254,7 +278,7 @@ class SolarFlowCard extends HTMLElement {
       const signature = JSON.stringify([
         language, config, period, [...this._hiddenSeries], live, status.state, today, energy.totals, Boolean(energy.loading),
         chart && [Boolean(chart.loading), Boolean(chart.error), chart.at], forecast.mode, Math.round(forecast.hours * 60 || 0),
-        panels?.panels.map((p) => [p.today, p.power]), system, bank, weather && [weather.condition, weather.temperature], inverterOpen,
+        panels?.panels.map((p) => [p.today, p.power]), system, bank, insights && [insights.loading, insights.at, insights.day?.offGridMinutes], weather && [weather.condition, weather.temperature], inverterOpen,
         inverter?.map((d) => [[...d.strings.values()].map((s) => Object.values(s).map((r) => r.value)), d.temperatures.map((r) => r.value), d.battery.map((r) => r.value), d.grid.map((r) => r.value)]),
         Math.floor(now.getTime() / 60000),
       ]);
@@ -294,6 +318,7 @@ class SolarFlowCard extends HTMLElement {
         inverter,
         system,
         bank,
+        insights,
         weather,
         inverterOpen,
         hiddenSeries: this._hiddenSeries,
