@@ -166,9 +166,10 @@ function panelsHtml(m) {
   const { t, locale } = m;
   // Estimated tiles: dashed, marked ≈, with a note on where the numbers come from.
   const est = data.estimate ? "≈ " : "";
-  const note = data.estimate ? t.panelsEstimateNote : data.weakest
-    ? fill(t.panelWeak, { name: data.weakest.name, pct: formatNumber((data.weakest.today / data.median) * 100, locale, 0) })
-    : t.panelsEven;
+  const statsNote = (stats) => `${fill(t.panelAvg, { kwh: formatEnergy(stats.average, locale) })} · ${stats.weakest
+    ? fill(t.panelWeak, { name: stats.weakest.name, pct: formatNumber((stats.weakest.today / stats.median) * 100, locale, 0) })
+    : t.panelsEven}`;
+  const note = data.estimate ? t.panelsEstimateNote : statsNote(data);
   return `
     <section class="sfc-section sfc-panels" id="sfc-panels">
       <div class="sfc-head">
@@ -187,10 +188,9 @@ function panelsHtml(m) {
                 <span>${escapeHtml(isNum(panel.power) ? `${est}${formatPower(panel.power, locale)}` : "kWh")}</span>
               </button>`).join("")}
           </div>
+          ${data.stringStats ? `<p class="sfc-panels-note ${data.stringStats[i].weakest ? "warn" : ""}">${escapeHtml(statsNote(data.stringStats[i]))}</p>` : ""}
         </div>`).join("")}
-      <p class="sfc-panels-note ${data.weakest ? "warn" : ""} ${data.estimate ? "estimate" : ""}">
-        ${data.estimate ? escapeHtml(note) : `${escapeHtml(fill(t.panelAvg, { kwh: formatEnergy(data.average, locale) }))} · ${escapeHtml(note)}`}
-      </p>
+      ${data.stringStats ? "" : `<p class="sfc-panels-note ${data.weakest ? "warn" : ""} ${data.estimate ? "estimate" : ""}">${escapeHtml(note)}</p>`}
     </section>`;
 }
 

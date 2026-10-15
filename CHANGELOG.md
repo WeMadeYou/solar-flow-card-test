@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.0-beta.3
+
+- `panels_average: per_string` (also in the editor): the panel average and the weakest panel are worked out for each string on its own, with a summary under each string, so a string facing another way does not make the other look weak. The default (`all`) stays as before.
+
 ## 1.4.0-beta.2
 
 - Reactor: the animations carry on across re-renders (every minute and on each new reading) instead of starting over, as the Foundation orbits do.

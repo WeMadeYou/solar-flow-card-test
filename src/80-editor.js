@@ -20,8 +20,8 @@ function editorStrings(hass, config) {
   }
 }
 
-// Switches that are off unless set: [config key, label key].
-const EDITOR_OPTIN = [["wide", "editorWide"], ["show_insights", "editorInsights"]];
+// Switches that are off unless set: [config key, label key, value when on].
+const EDITOR_OPTIN = [["wide", "editorWide"], ["show_insights", "editorInsights"], ["panels_average", "editorPanelsAverage", "per_string"]];
 const EDITOR_SWITCHES = [
   ["show_solar", "editorSolar"],
   ["show_battery", "editorBattery"],
@@ -144,9 +144,9 @@ class SolarFlowCardEditor extends HTMLElement {
         ${EDITOR_SWITCHES.map(([key, label]) => `
           <div class="switch"><label for="${key}" style="color:inherit">${escapeHtml(t[label])}</label>
             <input id="${key}" type="checkbox" ${this._config[key] === false ? "" : "checked"} /></div>`).join("")}
-        ${EDITOR_OPTIN.map(([key, label]) => `
+        ${EDITOR_OPTIN.map(([key, label, value]) => `
           <div class="switch"><label for="${key}" style="color:inherit">${escapeHtml(t[label])}</label>
-            <input id="${key}" type="checkbox" ${this._config[key] === true ? "checked" : ""} /></div>`).join("")}
+            <input id="${key}" type="checkbox" ${this._config[key] === (value ?? true) ? "checked" : ""} /></div>`).join("")}
         <p class="hint">${escapeHtml(t.editorHint)}</p>
       </div>`;
     const root = this.shadowRoot;
@@ -175,8 +175,8 @@ class SolarFlowCardEditor extends HTMLElement {
       const number = Number.parseFloat(e.target.value);
       this._set(key, Number.isFinite(number) ? number : undefined);
     }));
-    EDITOR_OPTIN.forEach(([key]) => root.getElementById(key)?.addEventListener("change", (e) =>
-      this._set(key, e.target.checked ? true : undefined)
+    EDITOR_OPTIN.forEach(([key, , value]) => root.getElementById(key)?.addEventListener("change", (e) =>
+      this._set(key, e.target.checked ? value ?? true : undefined)
     ));
     EDITOR_SWITCHES.forEach(([key]) => root.getElementById(key)?.addEventListener("change", (e) =>
       this._set(key, e.target.checked ? undefined : false)
