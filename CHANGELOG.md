@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.2
+
+- Grid power on DeyeCloud stations that only report the net grid power ("Grid Net Power", `wirePower`): the card showed the grid as 0 W / balanced while importing. The net power is now used (+ import, − export), also in the power chart.
+- When a DeyeCloud station sensor is missing or has no value, the inverter's own sensor is used instead: `TotalGridPower`, `TotalSolarPower`, `TotalConsumptionPower`, `BatteryPower`, `SOC`.
+
 ## 1.0.1
 
 - LICENSE uses the plain MIT layout, so GitHub and HACS recognize it; both copyright holders are kept.

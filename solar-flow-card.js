@@ -7,7 +7,7 @@
  * Built from src/*.js by scripts/build.mjs. Edit the sources, not this file.
  */
 (() => {
-const CARD_VERSION = "1.0.1";
+const CARD_VERSION = "1.0.2";
 const CARD_TAG = "solar-flow-card";
 const EDITOR_TAG = "solar-flow-card-editor";
 const THEMES = ["diorama", "aurora", "paper", "lcars", "atlantis", "expanse", "foundation", "galaxy"];
@@ -598,11 +598,21 @@ const LIVE_METRICS = {
   load: { key: "load_power", deye: "consumptionPower" },
   gridImport: { key: "grid_import_power", deye: "purchasePower" },
   gridExport: { key: "grid_export_power", deye: "gridPower" },
-  grid: { key: "grid_power" },
+  grid: { key: "grid_power", deye: "wirePower" },
   battery: { key: "battery_power", deye: "batteryPower" },
   charge: { key: "battery_charge_power", deye: "chargePower" },
   discharge: { key: "battery_discharge_power", deye: "dischargePower" },
   soc: { key: "battery_soc", deye: "batterySOC" },
+};
+
+// Inverter device keys used when the station sensor above is missing or
+// has no value. Signs match: battery + discharging, grid + importing.
+const LIVE_DEVICE_FALLBACK = {
+  solar: ["TotalSolarPower"],
+  load: ["TotalConsumptionPower", "UPSLoadPower"],
+  grid: ["TotalGridPower"],
+  battery: ["BatteryPower"],
+  soc: ["SOC", "BMSSOC"],
 };
 
 // Daily energy sensors (reset at midnight, state_class total_increasing).
@@ -642,6 +652,17 @@ function resolveEntities(hass, config) {
   for (const [name, def] of Object.entries(LIVE_METRICS)) {
     live[name] = pick(configured[def.key])
       || (def.deye ? find((a) => a.sensor_type === "station_latest" && a.metric_key === def.deye) : null);
+  }
+  // Station values DeyeCloud leaves empty: fall back to the inverter's own
+  // device sensor with the same meaning (same sign conventions).
+  const devices = candidates.filter(([, s]) => s.attributes?.sensor_type === "device"
+    && String(s.attributes?.device_type || "").includes("INVERTER"));
+  const numeric = (entry) => entry && stateNumber(entry.stateObj) !== null;
+  for (const [name, keys] of Object.entries(LIVE_DEVICE_FALLBACK)) {
+    if (configured[LIVE_METRICS[name].key] || numeric(live[name])) continue;
+    const wanted = keys.map(normalizeKey);
+    const match = devices.find(([, s]) => wanted.includes(normalizeKey(deviceKey(s))) && stateNumber(s) !== null);
+    if (match) live[name] = { entityId: match[0], stateObj: match[1] };
   }
   const energy = {};
   for (const [name, def] of Object.entries(ENERGY_METRICS)) {
