@@ -779,14 +779,17 @@ function renderGalaxy(m) {
 // dialing computer lists every flow, MALP telemetry is the energy section.
 // --------------------------------------------------------------------------
 
-// Four chevrons are the connection points for the panels, the grid, the
-// home and the battery (lines run to the corner readouts); the other five
-// show the battery level. Chevron i sits at -90° + 40° × i.
+// The compact gate: a smaller gate whose four chevrons are the connection
+// points of the panels, grid, home and battery, each linked to a picture in
+// a corner; the other five chevrons show the battery level. Chevron i sits
+// at -90° + 40° × i. The wide layout keeps all nine chevrons for the level.
 const GATE_PORTS = { pv: 8, grid: 1, load: 3, battery: 6 };
 const GATE_LEVEL = [0, 2, 4, 5, 7];
-const GATE_CORNERS = { pv: [-272, -226], grid: [272, -226], load: [272, 220], battery: [-272, 220] };
+const GATE_SCALE = 0.66;
+const GATE_ICONS = { pv: [-258, -196], grid: [258, -196], load: [258, 176], battery: [-258, 176] };
 
-function gateRing(m, lit, active) {
+// The ring, chevrons and event horizon, centred on 0,0 at full size.
+function gateRingMarkup(m, { lit, active, ports, id }) {
   const glyphs = ["M-5 -6 L5 -6 L0 6 Z", "M-6 0 A6 6 0 1 1 6 0", "M-5 -6 V6 M5 -6 V6 M-5 0 H5", "M0 -7 L6 6 L-6 6 Z", "M-6 -4 H6 M-3 4 H3 M0 -7 V7"];
   let g = "";
   for (let i = 0; i < 39; i++) {
@@ -795,48 +798,106 @@ function gateRing(m, lit, active) {
     g += `<g transform="translate(${(Math.cos(a) * 214).toFixed(1)} ${(Math.sin(a) * 214).toFixed(1)}) rotate(${((a * 180) / Math.PI + 90).toFixed(1)})"><path d="${glyphs[i % 5]}" class="${i % 7 ? "" : "hi"}"/></g>`
       + `<line x1="${(Math.cos(b) * 203).toFixed(1)}" y1="${(Math.sin(b) * 203).toFixed(1)}" x2="${(Math.cos(b) * 225).toFixed(1)}" y2="${(Math.sin(b) * 225).toFixed(1)}" class="gt-seam"/>`;
   }
+  const portOf = ports ? Object.fromEntries(Object.entries(GATE_PORTS).map(([kind, i]) => [i, kind])) : {};
+  let chevrons = "";
+  for (let i = 0; i < 9; i++) {
+    const angle = -90 + i * 40;
+    const a = (angle * Math.PI) / 180;
+    const kind = portOf[i];
+    const port = kind && ports[kind];
+    const cls = !ports ? (i < lit ? "on" : "")
+      : port ? `port ${kind} ${port[0] ? "on" : ""}` : kind ? "unused" : GATE_LEVEL.indexOf(i) < lit ? "on" : "";
+    chevrons += `<g class="gt-chevron ${cls}" transform="translate(${(Math.cos(a) * 252).toFixed(1)} ${(Math.sin(a) * 252).toFixed(1)}) rotate(${angle + 90})">
+      <path d="M-22 -14 L22 -14 L8 12 L-8 12 Z" class="gt-chevron-body"/><path d="M-13 -9 L13 -9 L0 9 Z" class="gt-chevron-light"/></g>`;
+  }
+  const spin = m.live.chargeActive ? "cw" : m.live.dischargeActive ? "ccw" : "";
+  const ripples = Array.from({ length: 6 }, (_, i) => `<circle r="${(i + 1) * 26}" style="--d:${loopPhase(6, i)}"/>`).join("");
+  return `
+    <g class="gt-horizon ${active ? "open" : ""}"><circle r="190" class="gt-eh" fill="url(#gt-eh-${id})"/><g class="gt-ripples">${ripples}</g></g>
+    <circle r="220" class="gt-ring-base"/>
+    <circle r="246" class="gt-ring-edge"/><circle r="194" class="gt-ring-edge"/>
+    <circle r="214" class="gt-ring-track"/>
+    <g class="gt-glyphs ${spin}" style="--d:${loopPhase(180)}">${g}</g>
+    ${chevrons}`;
+}
+
+// Each gate gets its own gradient ids: both are in the card, and a gradient
+// inside the hidden one would not paint the visible one.
+const gateDefs = (id) => `<defs>
+  <radialGradient id="gt-eh-${id}" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#e6fbff" stop-opacity=".95"/><stop offset=".35" stop-color="#5fc8ff" stop-opacity=".75"/><stop offset=".8" stop-color="#1b5fb8" stop-opacity=".55"/><stop offset="1" stop-color="#0a2a5c" stop-opacity=".2"/></radialGradient>
+  <linearGradient id="gt-zpm-${id}" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ff7a18"/><stop offset="1" stop-color="#ffd27a"/></linearGradient>
+</defs>`;
+
+// Wide layout: the full gate, nine chevrons for the battery level.
+function gateFull(m, lit, active) {
+  return `<svg class="gt-svg" viewBox="-300 -300 600 600" aria-hidden="true">${gateDefs("full")}${gateRingMarkup(m, { lit, active, ports: null, id: "full" })}</svg>`;
+}
+
+// Pictures for the corners, drawn around 0,0 within about ±40.
+function gateIcon(kind, m) {
+  const { live } = m;
+  if (kind === "pv") {
+    // An array of solar cells on a stand.
+    const cells = [];
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) cells.push(`<path d="M${-30 + c * 15 + r * 3} ${-18 + r * 11} h13 l2 9 h-13 z"/>`);
+    return `<g class="gt-icon pv ${live.solarActive ? "on" : ""}"><path class="gt-icon-stand" d="M0 15 V30 M-12 30 H12"/><g class="gt-icon-cells">${cells.join("")}</g></g>`;
+  }
+  if (kind === "battery") {
+    // A zero point module: a crystal filled to the battery level.
+    const level = isNum(live.soc) ? clamp(live.soc, 0, 100) / 100 : 0;
+    const top = 30 - level * 56;
+    return `<g class="gt-icon battery ${live.chargeActive || live.dischargeActive ? "on" : ""}">
+      <clipPath id="gt-zpm-clip"><path d="M-11 -28 L11 -28 L16 -20 L16 22 L11 30 L-11 30 L-16 22 L-16 -20 Z"/></clipPath>
+      <path class="gt-zpm-glass" d="M-11 -28 L11 -28 L16 -20 L16 22 L11 30 L-11 30 L-16 22 L-16 -20 Z"/>
+      <rect clip-path="url(#gt-zpm-clip)" x="-16" y="${top.toFixed(1)}" width="32" height="${(30 - top).toFixed(1)}" fill="url(#gt-zpm-compact)" class="gt-zpm-core"/>
+      <path class="gt-zpm-band" d="M-14 -34 H14 V-28 H-14 Z M-14 30 H14 V36 H-14 Z"/>
+      <path class="gt-zpm-edge" d="M0 -28 V30"/></g>`;
+  }
+  if (kind === "grid") {
+    // A dial home device: rings of glyph keys round a red dome.
+    const keys = (rx, ry, n) => Array.from({ length: n }, (_, i) => {
+      const a = (i / n) * Math.PI * 2;
+      return `<ellipse cx="${(Math.cos(a) * rx).toFixed(1)}" cy="${(Math.sin(a) * ry).toFixed(1)}" rx="3" ry="2"/>`;
+    }).join("");
+    return `<g class="gt-icon grid ${live.importActive || live.exportActive ? "on" : ""}">
+      <path class="gt-dhd-base" d="M-36 4 L-26 24 H26 L36 4"/>
+      <ellipse class="gt-dhd-top" rx="38" ry="18" cy="2"/>
+      <g class="gt-dhd-keys">${keys(30, 13, 16)}${keys(19, 8, 12)}</g>
+      <ellipse class="gt-dhd-dome" rx="8" ry="5" cy="1"/></g>`;
+  }
+  // The base inside the mountain.
+  return `<g class="gt-icon load ${live.loadActive ? "on" : ""}">
+    <path class="gt-sgc-mountain" d="M-40 28 L-16 -18 L-4 -8 L10 -30 L40 28 Z"/>
+    <path class="gt-sgc-door" d="M-12 28 V8 H12 V28"/><path class="gt-sgc-door-line" d="M0 8 V28"/>
+    <path class="gt-sgc-lights" d="M-26 20 h4 M-18 14 h4 M18 16 h4 M26 22 h4"/></g>`;
+}
+
+// Compact layout: a smaller gate with the corner pictures linked to their
+// connection chevrons.
+function gateCompact(m, lit, active) {
   const { live, config } = m;
-  // Which ports are in use, which carry power now, and which way it flows
-  // (each line runs from the corner to the chevron).
   const ports = {
     pv: config.showSolar && [live.solarActive, false],
     grid: [live.importActive || live.exportActive, live.exportActive],
     load: [live.loadActive, true],
     battery: config.showBattery && [live.chargeActive || live.dischargeActive, live.chargeActive],
   };
-  const portOf = Object.fromEntries(Object.entries(GATE_PORTS).map(([kind, i]) => [i, kind]));
-  let chevrons = "";
   let lines = "";
-  for (let i = 0; i < 9; i++) {
-    const angle = -90 + i * 40;
-    const a = (angle * Math.PI) / 180;
-    const kind = portOf[i];
-    const port = kind && ports[kind];
-    const cls = port ? `port ${kind} ${port[0] ? "on" : ""}` : kind ? "unused" : GATE_LEVEL.indexOf(i) < lit ? "on" : "";
-    chevrons += `<g class="gt-chevron ${cls}" transform="translate(${(Math.cos(a) * 252).toFixed(1)} ${(Math.sin(a) * 252).toFixed(1)}) rotate(${angle + 90})">
-      <path d="M-22 -14 L22 -14 L8 12 L-8 12 Z" class="gt-chevron-body"/><path d="M-13 -9 L13 -9 L0 9 Z" class="gt-chevron-light"/></g>`;
-    if (port) {
-      const [cx, cy] = GATE_CORNERS[kind];
-      const tip = [Math.cos(a) * 274, Math.sin(a) * 274];
-      lines += flowPath(`M${cx} ${cy} Q${((cx + tip[0]) / 2).toFixed(0)} ${cy} ${tip[0].toFixed(1)} ${tip[1].toFixed(1)}`, port[0], port[1], kind === "load" ? "load" : kind);
-    }
+  let icons = "";
+  for (const [kind, index] of Object.entries(GATE_PORTS)) {
+    const port = ports[kind];
+    if (!port) continue;
+    const angle = ((-90 + index * 40) * Math.PI) / 180;
+    const tip = [Math.cos(angle) * 276 * GATE_SCALE, Math.sin(angle) * 276 * GATE_SCALE];
+    const [x, y] = GATE_ICONS[kind];
+    const start = [x + (x < 0 ? 44 : -44), y + (y < 0 ? 18 : -14)];
+    lines += flowPath(`M${start[0]} ${start[1]} Q${((start[0] + tip[0]) / 2).toFixed(0)} ${start[1]} ${tip[0].toFixed(1)} ${tip[1].toFixed(1)}`, port[0], port[1], kind);
+    icons += `<g transform="translate(${x} ${y})">${gateIcon(kind, m)}</g>`;
   }
-  const spin = m.live.chargeActive ? "cw" : m.live.dischargeActive ? "ccw" : "";
-  const ripples = Array.from({ length: 6 }, (_, i) => `<circle r="${(i + 1) * 26}" style="--d:${loopPhase(6, i)}"/>`).join("");
-  return `
-    <svg class="gt-svg" viewBox="-300 -300 600 600" overflow="visible" aria-hidden="true">
-      <defs>
-        <radialGradient id="gt-eh" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#e6fbff" stop-opacity=".95"/><stop offset=".35" stop-color="#5fc8ff" stop-opacity=".75"/><stop offset=".8" stop-color="#1b5fb8" stop-opacity=".55"/><stop offset="1" stop-color="#0a2a5c" stop-opacity=".2"/></radialGradient>
-        <filter id="gt-glow"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-      </defs>
-      <g class="gt-horizon ${active ? "open" : ""}"><circle r="190" class="gt-eh"/><g class="gt-ripples">${ripples}</g></g>
-      <circle r="220" class="gt-ring-base"/>
-      <circle r="246" class="gt-ring-edge"/><circle r="194" class="gt-ring-edge"/>
-      <circle r="214" class="gt-ring-track"/>
-      <g class="gt-glyphs ${spin}" style="--d:${loopPhase(180)}">${g}</g>
-      <g class="gt-lines" fill="none" stroke-linecap="round">${lines}</g>
-      ${chevrons}
-    </svg>`;
+  return `<svg class="gt-svg" viewBox="-330 -280 660 560" aria-hidden="true">${gateDefs("compact")}
+    <g class="gt-lines" fill="none" stroke-linecap="round">${lines}</g>
+    ${icons}
+    <g transform="scale(${GATE_SCALE})">${gateRingMarkup(m, { lit, active, ports, id: "compact" })}</g></svg>`;
 }
 
 function renderGate(m) {
@@ -850,7 +911,7 @@ function renderGate(m) {
   const level = config.showBattery && isNum(soc) ? soc
     : isNum(hub.share) ? hub.share
       : pvCapacity ? clamp((live.solar / (pvCapacity * 1000)) * 100, 0, 100) : 0;
-  const lit = Math.round((level / 100) * GATE_LEVEL.length);
+  const active = live.loadActive || live.solarActive;
   const atReserve = config.showBattery && isNum(soc) && soc <= f.minSoc + 1;
   const gridValue = live.importActive ? live.gridImport : live.exportActive ? live.gridExport : Math.abs(live.grid);
   const batteryFlow = live.dischargeActive ? live.discharge : live.charge;
@@ -873,6 +934,26 @@ function renderGate(m) {
   const own = isNum(m.today.load) && isNum(m.today.gridImport) && m.today.load > 0.05
     ? formatPercent(clamp(((m.today.load - m.today.gridImport) / m.today.load) * 100, 0, 100), locale) : "—";
   const corner = (cls, pos, label, value) => `<div class="gt-node ${cls}" style="${pos}">${escapeHtml(label)}<b>${escapeHtml(value)}</b></div>`;
+  const values = {
+    pv: [t.solar, formatPower(live.solar, locale), m.ids.live.solar],
+    grid: [t.grid, formatPower(gridValue, locale), gridEntityId(m)],
+    battery: [t.battery, `${live.dischargeActive ? "−" : live.chargeActive ? "+" : ""}${formatPower(batteryFlow, locale)}`, batteryEntityId(m)],
+    load: [t.home, formatPower(live.load, locale), m.ids.live.load],
+  };
+  // Readouts under the corner pictures of the compact gate (viewBox -330…330 × -280…280).
+  const label = (kind) => {
+    const [x, y] = GATE_ICONS[kind];
+    const [name, value, entity] = values[kind];
+    return `<button class="gt-label ${kind}" style="left:${(((x + 330) / 660) * 100).toFixed(1)}%;top:${(((y + 44 + 280) / 560) * 100).toFixed(1)}%" ${entityAttr(entity)}>${escapeHtml(name)}<b>${escapeHtml(value)}</b></button>`;
+  };
+  const center = `
+        <button class="gt-center" data-action="inverter" title="${escapeHtml(t.inverterDetails)}">
+          ${config.showBattery ? `
+            <small>${escapeHtml(t.battery)}</small><b>${escapeHtml(formatPercent(soc, locale))}</b>
+            ${f.capacity ? `<span>${escapeHtml(`${isNum(f.stored) ? formatNumber(f.stored, locale, 1) : "—"} / ${formatEnergy(f.capacity, locale)}`)}</span>` : ""}
+            ${f.at ? `<em>${escapeHtml(`${f.mode === "charging" ? "▲" : "▼"} ${formatWhen(f.at, locale)}`)}</em>` : ""}` : `
+            <small>${escapeHtml(t.inverter)}</small><b>${escapeHtml(formatPower(hub.power, locale))}</b>`}
+        </button>`;
   return `
     <header class="gt-top">
       <span class="gt-tag">SGC-E</span>
@@ -880,15 +961,14 @@ function renderGate(m) {
       <div class="gt-right"><span>${escapeHtml(m.now.toLocaleDateString(locale, { day: "numeric", month: "short" }))} · ${escapeHtml(clockText(m))}</span><span class="gt-live ${m.status.state}">${escapeHtml(m.t[m.status.state])}</span></div>
     </header>
     <div class="gt-layout ${config.wide ? "wide" : ""}">
-      <div class="gt-gate">
-        ${gateRing(m, lit, live.loadActive || live.solarActive)}
-        <button class="gt-center" data-action="inverter" title="${escapeHtml(t.inverterDetails)}">
-          ${config.showBattery ? `
-            <small>${escapeHtml(t.battery)}</small><b>${escapeHtml(formatPercent(soc, locale))}</b>
-            ${f.capacity ? `<span>${escapeHtml(`${isNum(f.stored) ? formatNumber(f.stored, locale, 1) : "—"} / ${formatEnergy(f.capacity, locale)}`)}</span>` : ""}
-            ${f.at ? `<em>${escapeHtml(`${f.mode === "charging" ? "▲" : "▼"} ${formatWhen(f.at, locale)}`)}</em>` : ""}` : `
-            <small>${escapeHtml(t.inverter)}</small><b>${escapeHtml(formatPower(hub.power, locale))}</b>`}
-        </button>
+      <div class="gt-gate gt-compact">
+        ${gateCompact(m, Math.round((level / 100) * GATE_LEVEL.length), active)}
+        ${center}
+        ${["pv", "grid", "battery", "load"].filter((kind) => (kind !== "pv" || config.showSolar) && (kind !== "battery" || config.showBattery)).map(label).join("")}
+      </div>
+      <div class="gt-gate gt-full">
+        ${gateFull(m, Math.round((level / 100) * 9), active)}
+        ${center}
         ${config.showSolar ? corner("pv", "left:0;top:4%", t.solar, formatPower(live.solar, locale)) : ""}
         ${corner("grid", "right:0;top:4%", t.grid, formatPower(gridValue, locale))}
         ${config.showBattery ? corner("battery", "left:0;bottom:4%", t.battery, `${live.dischargeActive ? "−" : live.chargeActive ? "+" : ""}${formatPower(batteryFlow, locale)}`) : ""}

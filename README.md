@@ -54,7 +54,7 @@ History comes from Home Assistant itself (recorder history and long-term statist
 | `expanse` | A ship's power distribution display: bracketed readouts, orbital trajectories and a segmented charge bar with the reserve in red. |
 | `foundation` | A radiant of slowly turning golden orbits around the inverter, with a battery forecast written below. |
 | `galaxy` | A targeting computer flying down a trench, with the moment told as an opening crawl; the target turns red at the battery reserve. |
-| `gate` | A gate control room: four chevrons are the connection points of the panels, battery, grid and home (they pulse while power flows), the other five show the battery level; a dialing computer lists every flow. Made for the wide layout, with a compact version for narrow columns. |
+| `gate` | A gate control room with a dialing computer listing every flow. Compact: a smaller gate whose four chevrons are the connection points of pictures in the corners (solar cells, a zero point module filled to the battery level, a dial home device for the grid, the mountain base for the home); they pulse while power flows, the other five show the battery level. Wide: the full gate with all nine chevrons for the battery level, the dialing computer and the chart side by side. |
 
 ## Installation
 
