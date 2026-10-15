@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Atlantis, Foundation and Far galaxy: the centre is the inverter, where all flows meet. It shows the inverter's power (Atlantis also its load against rated power on the ring) instead of the battery level, which read as if the centre were a source. The battery level moved to the battery node ("Battery 37%"); Far galaxy marks a battery at its reserve there in red.
+
 ## 1.1.0
 
 - Dutch translation, thanks to @furian88.
