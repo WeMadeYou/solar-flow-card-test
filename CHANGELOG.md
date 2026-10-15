@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.0-beta.4
+
+- Wide layout in Home Assistant: the sections were all placed in the right column, leaving the space under the main view empty. The card measured the columns before Home Assistant's card frame had laid them out; it now waits for the layout.
+
 ## 1.3.0-beta.3
 
 - Wide layout: two columns down the whole card, the main view on the left and the chart on the right, with each following section placed in the shorter column. Both columns end at about the same height, with no empty gap under the main view. The layout follows the card's width when it changes (tablet rotation, window resize).
