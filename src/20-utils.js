@@ -64,6 +64,12 @@ function formatClock(date, locale) {
   return date.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
 }
 
+// A forecast time: the clock alone today, with the weekday on another day.
+function formatWhen(date, locale) {
+  if (date.toDateString() === new Date().toDateString()) return formatClock(date, locale);
+  return `${date.toLocaleDateString(locale, { weekday: "short" })} ${formatClock(date, locale)}`;
+}
+
 function formatDuration(hours, t) {
   const minutes = Math.max(1, Math.round(hours * 60));
   const h = Math.floor(minutes / 60);
