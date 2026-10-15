@@ -1222,7 +1222,7 @@ function renderReactor(m) {
           </defs>
           ${sky.sky}
           <rect width="520" height="540" fill="url(#rx-hex)"/>
-          <path class="rx-frame" pathLength="1" d="M30 70Q260 14 490 70L506 450Q260 540 14 450Z"/>
+          <path class="rx-frame" pathLength="1" d="M14 30Q260 -10 506 30L510 470Q260 600 10 470Z"/>
           <g class="rx-boot-ticks"><g class="rx-ticks">${ticks}</g></g>
           ${/* The gauges stop above the battery and grid flow lines. */ ""}
           ${config.showBattery ? `<path class="rx-track" d="${arc(156, 330, 240)}"/>${soc >= 1 ? `<path class="rx-gauge battery" pathLength="1" d="${arc(156, 240, 240 + 0.9 * soc)}"/>` : ""}` : ""}
