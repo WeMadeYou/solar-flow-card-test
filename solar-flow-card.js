@@ -4083,6 +4083,10 @@ class SolarFlowCard extends HTMLElement {
     this._signature = "";
   }
 
+  static get version() {
+    return CARD_VERSION;
+  }
+
   static getStubConfig() {
     return { theme: "diorama" };
   }
