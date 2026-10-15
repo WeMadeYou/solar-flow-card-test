@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Home consumption is calculated when there is no consumption sensor: panels + grid (+ import, − export) + battery (+ discharge, − charge). Works for the live value, the power chart and the daily/period energy, so setups that only have PV and grid sensors (e.g. SolarEdge over Modbus) no longer need a helper sensor.
+- Demo: the clock follows the scenario (noon 12:30, evening 19:30, night 03:00…), so the Diorama sky and the forecast times match the data.
 
 ## 1.0.3
 
