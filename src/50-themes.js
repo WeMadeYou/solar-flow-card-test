@@ -94,17 +94,56 @@ function dioramaScene(m) {
   const night = sky.phase === "night";
   const h = m.now.getHours() + m.now.getMinutes() / 60;
   let g = "";
+  const w = m.weather;
+  const clear = !w || w.sun !== false;
+  // Overcast skies turn grey.
+  if (w?.grey) g += `<rect x="0" y="0" width="520" height="360" fill="${night ? "#0a0f1c" : "#8d99a8"}" opacity="${w.grey}"/>`;
   if (night) {
-    const stars = [[40, 30], [90, 70], [150, 24], [210, 52], [300, 28], [360, 64], [460, 36], [500, 80], [120, 110], [260, 96]];
-    g += stars.map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="${i % 3 ? 1.2 : 1.8}" fill="#fff" opacity="${0.5 + (i % 4) * 0.12}"/>`).join("");
-    g += '<circle cx="430" cy="62" r="17" fill="#f4f1dc"/><circle cx="438" cy="56" r="15" fill="#253563" opacity=".9"/>';
-  } else {
+    if (clear) {
+      const stars = [[40, 30], [90, 70], [150, 24], [210, 52], [300, 28], [360, 64], [460, 36], [500, 80], [120, 110], [260, 96]];
+      g += stars.map(([x, y], i) => `<circle class="dio-star" style="--d:${(i * 0.7) % 4}s" cx="${x}" cy="${y}" r="${i % 3 ? 1.2 : 1.8}" fill="#fff" opacity="${0.5 + (i % 4) * 0.12}"/>`).join("");
+      g += '<circle cx="430" cy="62" r="17" fill="#f4f1dc"/><circle cx="438" cy="56" r="15" fill="#253563" opacity=".9"/>';
+    }
+  } else if (clear) {
     const p = clamp((h - 6) / 14, 0, 1);
     const sx = 70 + p * 380;
     const sy = 140 - Math.sin(Math.PI * p) * 100;
-    g += `<circle cx="${sx.toFixed(0)}" cy="${sy.toFixed(0)}" r="44" fill="#ffe27a" opacity=".22"/><circle cx="${sx.toFixed(0)}" cy="${sy.toFixed(0)}" r="26" fill="#ffe27a"/>`;
-    g += '<g fill="#fff" opacity=".85"><ellipse cx="410" cy="64" rx="34" ry="12"/><ellipse cx="430" cy="56" rx="22" ry="12"/><ellipse cx="120" cy="96" rx="26" ry="9"/></g>';
+    g += `<circle class="dio-glow" cx="${sx.toFixed(0)}" cy="${sy.toFixed(0)}" r="44" fill="#ffe27a" opacity=".22"/><circle cx="${sx.toFixed(0)}" cy="${sy.toFixed(0)}" r="26" fill="#ffe27a"/>`;
   }
+  // Clouds drift across the sky; more and darker ones in bad weather.
+  const cloudCount = w ? w.clouds : night ? 0 : 3;
+  const cloudFill = w?.grey ? (night ? "#4a5468" : "#dfe4ea") : night ? "#5a6886" : "#fff";
+  // Heights and sizes; the drift spreads them across the sky.
+  const cloudSpots = [[70, 1], [48, 1.3], [105, 0.8], [88, 1.1], [36, 1.4], [122, 0.9]];
+  for (let i = 0; i < cloudCount; i++) {
+    const [y, k] = cloudSpots[i];
+    const x = 0;
+    const speed = (w?.wind ? 40 : 90) + i * 17;
+    g += `<g class="dio-cloud" style="--t:${speed}s;--d:${loopPhase(speed, speed * (0.2 + (0.6 * i) / cloudCount))}" fill="${cloudFill}" opacity="${w?.grey ? 0.95 : 0.85}">
+      <g transform="translate(${x} ${y}) scale(${k})"><ellipse cx="0" cy="0" rx="34" ry="12"/><ellipse cx="18" cy="-8" rx="22" ry="12"/><ellipse cx="-16" cy="-4" rx="16" ry="9"/></g></g>`;
+  }
+  if (w?.rain) {
+    const drops = w.rain > 1 ? 70 : 36;
+    g += `<g class="dio-rain ${w.rain > 1 ? "heavy" : ""}" stroke="${night ? "#7f95c2" : "#7d93ad"}" stroke-width="1.4" stroke-linecap="round">`
+      + Array.from({ length: drops }, (_, i) => {
+        const x = (i * 137) % 540 - 10;
+        const y = (i * 61) % 260;
+        return `<line style="--d:-${((i * 0.37) % 1.2).toFixed(2)}s" x1="${x}" y1="${y}" x2="${x - 4}" y2="${y + 12}"/>`;
+      }).join("") + "</g>";
+  }
+  if (w?.snow) {
+    g += '<g class="dio-snow" fill="#fff">' + Array.from({ length: 40 }, (_, i) => {
+      const x = (i * 131) % 520;
+      const y = (i * 53) % 260;
+      return `<circle style="--d:-${((i * 0.53) % 6).toFixed(2)}s" cx="${x}" cy="${y}" r="${i % 3 ? 1.6 : 2.4}"/>`;
+    }).join("") + "</g>";
+  }
+  if (w?.fog) {
+    g += '<g class="dio-fog" fill="#eef1f4">'
+      + [[60, 150], [200, 185], [360, 165], [120, 230]].map(([x, y], i) => `<rect style="--d:-${i * 5}s" x="${x - 150}" y="${y}" width="300" height="18" rx="9" opacity=".45"/>`).join("")
+      + "</g>";
+  }
+  if (w?.lightning) g += '<rect class="dio-flash" x="0" y="0" width="520" height="360" fill="#fff"/>';
   g += poly(sky.ground[0], [-4, -3, 0], [7, -3, 0], [7, 6, 0], [-4, 6, 0]);
   g += poly(sky.ground[1], [-4, 6, 0], [7, 6, 0], [7, 6, -0.35], [-4, 6, -0.35]);
   g += poly(sky.ground[2], [7, -3, 0], [7, 6, 0], [7, 6, -0.35], [7, -3, -0.35]);
@@ -195,7 +234,7 @@ function renderDiorama(m) {
     <div class="dio-scene" style="--sky-a:${sky.sky[0]};--sky-b:${sky.sky[1]}">
       <svg viewBox="0 0 520 360" aria-hidden="true">${svg}</svg>
       <div class="dio-title"><h1>${escapeHtml(m.name)}</h1>${liveBadge(m)}</div>
-      <div class="dio-clock">${escapeHtml(clockText(m))}</div>
+      <div class="dio-clock">${escapeHtml(clockText(m))}${isNum(m.weather?.temperature) ? ` <button class="dio-temp" ${entityAttr(m.weather.entityId)}>${escapeHtml(`${formatNumber(m.weather.temperature, locale, 0)}${m.weather.unit}`)}</button>` : ""}</div>
       ${m.config.showSolar ? pill(288, 78, "pv", formatPower(live.solar, locale), t.fromRoof, m.ids.live.solar) : ""}
       ${m.config.showBattery ? pill(22, 208, "battery", formatPercent(live.soc, locale), batteryNote, batteryEntityId(m)) : ""}
       ${pill(378, 240, "grid", formatPower(gridValue, locale), t.grid.toLowerCase(), gridEntityId(m))}
@@ -597,6 +636,25 @@ function renderExpanse(m) {
 // Foundation: a radiant of slowly turning orbits that forecasts the battery.
 // --------------------------------------------------------------------------
 
+// A negative start offset that follows the wall clock, so a looping
+// animation continues where it was when the card re-renders.
+function loopPhase(seconds, shift = 0) {
+  return `-${(((Date.now() / 1000) + shift) % seconds).toFixed(2)}s`;
+}
+
+// One orbit of the radiant: a still ellipse with a planet travelling the
+// whole way round it (SVG motion, so it follows the ellipse exactly).
+function foundationOrbit(rx, ry, angle, r, seconds, reverse, m) {
+  const path = reverse
+    ? `M${rx} 0 A${rx} ${ry} 0 1 0 ${-rx} 0 A${rx} ${ry} 0 1 0 ${rx} 0`
+    : `M${rx} 0 A${rx} ${ry} 0 1 1 ${-rx} 0 A${rx} ${ry} 0 1 1 ${rx} 0`;
+  const still = m.config.animation === false || (typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches);
+  const planet = still
+    ? `<circle cx="${rx}" r="${r}"/>`
+    : `<circle r="${r}"><animateMotion dur="${seconds}s" begin="${loopPhase(seconds)}" repeatCount="indefinite" path="${path}"/></circle>`;
+  return `<g class="fnd-orbit" transform="rotate(${angle})"><ellipse rx="${rx}" ry="${ry}"/>${planet}</g>`;
+}
+
 function renderFoundation(m) {
   const { t, locale, live } = m;
   const W = 480;
@@ -636,9 +694,9 @@ function renderFoundation(m) {
           <filter id="fnd-glow"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
         </defs>
         <g transform="translate(240 170)" fill="none">
-          <g class="fnd-orbit o1"><ellipse rx="150" ry="58"/><circle cx="150" r="2.5"/></g>
-          <g class="fnd-orbit o2"><ellipse rx="128" ry="74" transform="rotate(32)"/><circle cx="108" cy="68" r="2"/></g>
-          <g class="fnd-orbit o3"><ellipse rx="128" ry="74" transform="rotate(-32)"/><circle cx="-108" cy="68" r="2"/></g>
+          ${foundationOrbit(150, 58, 0, 2.5, 48, false, m)}
+          ${foundationOrbit(128, 74, 32, 2, 70, true, m)}
+          ${foundationOrbit(128, 74, -32, 2, 95, false, m)}
           <g class="fnd-stars">${stars}</g>
           <circle r="62" fill="url(#fnd-sphere)" class="fnd-sphere"/>
           <circle r="44" class="fnd-ring"/>

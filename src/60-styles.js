@@ -186,11 +186,13 @@ const BASE_CSS = `
      pattern (10, 12, 18); --sfc-dash-time sets the speed. */
   @keyframes sfc-dash { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -180; } }
   .no-anim .sfc-flow, .no-anim .atl-pulse, .no-anim .aur-ring, .no-anim .lc-track i,
-    .no-anim .exp-spin, .no-anim .fnd-orbit, .no-anim .fnd-sphere, .no-anim .gal-warp, .no-anim .gal-target, .no-anim .gal-cross { animation: none !important; }
+    .no-anim .exp-spin, .no-anim .fnd-orbit, .no-anim .fnd-sphere, .no-anim .gal-warp, .no-anim .gal-target, .no-anim .gal-cross,
+    .no-anim .dio-cloud, .no-anim .dio-star, .no-anim .dio-glow, .no-anim .dio-rain line, .no-anim .dio-snow circle, .no-anim .dio-fog rect, .no-anim .dio-flash { animation: none !important; }
   /* Reduced motion: flows keep moving, slower; decorative effects stop. */
   @media (prefers-reduced-motion: reduce) {
     .sfc-flow { animation-duration: calc(var(--sfc-dash-time, 18s) * 3); }
-    .atl-pulse, .aur-ring, .lc-track i, .lc-status, .exp-spin, .fnd-orbit, .fnd-sphere, .gal-warp, .gal-target, .gal-cross { animation: none !important; }
+    .atl-pulse, .aur-ring, .lc-track i, .lc-status, .exp-spin, .fnd-orbit, .fnd-sphere, .gal-warp, .gal-target, .gal-cross,
+    .dio-cloud, .dio-star, .dio-glow, .dio-rain line, .dio-snow circle, .dio-fog rect, .dio-flash { animation: none !important; }
   }
 
   .sfc-empty { padding: 28px; text-align: center; }
@@ -217,6 +219,22 @@ const THEME_CSS = {
     .dio-title .sfc-badge { --sfc-badge-bg: rgba(255,255,255,.28); --sfc-badge-text: #fff; text-shadow: none; backdrop-filter: blur(6px); }
     .dio-clock { position: absolute; right: 3.5%; top: 5%; padding: 5px 10px; border-radius: 999px; background: rgba(255,255,255,.3);
       color: #fff; font-weight: 800; font-size: 12px; backdrop-filter: blur(6px); }
+    .dio-temp { margin-left: 4px; padding: 0 0 0 6px; border: 0; border-left: 1px solid rgba(255,255,255,.5); background: none; color: inherit; font: inherit; }
+    .dio-cloud { animation: dio-drift var(--t) linear infinite; animation-delay: var(--d); }
+    @keyframes dio-drift { from { transform: translateX(-90px); } to { transform: translateX(610px); } }
+    .dio-star { animation: dio-twinkle 4s ease-in-out infinite; animation-delay: var(--d); }
+    @keyframes dio-twinkle { 50% { opacity: .15; } }
+    .dio-glow { transform-box: fill-box; transform-origin: center; animation: dio-glow 6s ease-in-out infinite; }
+    @keyframes dio-glow { 50% { transform: scale(1.18); opacity: .12; } }
+    .dio-rain line { animation: dio-fall 1.2s linear infinite; animation-delay: var(--d); }
+    .dio-rain.heavy line { animation-duration: .7s; }
+    @keyframes dio-fall { from { transform: translate(0, -40px); opacity: 0; } 15% { opacity: 1; } to { transform: translate(-14px, 60px); opacity: 0; } }
+    .dio-snow circle { animation: dio-snow 6s linear infinite; animation-delay: var(--d); }
+    @keyframes dio-snow { from { transform: translate(0, -30px); opacity: 0; } 15% { opacity: .9; } to { transform: translate(14px, 90px); opacity: 0; } }
+    .dio-fog rect { animation: dio-fog 20s ease-in-out infinite alternate; animation-delay: var(--d); }
+    @keyframes dio-fog { to { transform: translateX(120px); } }
+    .dio-flash { opacity: 0; pointer-events: none; animation: dio-flash 9s linear infinite; }
+    @keyframes dio-flash { 0%, 92%, 95%, 100% { opacity: 0; } 93%, 96% { opacity: .55; } }
     .dio-pill { position: absolute; display: flex; align-items: center; gap: 6px; padding: 6px 11px 6px 9px; border: 0; border-radius: 999px;
       background: rgba(255,255,255,.93); box-shadow: 0 6px 16px rgba(30,60,90,.18); color: #24364a; font-size: clamp(10px, 2.4cqw, 13px);
       font-weight: 800; white-space: nowrap; transition: transform .2s; }
@@ -577,14 +595,9 @@ const THEME_CSS = {
     .fnd-stage svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
     .fnd-orbit ellipse { stroke: rgba(232,196,122,.35); stroke-width: .8; }
     .fnd-orbit circle { fill: #f3cf7a; }
-    .fnd-orbit { transform-box: view-box; transform-origin: 240px 170px; }
-    .fnd-orbit.o1 { animation: fnd-turn 60s linear infinite; }
-    .fnd-orbit.o2 { animation: fnd-turn 90s linear infinite reverse; }
-    .fnd-orbit.o3 { animation: fnd-turn 120s linear infinite; }
-    @keyframes fnd-turn { to { transform: rotate(360deg); } }
     .fnd-stars circle { fill: rgba(241,230,207,.55); }
-    .fnd-sphere { animation: fnd-breathe 6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
-    @keyframes fnd-breathe { 50% { opacity: .7; transform: scale(.94); } }
+    .fnd-sphere { animation: fnd-breathe 12s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+    @keyframes fnd-breathe { 50% { opacity: .85; transform: scale(.97); } }
     .fnd-ring { stroke: rgba(243,207,122,.6); stroke-width: .8; stroke-dasharray: 1 3; }
     .fnd-center { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; padding: 0; border: 0; background: none; }
     .fnd-center b { font: 400 clamp(15px, 4.2cqw, 21px)/1 var(--sfc-heading-font); white-space: nowrap; color: #1a1206; text-shadow: 0 0 10px rgba(255,244,214,.9); }
@@ -610,7 +623,7 @@ const THEME_CSS = {
       --sfc-accent: #ffe81f; --sfc-accent-soft: rgba(255,232,31,.12); --sfc-tile-bg: rgba(255,200,40,.025); --sfc-track: rgba(255,190,40,.12);
       --sfc-tab-bg: rgba(255,200,40,.04); --sfc-tab-on-bg: #ffe81f; --sfc-tab-on: #020203;
       --sfc-tip-bg: #0b0904; --sfc-badge-bg: rgba(255,232,31,.1);
-      --sfc-flow-base: rgba(255,190,40,.12); --sfc-flow-w: 1.6; --sfc-dash: 6 12; --sfc-dash-time: 8s;
+      --sfc-flow-base: rgba(255,190,40,.12); --sfc-flow-w: 1.6; --sfc-dash: 6 12; --sfc-dash-time: 14s;
       --sfc-radius: 4px; --sfc-section-radius: 2px; --sfc-tile-radius: 2px; --sfc-tabs-radius: 2px; --sfc-tab-radius: 1px; --sfc-icon-radius: 2px;
       --sfc-heading-weight: 700;
       background: var(--sfc-bg);
@@ -632,12 +645,12 @@ const THEME_CSS = {
     .gal-scope { position: relative; aspect-ratio: 480 / 300; margin: 4px 10px 12px; border: 1px solid rgba(255,190,40,.25); background: radial-gradient(closest-side, rgba(255,120,0,.06), transparent); }
     .gal-scope svg { position: absolute; inset: 0; width: 100%; height: 100%; }
     .gal-trench rect { stroke: rgba(255,170,30,.55); stroke-width: 1; vector-effect: non-scaling-stroke; }
-    .gal-warp { transform-box: view-box; transform-origin: 240px 150px; opacity: 0; animation: gal-warp 4s linear infinite; animation-delay: calc(var(--d) * -1s); }
-    @keyframes gal-warp { from { transform: scale(1); opacity: .9; } to { transform: scale(4.6); opacity: 0; } }
+    .gal-warp { transform-box: view-box; transform-origin: 240px 150px; opacity: 0; animation: gal-warp 12s linear infinite; animation-delay: calc(var(--d) * -3s); }
+    @keyframes gal-warp { from { transform: scale(1); opacity: .45; } to { transform: scale(4.6); opacity: 0; } }
     .gal-target { stroke: #ffe81f !important; stroke-width: 2 !important; }
-    .gal-target.low, .gal-cross.low { stroke: #ff4b3a !important; animation: gal-blink 1s steps(2) infinite; }
+    .gal-target.low, .gal-cross.low { stroke: #ff4b3a !important; animation: gal-blink 3s ease-in-out infinite; }
     .gal-cross { stroke: #ff4b3a; stroke-width: 1.5; }
-    @keyframes gal-blink { 50% { opacity: .3; } }
+    @keyframes gal-blink { 50% { opacity: .45; } }
     .gal-center { position: absolute; transform: translate(-50%, -50%); padding: 0; border: 0; background: none; }
     .gal-center b { color: #ffe81f; font: 700 clamp(13px, 3.6cqw, 18px) var(--sfc-heading-font); white-space: nowrap; text-shadow: 0 0 8px rgba(255,232,31,.6); }
     .gal-center { display: grid; justify-items: center; }

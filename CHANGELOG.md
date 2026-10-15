@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Diorama follows the weather of a Home Assistant weather entity (`weather_entity`, otherwise the first one found; `show_weather: false` turns it off, also in the editor): drifting clouds, a grey sky when overcast, rain, snow, fog and lightning; twinkling stars on clear nights; the temperature next to the clock.
+- Foundation: the orbits stay still and the planets travel all the way round them, instead of the whole ellipses swinging; the sphere breathes more slowly.
+- Far galaxy: a calmer trench (slower, fainter), slower flow dots and a gentle pulse instead of a blink at the battery reserve.
+- Looping animations keep their place when the card refreshes instead of starting over.
+
 - Atlantis, Foundation and Far galaxy: the centre is the inverter, where all flows meet. It shows the inverter's power (Atlantis also its load against rated power on the ring) instead of the battery level, which read as if the centre were a source. The battery level moved to the battery node ("Battery 37%"); Far galaxy marks a battery at its reserve there in red.
 
 ## 1.1.0

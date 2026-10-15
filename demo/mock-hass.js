@@ -4,11 +4,11 @@
 const STATION = "62745671";
 
 export const SCENARIOS = {
-  noon: { label: "Noon, charging", hour: 12.5, generationPower: 5200, consumptionPower: 640, batteryPower: -3900, purchasePower: 0, gridPower: 660, batterySOC: 71 },
-  afternoon: { label: "Afternoon, mixed", hour: 15.5, generationPower: 1550, consumptionPower: 2760, batteryPower: 1320, purchasePower: 8, gridPower: 0, batterySOC: 55 },
-  evening: { label: "Evening, battery", hour: 19.5, generationPower: 0, consumptionPower: 1850, batteryPower: 1850, purchasePower: 0, gridPower: 0, batterySOC: 38 },
-  losses: { label: "Evening, inverter losses", hour: 22.25, generationPower: 0, consumptionPower: 823, batteryPower: 924, purchasePower: 0, gridPower: 0, batterySOC: 33 },
-  night: { label: "Night, grid", hour: 3, generationPower: 0, consumptionPower: 420, batteryPower: 0, purchasePower: 420, gridPower: 0, batterySOC: 10 },
+  noon: { label: "Noon, charging", hour: 12.5, weather: "sunny", generationPower: 5200, consumptionPower: 640, batteryPower: -3900, purchasePower: 0, gridPower: 660, batterySOC: 71 },
+  afternoon: { label: "Afternoon, mixed", hour: 15.5, weather: "partlycloudy", generationPower: 1550, consumptionPower: 2760, batteryPower: 1320, purchasePower: 8, gridPower: 0, batterySOC: 55 },
+  evening: { label: "Evening, battery", hour: 19.5, weather: "cloudy", generationPower: 0, consumptionPower: 1850, batteryPower: 1850, purchasePower: 0, gridPower: 0, batterySOC: 38 },
+  losses: { label: "Evening, inverter losses", hour: 22.25, weather: "rainy", generationPower: 0, consumptionPower: 823, batteryPower: 924, purchasePower: 0, gridPower: 0, batterySOC: 33 },
+  night: { label: "Night, grid", hour: 3, weather: "clear-night", generationPower: 0, consumptionPower: 420, batteryPower: 0, purchasePower: 420, gridPower: 0, batterySOC: 10 },
 };
 
 function sun(h) {
@@ -32,12 +32,17 @@ function profile(t) {
   };
 }
 
-export function createHass({ scenario = "afternoon", language = "pl" } = {}) {
+export function createHass({ scenario = "afternoon", language = "pl", weather } = {}) {
   const live = SCENARIOS[scenario] || SCENARIOS.afternoon;
   const states = {};
   const now = new Date().toISOString();
   const add = (id, state, attributes) => {
     states[id] = { entity_id: id, state: String(state), attributes: { station_id: STATION, station_name: "Dom", ...attributes }, last_updated: now, last_changed: now };
+  };
+  const condition = weather || live.weather || "sunny";
+  states["weather.home"] = {
+    entity_id: "weather.home", state: condition, last_updated: now, last_changed: now,
+    attributes: { friendly_name: "Home", temperature: { "clear-night": 6, snowy: -2, "snowy-rainy": 1 }[condition] ?? 14, temperature_unit: "°C" },
   };
   const units = { batterySOC: "%" };
   for (const key of ["generationPower", "consumptionPower", "gridPower", "purchasePower", "wirePower", "chargePower", "dischargePower", "batteryPower", "batterySOC"]) {

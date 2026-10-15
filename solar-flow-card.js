@@ -184,6 +184,7 @@ const TRANSLATIONS = {
     "editorShowForecast": "Show battery forecast",
     "editorShowSystem": "Installation (phases, inverter load, battery)",
     "editorShowPanels": "Show panels (optimizers)",
+    "editorShowWeather": "Weather in the Diorama sky",
     "editorSolar": "The installation has PV panels",
     "editorBattery": "The installation has a battery",
     "editorShowSelfSufficiency": "Show self-sufficiency",
@@ -362,6 +363,7 @@ const TRANSLATIONS = {
     "editorShowForecast": "Toon batterijvoorspelling",
     "editorShowSystem": "Installatie (fasen, omvormerbelasting, batterij)",
     "editorShowPanels": "Toon panelen (optimizers)",
+    "editorShowWeather": "Weer in de Diorama-lucht",
     "editorSolar": "De installatie heeft zonnepanelen",
     "editorBattery": "De installatie heeft een batterij",
     "editorShowSelfSufficiency": "Toon zelfvoorziening",
@@ -540,6 +542,7 @@ const TRANSLATIONS = {
     "editorShowForecast": "Pokaż prognozę magazynu",
     "editorShowSystem": "Instalacja (fazy, obciążenie falownika, bateria)",
     "editorShowPanels": "Pokaż panele (optymalizatory)",
+    "editorShowWeather": "Pogoda na niebie Dioramy",
     "editorSolar": "Instalacja ma panele PV",
     "editorBattery": "Instalacja ma magazyn energii",
     "editorShowSelfSufficiency": "Pokaż samowystarczalność",
@@ -1296,6 +1299,44 @@ function systemData(hass, resolved, config) {
   return data.phases || data.inverter || data.battery.length || data.generator ? data : null;
 }
 
+// Weather from a Home Assistant weather entity (the `weather_entity` option,
+// otherwise the first one found), for themes that draw the sky.
+const WEATHER_LOOK = {
+  "sunny": { clouds: 0 },
+  "clear-night": { clouds: 0 },
+  "partlycloudy": { clouds: 2 },
+  "cloudy": { clouds: 4, grey: 0.35, sun: false },
+  "fog": { clouds: 1, grey: 0.45, sun: false, fog: true },
+  "rainy": { clouds: 4, grey: 0.45, sun: false, rain: 1 },
+  "pouring": { clouds: 5, grey: 0.6, sun: false, rain: 2 },
+  "snowy": { clouds: 4, grey: 0.35, sun: false, snow: true },
+  "snowy-rainy": { clouds: 4, grey: 0.45, sun: false, rain: 1, snow: true },
+  "hail": { clouds: 5, grey: 0.55, sun: false, rain: 2 },
+  "lightning": { clouds: 5, grey: 0.6, sun: false, lightning: true },
+  "lightning-rainy": { clouds: 5, grey: 0.6, sun: false, rain: 2, lightning: true },
+  "windy": { clouds: 3, wind: true },
+  "windy-variant": { clouds: 4, grey: 0.25, wind: true },
+  "exceptional": { clouds: 3, grey: 0.3 },
+};
+
+function weatherData(hass, config) {
+  if (config.show_weather === false) return null;
+  const states = hass?.states || {};
+  const entityId = config.weather_entity && states[config.weather_entity]
+    ? config.weather_entity
+    : Object.keys(states).find((id) => id.startsWith("weather."));
+  const stateObj = entityId ? states[entityId] : null;
+  if (!stateObj || !(stateObj.state in WEATHER_LOOK)) return null;
+  const temperature = Number.parseFloat(stateObj.attributes?.temperature);
+  return {
+    entityId,
+    condition: stateObj.state,
+    temperature: Number.isFinite(temperature) ? temperature : null,
+    unit: stateObj.attributes?.temperature_unit || "°C",
+    ...WEATHER_LOOK[stateObj.state],
+  };
+}
+
 // Status used by themes that show one (LCARS): alert when offline or the
 // battery reached its reserve, caution when delayed, close to the reserve,
 // a panel is underperforming or the battery is too cold or hot.
@@ -1893,17 +1934,56 @@ function dioramaScene(m) {
   const night = sky.phase === "night";
   const h = m.now.getHours() + m.now.getMinutes() / 60;
   let g = "";
+  const w = m.weather;
+  const clear = !w || w.sun !== false;
+  // Overcast skies turn grey.
+  if (w?.grey) g += `<rect x="0" y="0" width="520" height="360" fill="${night ? "#0a0f1c" : "#8d99a8"}" opacity="${w.grey}"/>`;
   if (night) {
-    const stars = [[40, 30], [90, 70], [150, 24], [210, 52], [300, 28], [360, 64], [460, 36], [500, 80], [120, 110], [260, 96]];
-    g += stars.map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="${i % 3 ? 1.2 : 1.8}" fill="#fff" opacity="${0.5 + (i % 4) * 0.12}"/>`).join("");
-    g += '<circle cx="430" cy="62" r="17" fill="#f4f1dc"/><circle cx="438" cy="56" r="15" fill="#253563" opacity=".9"/>';
-  } else {
+    if (clear) {
+      const stars = [[40, 30], [90, 70], [150, 24], [210, 52], [300, 28], [360, 64], [460, 36], [500, 80], [120, 110], [260, 96]];
+      g += stars.map(([x, y], i) => `<circle class="dio-star" style="--d:${(i * 0.7) % 4}s" cx="${x}" cy="${y}" r="${i % 3 ? 1.2 : 1.8}" fill="#fff" opacity="${0.5 + (i % 4) * 0.12}"/>`).join("");
+      g += '<circle cx="430" cy="62" r="17" fill="#f4f1dc"/><circle cx="438" cy="56" r="15" fill="#253563" opacity=".9"/>';
+    }
+  } else if (clear) {
     const p = clamp((h - 6) / 14, 0, 1);
     const sx = 70 + p * 380;
     const sy = 140 - Math.sin(Math.PI * p) * 100;
-    g += `<circle cx="${sx.toFixed(0)}" cy="${sy.toFixed(0)}" r="44" fill="#ffe27a" opacity=".22"/><circle cx="${sx.toFixed(0)}" cy="${sy.toFixed(0)}" r="26" fill="#ffe27a"/>`;
-    g += '<g fill="#fff" opacity=".85"><ellipse cx="410" cy="64" rx="34" ry="12"/><ellipse cx="430" cy="56" rx="22" ry="12"/><ellipse cx="120" cy="96" rx="26" ry="9"/></g>';
+    g += `<circle class="dio-glow" cx="${sx.toFixed(0)}" cy="${sy.toFixed(0)}" r="44" fill="#ffe27a" opacity=".22"/><circle cx="${sx.toFixed(0)}" cy="${sy.toFixed(0)}" r="26" fill="#ffe27a"/>`;
   }
+  // Clouds drift across the sky; more and darker ones in bad weather.
+  const cloudCount = w ? w.clouds : night ? 0 : 3;
+  const cloudFill = w?.grey ? (night ? "#4a5468" : "#dfe4ea") : night ? "#5a6886" : "#fff";
+  // Heights and sizes; the drift spreads them across the sky.
+  const cloudSpots = [[70, 1], [48, 1.3], [105, 0.8], [88, 1.1], [36, 1.4], [122, 0.9]];
+  for (let i = 0; i < cloudCount; i++) {
+    const [y, k] = cloudSpots[i];
+    const x = 0;
+    const speed = (w?.wind ? 40 : 90) + i * 17;
+    g += `<g class="dio-cloud" style="--t:${speed}s;--d:${loopPhase(speed, speed * (0.2 + (0.6 * i) / cloudCount))}" fill="${cloudFill}" opacity="${w?.grey ? 0.95 : 0.85}">
+      <g transform="translate(${x} ${y}) scale(${k})"><ellipse cx="0" cy="0" rx="34" ry="12"/><ellipse cx="18" cy="-8" rx="22" ry="12"/><ellipse cx="-16" cy="-4" rx="16" ry="9"/></g></g>`;
+  }
+  if (w?.rain) {
+    const drops = w.rain > 1 ? 70 : 36;
+    g += `<g class="dio-rain ${w.rain > 1 ? "heavy" : ""}" stroke="${night ? "#7f95c2" : "#7d93ad"}" stroke-width="1.4" stroke-linecap="round">`
+      + Array.from({ length: drops }, (_, i) => {
+        const x = (i * 137) % 540 - 10;
+        const y = (i * 61) % 260;
+        return `<line style="--d:-${((i * 0.37) % 1.2).toFixed(2)}s" x1="${x}" y1="${y}" x2="${x - 4}" y2="${y + 12}"/>`;
+      }).join("") + "</g>";
+  }
+  if (w?.snow) {
+    g += '<g class="dio-snow" fill="#fff">' + Array.from({ length: 40 }, (_, i) => {
+      const x = (i * 131) % 520;
+      const y = (i * 53) % 260;
+      return `<circle style="--d:-${((i * 0.53) % 6).toFixed(2)}s" cx="${x}" cy="${y}" r="${i % 3 ? 1.6 : 2.4}"/>`;
+    }).join("") + "</g>";
+  }
+  if (w?.fog) {
+    g += '<g class="dio-fog" fill="#eef1f4">'
+      + [[60, 150], [200, 185], [360, 165], [120, 230]].map(([x, y], i) => `<rect style="--d:-${i * 5}s" x="${x - 150}" y="${y}" width="300" height="18" rx="9" opacity=".45"/>`).join("")
+      + "</g>";
+  }
+  if (w?.lightning) g += '<rect class="dio-flash" x="0" y="0" width="520" height="360" fill="#fff"/>';
   g += poly(sky.ground[0], [-4, -3, 0], [7, -3, 0], [7, 6, 0], [-4, 6, 0]);
   g += poly(sky.ground[1], [-4, 6, 0], [7, 6, 0], [7, 6, -0.35], [-4, 6, -0.35]);
   g += poly(sky.ground[2], [7, -3, 0], [7, 6, 0], [7, 6, -0.35], [7, -3, -0.35]);
@@ -1994,7 +2074,7 @@ function renderDiorama(m) {
     <div class="dio-scene" style="--sky-a:${sky.sky[0]};--sky-b:${sky.sky[1]}">
       <svg viewBox="0 0 520 360" aria-hidden="true">${svg}</svg>
       <div class="dio-title"><h1>${escapeHtml(m.name)}</h1>${liveBadge(m)}</div>
-      <div class="dio-clock">${escapeHtml(clockText(m))}</div>
+      <div class="dio-clock">${escapeHtml(clockText(m))}${isNum(m.weather?.temperature) ? ` <button class="dio-temp" ${entityAttr(m.weather.entityId)}>${escapeHtml(`${formatNumber(m.weather.temperature, locale, 0)}${m.weather.unit}`)}</button>` : ""}</div>
       ${m.config.showSolar ? pill(288, 78, "pv", formatPower(live.solar, locale), t.fromRoof, m.ids.live.solar) : ""}
       ${m.config.showBattery ? pill(22, 208, "battery", formatPercent(live.soc, locale), batteryNote, batteryEntityId(m)) : ""}
       ${pill(378, 240, "grid", formatPower(gridValue, locale), t.grid.toLowerCase(), gridEntityId(m))}
@@ -2396,6 +2476,25 @@ function renderExpanse(m) {
 // Foundation: a radiant of slowly turning orbits that forecasts the battery.
 // --------------------------------------------------------------------------
 
+// A negative start offset that follows the wall clock, so a looping
+// animation continues where it was when the card re-renders.
+function loopPhase(seconds, shift = 0) {
+  return `-${(((Date.now() / 1000) + shift) % seconds).toFixed(2)}s`;
+}
+
+// One orbit of the radiant: a still ellipse with a planet travelling the
+// whole way round it (SVG motion, so it follows the ellipse exactly).
+function foundationOrbit(rx, ry, angle, r, seconds, reverse, m) {
+  const path = reverse
+    ? `M${rx} 0 A${rx} ${ry} 0 1 0 ${-rx} 0 A${rx} ${ry} 0 1 0 ${rx} 0`
+    : `M${rx} 0 A${rx} ${ry} 0 1 1 ${-rx} 0 A${rx} ${ry} 0 1 1 ${rx} 0`;
+  const still = m.config.animation === false || (typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches);
+  const planet = still
+    ? `<circle cx="${rx}" r="${r}"/>`
+    : `<circle r="${r}"><animateMotion dur="${seconds}s" begin="${loopPhase(seconds)}" repeatCount="indefinite" path="${path}"/></circle>`;
+  return `<g class="fnd-orbit" transform="rotate(${angle})"><ellipse rx="${rx}" ry="${ry}"/>${planet}</g>`;
+}
+
 function renderFoundation(m) {
   const { t, locale, live } = m;
   const W = 480;
@@ -2435,9 +2534,9 @@ function renderFoundation(m) {
           <filter id="fnd-glow"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
         </defs>
         <g transform="translate(240 170)" fill="none">
-          <g class="fnd-orbit o1"><ellipse rx="150" ry="58"/><circle cx="150" r="2.5"/></g>
-          <g class="fnd-orbit o2"><ellipse rx="128" ry="74" transform="rotate(32)"/><circle cx="108" cy="68" r="2"/></g>
-          <g class="fnd-orbit o3"><ellipse rx="128" ry="74" transform="rotate(-32)"/><circle cx="-108" cy="68" r="2"/></g>
+          ${foundationOrbit(150, 58, 0, 2.5, 48, false, m)}
+          ${foundationOrbit(128, 74, 32, 2, 70, true, m)}
+          ${foundationOrbit(128, 74, -32, 2, 95, false, m)}
           <g class="fnd-stars">${stars}</g>
           <circle r="62" fill="url(#fnd-sphere)" class="fnd-sphere"/>
           <circle r="44" class="fnd-ring"/>
@@ -2712,11 +2811,13 @@ const BASE_CSS = `
      pattern (10, 12, 18); --sfc-dash-time sets the speed. */
   @keyframes sfc-dash { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -180; } }
   .no-anim .sfc-flow, .no-anim .atl-pulse, .no-anim .aur-ring, .no-anim .lc-track i,
-    .no-anim .exp-spin, .no-anim .fnd-orbit, .no-anim .fnd-sphere, .no-anim .gal-warp, .no-anim .gal-target, .no-anim .gal-cross { animation: none !important; }
+    .no-anim .exp-spin, .no-anim .fnd-orbit, .no-anim .fnd-sphere, .no-anim .gal-warp, .no-anim .gal-target, .no-anim .gal-cross,
+    .no-anim .dio-cloud, .no-anim .dio-star, .no-anim .dio-glow, .no-anim .dio-rain line, .no-anim .dio-snow circle, .no-anim .dio-fog rect, .no-anim .dio-flash { animation: none !important; }
   /* Reduced motion: flows keep moving, slower; decorative effects stop. */
   @media (prefers-reduced-motion: reduce) {
     .sfc-flow { animation-duration: calc(var(--sfc-dash-time, 18s) * 3); }
-    .atl-pulse, .aur-ring, .lc-track i, .lc-status, .exp-spin, .fnd-orbit, .fnd-sphere, .gal-warp, .gal-target, .gal-cross { animation: none !important; }
+    .atl-pulse, .aur-ring, .lc-track i, .lc-status, .exp-spin, .fnd-orbit, .fnd-sphere, .gal-warp, .gal-target, .gal-cross,
+    .dio-cloud, .dio-star, .dio-glow, .dio-rain line, .dio-snow circle, .dio-fog rect, .dio-flash { animation: none !important; }
   }
 
   .sfc-empty { padding: 28px; text-align: center; }
@@ -2743,6 +2844,22 @@ const THEME_CSS = {
     .dio-title .sfc-badge { --sfc-badge-bg: rgba(255,255,255,.28); --sfc-badge-text: #fff; text-shadow: none; backdrop-filter: blur(6px); }
     .dio-clock { position: absolute; right: 3.5%; top: 5%; padding: 5px 10px; border-radius: 999px; background: rgba(255,255,255,.3);
       color: #fff; font-weight: 800; font-size: 12px; backdrop-filter: blur(6px); }
+    .dio-temp { margin-left: 4px; padding: 0 0 0 6px; border: 0; border-left: 1px solid rgba(255,255,255,.5); background: none; color: inherit; font: inherit; }
+    .dio-cloud { animation: dio-drift var(--t) linear infinite; animation-delay: var(--d); }
+    @keyframes dio-drift { from { transform: translateX(-90px); } to { transform: translateX(610px); } }
+    .dio-star { animation: dio-twinkle 4s ease-in-out infinite; animation-delay: var(--d); }
+    @keyframes dio-twinkle { 50% { opacity: .15; } }
+    .dio-glow { transform-box: fill-box; transform-origin: center; animation: dio-glow 6s ease-in-out infinite; }
+    @keyframes dio-glow { 50% { transform: scale(1.18); opacity: .12; } }
+    .dio-rain line { animation: dio-fall 1.2s linear infinite; animation-delay: var(--d); }
+    .dio-rain.heavy line { animation-duration: .7s; }
+    @keyframes dio-fall { from { transform: translate(0, -40px); opacity: 0; } 15% { opacity: 1; } to { transform: translate(-14px, 60px); opacity: 0; } }
+    .dio-snow circle { animation: dio-snow 6s linear infinite; animation-delay: var(--d); }
+    @keyframes dio-snow { from { transform: translate(0, -30px); opacity: 0; } 15% { opacity: .9; } to { transform: translate(14px, 90px); opacity: 0; } }
+    .dio-fog rect { animation: dio-fog 20s ease-in-out infinite alternate; animation-delay: var(--d); }
+    @keyframes dio-fog { to { transform: translateX(120px); } }
+    .dio-flash { opacity: 0; pointer-events: none; animation: dio-flash 9s linear infinite; }
+    @keyframes dio-flash { 0%, 92%, 95%, 100% { opacity: 0; } 93%, 96% { opacity: .55; } }
     .dio-pill { position: absolute; display: flex; align-items: center; gap: 6px; padding: 6px 11px 6px 9px; border: 0; border-radius: 999px;
       background: rgba(255,255,255,.93); box-shadow: 0 6px 16px rgba(30,60,90,.18); color: #24364a; font-size: clamp(10px, 2.4cqw, 13px);
       font-weight: 800; white-space: nowrap; transition: transform .2s; }
@@ -3103,14 +3220,9 @@ const THEME_CSS = {
     .fnd-stage svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
     .fnd-orbit ellipse { stroke: rgba(232,196,122,.35); stroke-width: .8; }
     .fnd-orbit circle { fill: #f3cf7a; }
-    .fnd-orbit { transform-box: view-box; transform-origin: 240px 170px; }
-    .fnd-orbit.o1 { animation: fnd-turn 60s linear infinite; }
-    .fnd-orbit.o2 { animation: fnd-turn 90s linear infinite reverse; }
-    .fnd-orbit.o3 { animation: fnd-turn 120s linear infinite; }
-    @keyframes fnd-turn { to { transform: rotate(360deg); } }
     .fnd-stars circle { fill: rgba(241,230,207,.55); }
-    .fnd-sphere { animation: fnd-breathe 6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
-    @keyframes fnd-breathe { 50% { opacity: .7; transform: scale(.94); } }
+    .fnd-sphere { animation: fnd-breathe 12s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+    @keyframes fnd-breathe { 50% { opacity: .85; transform: scale(.97); } }
     .fnd-ring { stroke: rgba(243,207,122,.6); stroke-width: .8; stroke-dasharray: 1 3; }
     .fnd-center { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; padding: 0; border: 0; background: none; }
     .fnd-center b { font: 400 clamp(15px, 4.2cqw, 21px)/1 var(--sfc-heading-font); white-space: nowrap; color: #1a1206; text-shadow: 0 0 10px rgba(255,244,214,.9); }
@@ -3136,7 +3248,7 @@ const THEME_CSS = {
       --sfc-accent: #ffe81f; --sfc-accent-soft: rgba(255,232,31,.12); --sfc-tile-bg: rgba(255,200,40,.025); --sfc-track: rgba(255,190,40,.12);
       --sfc-tab-bg: rgba(255,200,40,.04); --sfc-tab-on-bg: #ffe81f; --sfc-tab-on: #020203;
       --sfc-tip-bg: #0b0904; --sfc-badge-bg: rgba(255,232,31,.1);
-      --sfc-flow-base: rgba(255,190,40,.12); --sfc-flow-w: 1.6; --sfc-dash: 6 12; --sfc-dash-time: 8s;
+      --sfc-flow-base: rgba(255,190,40,.12); --sfc-flow-w: 1.6; --sfc-dash: 6 12; --sfc-dash-time: 14s;
       --sfc-radius: 4px; --sfc-section-radius: 2px; --sfc-tile-radius: 2px; --sfc-tabs-radius: 2px; --sfc-tab-radius: 1px; --sfc-icon-radius: 2px;
       --sfc-heading-weight: 700;
       background: var(--sfc-bg);
@@ -3158,12 +3270,12 @@ const THEME_CSS = {
     .gal-scope { position: relative; aspect-ratio: 480 / 300; margin: 4px 10px 12px; border: 1px solid rgba(255,190,40,.25); background: radial-gradient(closest-side, rgba(255,120,0,.06), transparent); }
     .gal-scope svg { position: absolute; inset: 0; width: 100%; height: 100%; }
     .gal-trench rect { stroke: rgba(255,170,30,.55); stroke-width: 1; vector-effect: non-scaling-stroke; }
-    .gal-warp { transform-box: view-box; transform-origin: 240px 150px; opacity: 0; animation: gal-warp 4s linear infinite; animation-delay: calc(var(--d) * -1s); }
-    @keyframes gal-warp { from { transform: scale(1); opacity: .9; } to { transform: scale(4.6); opacity: 0; } }
+    .gal-warp { transform-box: view-box; transform-origin: 240px 150px; opacity: 0; animation: gal-warp 12s linear infinite; animation-delay: calc(var(--d) * -3s); }
+    @keyframes gal-warp { from { transform: scale(1); opacity: .45; } to { transform: scale(4.6); opacity: 0; } }
     .gal-target { stroke: #ffe81f !important; stroke-width: 2 !important; }
-    .gal-target.low, .gal-cross.low { stroke: #ff4b3a !important; animation: gal-blink 1s steps(2) infinite; }
+    .gal-target.low, .gal-cross.low { stroke: #ff4b3a !important; animation: gal-blink 3s ease-in-out infinite; }
     .gal-cross { stroke: #ff4b3a; stroke-width: 1.5; }
-    @keyframes gal-blink { 50% { opacity: .3; } }
+    @keyframes gal-blink { 50% { opacity: .45; } }
     .gal-center { position: absolute; transform: translate(-50%, -50%); padding: 0; border: 0; background: none; }
     .gal-center b { color: #ffe81f; font: 700 clamp(13px, 3.6cqw, 18px) var(--sfc-heading-font); white-space: nowrap; text-shadow: 0 0 8px rgba(255,232,31,.6); }
     .gal-center { display: grid; justify-items: center; }
@@ -3392,6 +3504,7 @@ class SolarFlowCard extends HTMLElement {
       const chart = this._chartState(resolved, period, energy);
       const forecast = batteryForecast(live, config);
       const panels = showSolar ? panelData(this._hass, resolved, config) : null;
+      const weather = theme === "diorama" ? weatherData(this._hass, config) : null;
       const inverter = this._inverterOpen ? inverterReadings(resolved) : null;
       const system = config.show_system !== false ? systemData(this._hass, resolved, config) : null;
       if (system && !showBattery) Object.assign(system, { battery: [], batteryWarn: null });
@@ -3406,7 +3519,7 @@ class SolarFlowCard extends HTMLElement {
       const signature = JSON.stringify([
         language, config, period, [...this._hiddenSeries], live, status.state, today, energy.totals, Boolean(energy.loading),
         chart && [Boolean(chart.loading), Boolean(chart.error), chart.at], forecast.mode, Math.round(forecast.hours * 60 || 0),
-        panels?.panels.map((p) => [p.today, p.power]), system, this._inverterOpen,
+        panels?.panels.map((p) => [p.today, p.power]), system, weather && [weather.condition, weather.temperature], this._inverterOpen,
         inverter?.map((d) => [[...d.strings.values()].map((s) => Object.values(s).map((r) => r.value)), d.temperatures.map((r) => r.value), d.battery.map((r) => r.value), d.grid.map((r) => r.value)]),
         Math.floor(now.getTime() / 60000),
       ]);
@@ -3444,6 +3557,7 @@ class SolarFlowCard extends HTMLElement {
         panels,
         inverter,
         system,
+        weather,
         inverterOpen: this._inverterOpen,
         hiddenSeries: this._hiddenSeries,
       };
@@ -3524,6 +3638,7 @@ const EDITOR_SWITCHES = [
   ["show_forecast", "editorShowForecast"],
   ["show_system", "editorShowSystem"],
   ["show_panels", "editorShowPanels"],
+  ["show_weather", "editorShowWeather"],
   ["show_self_sufficiency", "editorShowSelfSufficiency"],
   ["show_self_use", "editorShowSelfUse"],
   ["show_savings", "editorShowSavings"],

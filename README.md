@@ -41,7 +41,7 @@ History comes from Home Assistant itself (recorder history and long-term statist
 
 | Theme | Look |
 |---|---|
-| `diorama` | An isometric house with your panels on the roof; the sky follows the time of day, windows light up at night. |
+| `diorama` | An isometric house with your panels on the roof; the sky follows the time of day and the weather (drifting clouds, rain, snow, fog, lightning), windows light up at night. |
 | `aurora` | Neon rings and glowing flows on a night sky. |
 | `paper` | An editorial page: a sentence that explains the moment and a Sankey diagram of where the power goes. |
 | `lcars` | A starship operations panel with segment bars, a battery cell gauge and a status line. |
@@ -95,6 +95,8 @@ co2_factor: 0.7
 | `station_id` | first station | DeyeCloud station, when the account has several. |
 | `animation` | `true` | Animated flows. |
 | `load_fonts` | `true` | Load the theme's font from Google Fonts; `false` uses system fonts. |
+| `show_weather` | `true` | Diorama: draw the weather of a Home Assistant weather entity in the sky, with the temperature next to the clock. |
+| `weather_entity` | first `weather.*` entity | Weather entity for the Diorama sky. |
 
 ### Your installation
 
