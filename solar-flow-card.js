@@ -95,6 +95,9 @@ const TRANSLATIONS = {
     "panelWeak": "Weakest: {name} at {pct}% of the median",
     "panelsEven": "All panels within 15% of the median",
     "stringModules": "String {n} · {count} modules",
+    "panelsEstimateHint": "≈ {energy} per panel today",
+    "panelEach": "≈ {power} per panel",
+    "panelsEstimateNote": "Estimate: these panels have no optimizers and do not report their own data, so each value is the string's power divided evenly by its panels, and today's energy split evenly over all panels.",
     "paperHeadline": "{power} to the home",
     "paperMix": "Right now: {parts}.",
     "paperOnly": "Right now everything comes from {source}.",
@@ -199,6 +202,7 @@ const TRANSLATIONS = {
     "editorBatteryMinSoc": "Battery reserve (%)",
     "editorPvCapacity": "PV size (kWp)",
     "editorPvPanels": "Number of panels",
+    "editorPanelsPerString": "Panels per string",
     "editorInverterRating": "Inverter rated power (kW)",
     "editorPriceImport": "Import price per kWh",
     "editorPriceExport": "Export price per kWh",
@@ -301,6 +305,9 @@ const TRANSLATIONS = {
     "panelWeak": "Zwakste: {name} op {pct}% van de mediaan",
     "panelsEven": "Alle panelen binnen 15% van de mediaan",
     "stringModules": "String {n} · {count} modules",
+    "panelsEstimateHint": "≈ {energy} per paneel vandaag",
+    "panelEach": "≈ {power} per paneel",
+    "panelsEstimateNote": "Schatting: deze panelen hebben geen optimizers en melden geen eigen gegevens, dus elke waarde is het vermogen van de string gelijk verdeeld over de panelen, en de energie van vandaag gelijk verdeeld over alle panelen.",
     "paperHeadline": "{power} naar de woning",
     "paperMix": "Momenteel: {parts}.",
     "paperOnly": "Momenteel komt alles van {source}.",
@@ -405,6 +412,7 @@ const TRANSLATIONS = {
     "editorBatteryMinSoc": "Batterijreserve (%)",
     "editorPvCapacity": "PV-grootte (kWp)",
     "editorPvPanels": "Aantal panelen",
+    "editorPanelsPerString": "Panelen per string",
     "editorInverterRating": "Nominaal vermogen omvormer (kW)",
     "editorPriceImport": "Inkoopprijs per kWh",
     "editorPriceExport": "Verkoopprijs per kWh",
@@ -507,6 +515,9 @@ const TRANSLATIONS = {
     "panelWeak": "Najsłabszy: {name}, {pct}% mediany",
     "panelsEven": "Wszystkie panele w granicach 15% mediany",
     "stringModules": "String {n} · {count} modułów",
+    "panelsEstimateHint": "≈ {energy} na panel dziś",
+    "panelEach": "≈ {power} na panel",
+    "panelsEstimateNote": "Szacunek: panele nie mają optymalizatorów i nie przesyłają własnych danych, więc każda wartość to moc stringu podzielona po równo na jego panele, a dzisiejsza energia podzielona po równo na wszystkie panele.",
     "paperHeadline": "{power} do domu",
     "paperMix": "Teraz prąd daje {parts}.",
     "paperOnly": "Teraz cały prąd daje {source}.",
@@ -611,6 +622,7 @@ const TRANSLATIONS = {
     "editorBatteryMinSoc": "Rezerwa magazynu (%)",
     "editorPvCapacity": "Moc instalacji PV (kWp)",
     "editorPvPanels": "Liczba paneli",
+    "editorPanelsPerString": "Paneli na string",
     "editorInverterRating": "Moc znamionowa falownika (kW)",
     "editorPriceImport": "Cena zakupu za kWh",
     "editorPriceExport": "Cena sprzedaży za kWh",
@@ -1542,6 +1554,53 @@ function weatherData(hass, config) {
   };
 }
 
+// Panels without optimizers (`panels_per_string`): an estimate per panel
+// from the inverter's string power, split evenly over the string's panels,
+// and today's PV energy split evenly over all panels. Strings are taken in
+// order; a single number applies to every string in use.
+function estimatePanels(readings, config, today) {
+  const setting = config.panels_per_string;
+  const counts = Array.isArray(setting) ? setting.map((n) => Math.round(Number(n)) || 0) : [];
+  const each = Math.round(Number(setting)) || 0;
+  if (!counts.some((n) => n > 0) && each <= 0) return null;
+  const device = (readings || []).find((d) => d.strings.size);
+  if (!device) return null;
+  let strings = [...device.strings.entries()].sort((a, b) => a[0] - b[0]);
+  if (counts.length) strings = strings.slice(0, counts.length);
+  else {
+    const total = positiveNumber(config.pv_panels);
+    const inUse = strings.filter(([, s]) => (s.V?.value ?? 0) > 50 || (s.W?.value ?? 0) > ACTIVE_W);
+    strings = total ? strings.slice(0, Math.max(1, Math.round(total / each))) : inUse.length ? inUse : strings;
+  }
+  const groups = strings.map(([index, s], i) => ({ index, count: counts.length ? counts[i] : each, power: s.W?.value ?? null, entityId: (s.W || s.V || s.A)?.entityId }))
+    .filter((g) => g.count > 0);
+  const totalPanels = groups.reduce((sum, g) => sum + g.count, 0);
+  if (!totalPanels) return null;
+  const perPanelToday = isNum(today.solar) ? today.solar / totalPanels : null;
+  const maxPer = Math.max(1, ...groups.map((g) => (isNum(g.power) ? g.power / g.count : 0)));
+  let n = 0;
+  const panelGroups = groups.map((g) => {
+    const power = isNum(g.power) ? Math.max(0, g.power) / g.count : null;
+    return Array.from({ length: g.count }, () => ({
+      serial: `PV${g.index}`,
+      name: `#${++n}`,
+      entityId: g.entityId,
+      today: perPanelToday,
+      power,
+      share: isNum(power) ? clamp(power / maxPer, 0, 1) : 0,
+    }));
+  });
+  return {
+    estimate: true,
+    panels: panelGroups.flat(),
+    strings: panelGroups,
+    stringPower: groups.map((g) => (isNum(g.power) ? Math.max(0, g.power) / g.count : null)),
+    median: perPanelToday,
+    weakest: null,
+    average: perPanelToday,
+  };
+}
+
 // Status used by themes that show one (LCARS): alert when offline or the
 // battery reached its reserve, caution when delayed, close to the reserve,
 // a panel is underperforming or the battery is too cold or hot.
@@ -1717,30 +1776,32 @@ function panelsHtml(m) {
   const data = m.panels;
   if (!m.config.showPanels || !m.config.showSolar || !data) return "";
   const { t, locale } = m;
-  const note = data.weakest
+  // Estimated tiles: dashed, marked ≈, with a note on where the numbers come from.
+  const est = data.estimate ? "≈ " : "";
+  const note = data.estimate ? t.panelsEstimateNote : data.weakest
     ? fill(t.panelWeak, { name: data.weakest.name, pct: formatNumber((data.weakest.today / data.median) * 100, locale, 0) })
     : t.panelsEven;
   return `
     <section class="sfc-section sfc-panels" id="sfc-panels">
       <div class="sfc-head">
         <div><span class="sfc-kicker">${data.panels.length}×</span><h3>${escapeHtml(t.panelsTitle)}</h3></div>
-        <span class="sfc-hint">${escapeHtml(t.panelsHint)}</span>
+        <span class="sfc-hint">${escapeHtml(data.estimate ? fill(t.panelsEstimateHint, { energy: formatEnergy(data.average, locale) }) : t.panelsHint)}</span>
       </div>
       ${data.strings.map((string, i) => `
         <div class="sfc-panel-string">
-          ${data.strings.length > 1 ? `<small class="sfc-string-label">${escapeHtml(fill(t.stringModules, { n: i + 1, count: string.length }))}</small>` : ""}
+          ${data.strings.length > 1 || data.estimate ? `<small class="sfc-string-label">${escapeHtml(fill(t.stringModules, { n: i + 1, count: string.length }))}${data.estimate && isNum(data.stringPower[i]) ? ` · ${escapeHtml(fill(t.panelEach, { power: formatPower(data.stringPower[i], locale) }))}` : ""}</small>` : ""}
           <div class="sfc-panel-grid" style="--cols:${Math.min(string.length, 8)}">
             ${string.map((panel) => `
-              <button class="sfc-panel ${panel.weak ? "weak" : ""}" style="--share:${(panel.share * 100).toFixed(0)}%;--share-n:${panel.share.toFixed(2)}"
+              <button class="sfc-panel ${panel.weak ? "weak" : ""} ${data.estimate ? "estimate" : ""}" style="--share:${(panel.share * 100).toFixed(0)}%;--share-n:${panel.share.toFixed(2)}"
                 data-entity="${escapeHtml(panel.entityId)}" title="${escapeHtml(panel.serial)}">
                 <small>${escapeHtml(panel.name)}</small>
-                <strong>${escapeHtml(isNum(panel.today) ? formatNumber(panel.today, locale, 2) : "—")}</strong>
-                <span>${escapeHtml(isNum(panel.power) ? formatPower(panel.power, locale) : "kWh")}</span>
+                <strong>${escapeHtml(isNum(panel.today) ? `${est}${formatNumber(panel.today, locale, 2)}` : "—")}</strong>
+                <span>${escapeHtml(isNum(panel.power) ? `${est}${formatPower(panel.power, locale)}` : "kWh")}</span>
               </button>`).join("")}
           </div>
         </div>`).join("")}
-      <p class="sfc-panels-note ${data.weakest ? "warn" : ""}">
-        ${escapeHtml(fill(t.panelAvg, { kwh: formatEnergy(data.average, locale) }))} · ${escapeHtml(note)}
+      <p class="sfc-panels-note ${data.weakest ? "warn" : ""} ${data.estimate ? "estimate" : ""}">
+        ${data.estimate ? escapeHtml(note) : `${escapeHtml(fill(t.panelAvg, { kwh: formatEnergy(data.average, locale) }))} · ${escapeHtml(note)}`}
       </p>
     </section>`;
 }
@@ -3234,6 +3295,8 @@ const BASE_CSS = `
   .sfc-panel span { color: var(--sfc-muted); font-size: 10px; }
   .sfc-panels-note { margin: 10px 0 0; color: var(--sfc-muted); font-size: 11px; }
   .sfc-panels-note.warn { color: var(--sfc-load); }
+  .sfc-panel.estimate { border-style: dashed; }
+  .sfc-panels-note.estimate { font-size: 10px; font-style: italic; line-height: 1.35; }
 
   /* Chart */
   .sfc-chart { margin-bottom: 12px; }
@@ -4217,13 +4280,14 @@ class SolarFlowCard extends HTMLElement {
       const energy = this._periodEnergy(resolved, period, today);
       const chart = this._chartState(resolved, period, energy);
       const forecast = batteryForecast(live, bank?.capacity && !positiveNumber(config.battery_capacity) ? { ...config, battery_capacity: bank.capacity } : config);
-      const panels = showSolar ? panelData(this._hass, resolved, config) : null;
+      const readings = inverterReadings(resolved);
+      const panels = showSolar ? panelData(this._hass, resolved, config) || estimatePanels(readings, config, today) : null;
       const insights = this._insights(resolved, today, forecast);
       const weather = theme === "diorama" ? weatherData(this._hass, config) : null;
       // The wide layout has room for everything: inverter details stay open.
       const wide = config.wide === true;
       const inverterOpen = wide || this._inverterOpen;
-      const inverter = inverterOpen ? inverterReadings(resolved) : null;
+      const inverter = inverterOpen ? readings : null;
       const system = config.show_system !== false ? systemData(this._hass, resolved, config) : null;
       if (system && !showBattery) Object.assign(system, { battery: [], batteryWarn: null });
       const since = period === "all" && energy.buckets?.length
@@ -4351,6 +4415,7 @@ const EDITOR_NUMBERS = [
   ["battery_min_soc", "editorBatteryMinSoc", "1"],
   ["pv_capacity", "editorPvCapacity", "0.1"],
   ["pv_panels", "editorPvPanels", "1"],
+  ["panels_per_string", "editorPanelsPerString", "1"],
   ["inverter_power_rating", "editorInverterRating", "0.1"],
   ["price_import", "editorPriceImport", "0.01"],
   ["price_export", "editorPriceExport", "0.01"],

@@ -32,7 +32,7 @@ function profile(t) {
   };
 }
 
-export function createHass({ scenario = "afternoon", language = "pl", weather } = {}) {
+export function createHass({ scenario = "afternoon", language = "pl", weather, optimizers = true } = {}) {
   const live = SCENARIOS[scenario] || SCENARIOS.afternoon;
   const states = {};
   const now = new Date().toISOString();
@@ -90,7 +90,7 @@ export function createHass({ scenario = "afternoon", language = "pl", weather } 
   inverter("TotalInverterOutputPower", Math.max(0, live.consumptionPower - (live.purchasePower || 0)) * 0.98, "W");
   inverter("RatedPower", 10000, "W");
   inverter("TotalGeneratorPower", 0, "W");
-  for (let i = 0; i < 16; i++) {
+  for (let i = 0; optimizers && i < 16; i++) {
     const serial = `OPT${2400 + i}`;
     const value = i === 11 ? 0.61 : 1.12 + (i % 5) * 0.03;
     add(`sensor.optimizer_${serial.toLowerCase()}_today`, value, { sensor_type: "optimizer", metric_key: "today", device_sn: serial, unit_of_measurement: "kWh" });

@@ -164,30 +164,32 @@ function panelsHtml(m) {
   const data = m.panels;
   if (!m.config.showPanels || !m.config.showSolar || !data) return "";
   const { t, locale } = m;
-  const note = data.weakest
+  // Estimated tiles: dashed, marked ≈, with a note on where the numbers come from.
+  const est = data.estimate ? "≈ " : "";
+  const note = data.estimate ? t.panelsEstimateNote : data.weakest
     ? fill(t.panelWeak, { name: data.weakest.name, pct: formatNumber((data.weakest.today / data.median) * 100, locale, 0) })
     : t.panelsEven;
   return `
     <section class="sfc-section sfc-panels" id="sfc-panels">
       <div class="sfc-head">
         <div><span class="sfc-kicker">${data.panels.length}×</span><h3>${escapeHtml(t.panelsTitle)}</h3></div>
-        <span class="sfc-hint">${escapeHtml(t.panelsHint)}</span>
+        <span class="sfc-hint">${escapeHtml(data.estimate ? fill(t.panelsEstimateHint, { energy: formatEnergy(data.average, locale) }) : t.panelsHint)}</span>
       </div>
       ${data.strings.map((string, i) => `
         <div class="sfc-panel-string">
-          ${data.strings.length > 1 ? `<small class="sfc-string-label">${escapeHtml(fill(t.stringModules, { n: i + 1, count: string.length }))}</small>` : ""}
+          ${data.strings.length > 1 || data.estimate ? `<small class="sfc-string-label">${escapeHtml(fill(t.stringModules, { n: i + 1, count: string.length }))}${data.estimate && isNum(data.stringPower[i]) ? ` · ${escapeHtml(fill(t.panelEach, { power: formatPower(data.stringPower[i], locale) }))}` : ""}</small>` : ""}
           <div class="sfc-panel-grid" style="--cols:${Math.min(string.length, 8)}">
             ${string.map((panel) => `
-              <button class="sfc-panel ${panel.weak ? "weak" : ""}" style="--share:${(panel.share * 100).toFixed(0)}%;--share-n:${panel.share.toFixed(2)}"
+              <button class="sfc-panel ${panel.weak ? "weak" : ""} ${data.estimate ? "estimate" : ""}" style="--share:${(panel.share * 100).toFixed(0)}%;--share-n:${panel.share.toFixed(2)}"
                 data-entity="${escapeHtml(panel.entityId)}" title="${escapeHtml(panel.serial)}">
                 <small>${escapeHtml(panel.name)}</small>
-                <strong>${escapeHtml(isNum(panel.today) ? formatNumber(panel.today, locale, 2) : "—")}</strong>
-                <span>${escapeHtml(isNum(panel.power) ? formatPower(panel.power, locale) : "kWh")}</span>
+                <strong>${escapeHtml(isNum(panel.today) ? `${est}${formatNumber(panel.today, locale, 2)}` : "—")}</strong>
+                <span>${escapeHtml(isNum(panel.power) ? `${est}${formatPower(panel.power, locale)}` : "kWh")}</span>
               </button>`).join("")}
           </div>
         </div>`).join("")}
-      <p class="sfc-panels-note ${data.weakest ? "warn" : ""}">
-        ${escapeHtml(fill(t.panelAvg, { kwh: formatEnergy(data.average, locale) }))} · ${escapeHtml(note)}
+      <p class="sfc-panels-note ${data.weakest ? "warn" : ""} ${data.estimate ? "estimate" : ""}">
+        ${data.estimate ? escapeHtml(note) : `${escapeHtml(fill(t.panelAvg, { kwh: formatEnergy(data.average, locale) }))} · ${escapeHtml(note)}`}
       </p>
     </section>`;
 }

@@ -673,6 +673,53 @@ function weatherData(hass, config) {
   };
 }
 
+// Panels without optimizers (`panels_per_string`): an estimate per panel
+// from the inverter's string power, split evenly over the string's panels,
+// and today's PV energy split evenly over all panels. Strings are taken in
+// order; a single number applies to every string in use.
+function estimatePanels(readings, config, today) {
+  const setting = config.panels_per_string;
+  const counts = Array.isArray(setting) ? setting.map((n) => Math.round(Number(n)) || 0) : [];
+  const each = Math.round(Number(setting)) || 0;
+  if (!counts.some((n) => n > 0) && each <= 0) return null;
+  const device = (readings || []).find((d) => d.strings.size);
+  if (!device) return null;
+  let strings = [...device.strings.entries()].sort((a, b) => a[0] - b[0]);
+  if (counts.length) strings = strings.slice(0, counts.length);
+  else {
+    const total = positiveNumber(config.pv_panels);
+    const inUse = strings.filter(([, s]) => (s.V?.value ?? 0) > 50 || (s.W?.value ?? 0) > ACTIVE_W);
+    strings = total ? strings.slice(0, Math.max(1, Math.round(total / each))) : inUse.length ? inUse : strings;
+  }
+  const groups = strings.map(([index, s], i) => ({ index, count: counts.length ? counts[i] : each, power: s.W?.value ?? null, entityId: (s.W || s.V || s.A)?.entityId }))
+    .filter((g) => g.count > 0);
+  const totalPanels = groups.reduce((sum, g) => sum + g.count, 0);
+  if (!totalPanels) return null;
+  const perPanelToday = isNum(today.solar) ? today.solar / totalPanels : null;
+  const maxPer = Math.max(1, ...groups.map((g) => (isNum(g.power) ? g.power / g.count : 0)));
+  let n = 0;
+  const panelGroups = groups.map((g) => {
+    const power = isNum(g.power) ? Math.max(0, g.power) / g.count : null;
+    return Array.from({ length: g.count }, () => ({
+      serial: `PV${g.index}`,
+      name: `#${++n}`,
+      entityId: g.entityId,
+      today: perPanelToday,
+      power,
+      share: isNum(power) ? clamp(power / maxPer, 0, 1) : 0,
+    }));
+  });
+  return {
+    estimate: true,
+    panels: panelGroups.flat(),
+    strings: panelGroups,
+    stringPower: groups.map((g) => (isNum(g.power) ? Math.max(0, g.power) / g.count : null)),
+    median: perPanelToday,
+    weakest: null,
+    average: perPanelToday,
+  };
+}
+
 // Status used by themes that show one (LCARS): alert when offline or the
 // battery reached its reserve, caution when delayed, close to the reserve,
 // a panel is underperforming or the battery is too cold or hot.
