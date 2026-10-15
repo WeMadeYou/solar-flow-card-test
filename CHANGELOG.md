@@ -1,12 +1,14 @@
 # Changelog
 
-## Unreleased
+## 1.3.0-beta
+
+A test release: install it from HACS with "Show beta versions" turned on.
 
 - **Gate Command** theme (`gate`): a gate control room with a dialing computer that lists every flow and a status line; the event horizon ripples while power flows and the glyph ring turns slowly while the battery charges or discharges. Compact: a smaller gate whose four chevrons are the connection points of pictures in the corners (solar cells, a zero point module filled to the battery level, a dial home device for the grid, the mountain base for the home), linked by flow lines and pulsing gently while power flows; the other five chevrons show the battery level. Wide (`wide: true`): the full gate with all nine chevrons for the battery level, the dialing computer and the chart side by side.
 - **Wide layout** for every theme (`wide: true`, also in the editor): the main view and the chart side by side, the other sections open below in balanced columns, with the inverter details shown without a click. A missing section (no panels, no battery) leaves no gap. Below about 880 px of card width the card stays compact.
 - **Today at a glance** and **Comparison** sections (`show_insights`, on by default in the wide layout, also in the editor): solar and consumption peaks with their time, the battery's range and cycles today, time without the grid; today against yesterday (with the trend), the 7-day average and this month for production, consumption, grid import and export. Calculated from Home Assistant's history and statistics, so they work with any inverter.
 - **Panel estimate without optimizers**: `panels_per_string` (a number, or a list per string; also in the editor). When the panels don't report their own data, the Panels section shows each string's power divided over its panels and today's energy divided over all panels, on dashed tiles marked ≈, with a note that this is an estimate. The Diorama roof draws that many modules. The editor shows one field per PV string the inverter reports ("PV1 · now 342 V"), so each string can have its own count; without string data it shows a single field. The demo has a "no optimizers" setting.
-- Gate: chevrons drawn after the show's: a metal arrowhead housing, a clamp that drops into place when the chevron locks and a triangular light; a redrawn dial home device (pedestal, two rings of nineteen keys, the red dome); the wide gate has the corner pictures too.
+- **Gate**: chevrons drawn after the show's: a metal arrowhead housing, a clamp that drops into place when the chevron locks and a triangular light; a redrawn dial home device (pedestal, two rings of nineteen keys, the red dome); the wide gate has the corner pictures too.
 - Gate: the ring carries the 39 gate symbols, traced from a drawing of the gate, in the show's order with the point of origin at the top.
 - The theme picker in the editor wraps to fit nine themes.
 - Demo: always loads the latest card (no stale copy from the browser cache), shows the card version, and switches to the wide layout when a wide width is picked.
