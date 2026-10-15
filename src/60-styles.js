@@ -883,7 +883,7 @@ const THEME_CSS = {
     .rx-right { text-align: right; }
     .rx-wx { margin-top: 3px; padding: 0; border: 0; background: none; color: #ffd27a; font: 600 13px var(--sfc-font); cursor: pointer; }
     .night .rx-wx { color: #9cc8ff; }
-    .rx-visor { position: relative; aspect-ratio: 520 / 540; margin: -26px -16px 0; }
+    .rx-visor { position: relative; aspect-ratio: 520 / 540; margin: -10px -16px 0; }
     .rx-visor > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
     .rx-frame { fill: rgba(79,216,255,.025); stroke: rgba(79,216,255,.35); stroke-width: 1.2; }
     .rx-ticks { stroke: #4fd8ff; stroke-width: 1; transform-box: view-box; transform-origin: 260px 250px; animation: rx-spin var(--spin, 60s) linear infinite; animation-delay: var(--p-spin, 0s); }

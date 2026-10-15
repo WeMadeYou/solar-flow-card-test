@@ -7,7 +7,7 @@
  * Built from src/*.js by scripts/build.mjs. Edit the sources, not this file.
  */
 (() => {
-const CARD_VERSION = "1.4.0-beta.4";
+const CARD_VERSION = "1.4.0-beta.5";
 const CARD_TAG = "solar-flow-card";
 const EDITOR_TAG = "solar-flow-card-editor";
 const THEMES = ["diorama", "aurora", "paper", "lcars", "atlantis", "expanse", "foundation", "galaxy", "gate", "reactor"];
@@ -3512,7 +3512,7 @@ function renderReactor(m) {
           </defs>
           ${sky.sky}
           <rect width="520" height="540" fill="url(#rx-hex)"/>
-          <path class="rx-frame" pathLength="1" d="M30 70Q260 14 490 70L506 450Q260 540 14 450Z"/>
+          <path class="rx-frame" pathLength="1" d="M14 30Q260 -10 506 30L510 470Q260 600 10 470Z"/>
           <g class="rx-boot-ticks"><g class="rx-ticks">${ticks}</g></g>
           ${/* The gauges stop above the battery and grid flow lines. */ ""}
           ${config.showBattery ? `<path class="rx-track" d="${arc(156, 330, 240)}"/>${soc >= 1 ? `<path class="rx-gauge battery" pathLength="1" d="${arc(156, 240, 240 + 0.9 * soc)}"/>` : ""}` : ""}
@@ -4443,7 +4443,7 @@ const THEME_CSS = {
     .rx-right { text-align: right; }
     .rx-wx { margin-top: 3px; padding: 0; border: 0; background: none; color: #ffd27a; font: 600 13px var(--sfc-font); cursor: pointer; }
     .night .rx-wx { color: #9cc8ff; }
-    .rx-visor { position: relative; aspect-ratio: 520 / 540; margin: -26px -16px 0; }
+    .rx-visor { position: relative; aspect-ratio: 520 / 540; margin: -10px -16px 0; }
     .rx-visor > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
     .rx-frame { fill: rgba(79,216,255,.025); stroke: rgba(79,216,255,.35); stroke-width: 1.2; }
     .rx-ticks { stroke: #4fd8ff; stroke-width: 1; transform-box: view-box; transform-origin: 260px 250px; animation: rx-spin var(--spin, 60s) linear infinite; animation-delay: var(--p-spin, 0s); }

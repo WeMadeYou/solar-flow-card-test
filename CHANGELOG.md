@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.0-beta.5
+
+- Reactor: a larger visor frame, so it no longer cuts through the sun, battery, grid and home readouts.
+
 ## 1.4.0-beta.4
 
 - Reactor: the battery and solar gauges end above the battery and grid flow lines instead of crossing them.
