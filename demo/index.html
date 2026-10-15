@@ -15,7 +15,7 @@
 </head>
 <body>
   <div class="bar">
-    <strong>Solar Flow Card</strong>
+    <strong>Solar Flow Card <small id="version"></small></strong>
     <label>Theme <select id="theme"><option>all</option><option>diorama</option><option>aurora</option><option>paper</option><option>lcars</option><option>atlantis</option><option>expanse</option><option>foundation</option><option>galaxy</option><option>gate</option></select></label>
     <label>Scenario <select id="scenario"></select></label>
     <label>Language <select id="language"><option>pl</option><option>en</option><option>nl</option></select></label>
@@ -48,8 +48,11 @@
     })();
   </script>
   <script type="module">
-    import "../solar-flow-card.js";
-    import { createHass, SCENARIOS } from "./mock-hass.js";
+    // Load the card and the mock fresh on every visit: GitHub Pages lets the
+    // browser cache them, which would show an older card after an update.
+    const fresh = `?v=${Date.now()}`;
+    await import(`../solar-flow-card.js${fresh}`);
+    const { createHass, SCENARIOS } = await import(`./mock-hass.js${fresh}`);
 
     const params = new URLSearchParams(location.search);
     const $ = (id) => document.getElementById(id);
@@ -62,6 +65,13 @@
       }
       $(id).addEventListener("change", render);
     }
+    // A wide card is what the wide layout is for: switch it on with the width.
+    $("width").addEventListener("change", () => {
+      if (Number($("width").value) >= 1100 && $("wide").value === "0") {
+        $("wide").value = "1";
+        render();
+      }
+    }, { capture: true });
 
     function render() {
       const themes = $("theme").value === "all" ? ["diorama", "aurora", "paper", "lcars", "atlantis", "expanse", "foundation", "galaxy", "gate"] : [$("theme").value];
@@ -98,6 +108,8 @@
       }
     }
     render();
+    const card = document.querySelector("solar-flow-card");
+    $("version").textContent = card?.constructor.version ? `v${card.constructor.version}` : "";
     window.demoReady = true;
   </script>
 </body>
