@@ -586,6 +586,55 @@ function combineBankSeries(series, config) {
   };
 }
 
+// Today's highlights from the power history (5-minute buckets): the solar
+// and consumption peaks with their time, the battery's range, battery
+// cycles and the time the home ran without the grid.
+function dayHighlights(data, spec, today, forecast) {
+  if (!data || data.kind !== "power") return null;
+  const at = (i) => new Date(spec.start.getTime() + (i + 0.5) * spec.bucketMs);
+  const peak = (values) => {
+    if (!values) return null;
+    let best = -1;
+    values.forEach((v, i) => { if (isNum(v) && (best < 0 || v > values[best])) best = i; });
+    return best >= 0 && values[best] > ACTIVE_W ? { value: values[best], at: at(best) } : null;
+  };
+  const socs = (data.soc || []).filter(isNum);
+  let offGrid = 0;
+  let measured = 0;
+  (data.load || []).forEach((load, i) => {
+    if (!isNum(load)) return;
+    measured++;
+    const grid = data.grid?.[i];
+    if (load > ACTIVE_W && (!isNum(grid) || grid <= 4 * ACTIVE_W)) offGrid++;
+  });
+  const minutes = spec.bucketMs / 60000;
+  return {
+    solarPeak: peak(data.solar),
+    loadPeak: peak(data.load),
+    socMin: socs.length ? Math.min(...socs) : null,
+    socMax: socs.length ? Math.max(...socs) : null,
+    cycles: forecast?.capacity && isNum(today.charge) ? today.charge / forecast.capacity : null,
+    offGridMinutes: measured && data.grid ? offGrid * minutes : null,
+  };
+}
+
+// Today against yesterday, the 7-day average and this month, per flow.
+function comparisonRows(today, week, month) {
+  const days = week.buckets || [];
+  const yesterday = days.length >= 2 ? days[days.length - 2] : null;
+  const rows = ["solar", "load", "gridImport", "gridExport"].map((name) => {
+    const values = days.map((d) => d[name]).filter(isNum);
+    return {
+      name,
+      today: today[name],
+      yesterday: yesterday ? yesterday[name] : null,
+      average: values.length ? values.reduce((s, v) => s + v, 0) / values.length : null,
+      month: month.totals?.[name] ?? null,
+    };
+  }).filter((row) => [row.today, row.yesterday, row.month].some(isNum));
+  return rows.length ? rows : null;
+}
+
 // Weather from a Home Assistant weather entity (the `weather_entity` option,
 // otherwise the first one found), for themes that draw the sky.
 const WEATHER_LOOK = {

@@ -11,7 +11,7 @@ const EDITOR_NUMBERS = [
   ["co2_factor", "editorCo2", "0.01"],
 ];
 // Switches that are off unless set: [config key, label key].
-const EDITOR_OPTIN = [["wide", "editorWide"]];
+const EDITOR_OPTIN = [["wide", "editorWide"], ["show_insights", "editorInsights"]];
 const EDITOR_SWITCHES = [
   ["show_solar", "editorSolar"],
   ["show_battery", "editorBattery"],

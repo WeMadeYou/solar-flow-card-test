@@ -168,6 +168,17 @@ const TRANSLATIONS = {
     "gateIdle": "Gate idle · all chevrons standing by",
     "gateReserve": "Chevron 7 will not lock · battery at reserve",
     "gateReserveLabel": "Reserve",
+    "insightsTitle": "Today at a glance",
+    "peakSolar": "Solar peak",
+    "peakLoad": "Consumption peak",
+    "atTime": "at {time}",
+    "socRange": "Battery today",
+    "batteryCycles": "Battery cycles",
+    "offGrid": "Without the grid",
+    "compareTitle": "Comparison",
+    "colYesterday": "Yesterday",
+    "colAvg7": "7-day avg",
+    "colMonth": "This month",
     "themeNames": {
       "diorama": "Diorama",
       "aurora": "Aurora",
@@ -200,6 +211,7 @@ const TRANSLATIONS = {
     "editorShowPanels": "Show panels (optimizers)",
     "editorShowWeather": "Weather in the Diorama sky",
     "editorWide": "Wide layout (on a wide dashboard)",
+    "editorInsights": "Today at a glance and comparison",
     "editorSolar": "The installation has PV panels",
     "editorBattery": "The installation has a battery",
     "editorShowSelfSufficiency": "Show self-sufficiency",
@@ -362,6 +374,17 @@ const TRANSLATIONS = {
     "gateIdle": "Poort in rust · chevrons stand-by",
     "gateReserve": "Chevron 7 vergrendelt niet · batterij op reserve",
     "gateReserveLabel": "Reserve",
+    "insightsTitle": "Vandaag in het kort",
+    "peakSolar": "Piek zon",
+    "peakLoad": "Piek verbruik",
+    "atTime": "om {time}",
+    "socRange": "Batterij vandaag",
+    "batteryCycles": "Batterijcycli",
+    "offGrid": "Zonder net",
+    "compareTitle": "Vergelijking",
+    "colYesterday": "Gisteren",
+    "colAvg7": "Gem. 7 dagen",
+    "colMonth": "Deze maand",
     "themeNames": {
       "diorama": "Diorama",
       "aurora": "Aurora",
@@ -394,6 +417,7 @@ const TRANSLATIONS = {
     "editorShowPanels": "Toon panelen (optimizers)",
     "editorShowWeather": "Weer in de Diorama-lucht",
     "editorWide": "Brede indeling (op een breed dashboard)",
+    "editorInsights": "Vandaag in het kort en vergelijking",
     "editorSolar": "De installatie heeft zonnepanelen",
     "editorBattery": "De installatie heeft een batterij",
     "editorShowSelfSufficiency": "Toon zelfvoorziening",
@@ -556,6 +580,17 @@ const TRANSLATIONS = {
     "gateIdle": "Wrota w spoczynku · szewrony w gotowości",
     "gateReserve": "Szewron 7 nie zablokuje się · magazyn na rezerwie",
     "gateReserveLabel": "Rezerwa",
+    "insightsTitle": "Dziś w skrócie",
+    "peakSolar": "Szczyt PV",
+    "peakLoad": "Szczyt zużycia",
+    "atTime": "o {time}",
+    "socRange": "Magazyn dziś",
+    "batteryCycles": "Cykle magazynu",
+    "offGrid": "Bez sieci",
+    "compareTitle": "Porównanie",
+    "colYesterday": "Wczoraj",
+    "colAvg7": "Śr. 7 dni",
+    "colMonth": "Ten miesiąc",
     "themeNames": {
       "diorama": "Diorama",
       "aurora": "Aurora",
@@ -588,6 +623,7 @@ const TRANSLATIONS = {
     "editorShowPanels": "Pokaż panele (optymalizatory)",
     "editorShowWeather": "Pogoda na niebie Dioramy",
     "editorWide": "Szeroki układ (na szerokim dashboardzie)",
+    "editorInsights": "Dziś w skrócie i porównanie",
     "editorSolar": "Instalacja ma panele PV",
     "editorBattery": "Instalacja ma magazyn energii",
     "editorShowSelfSufficiency": "Pokaż samowystarczalność",
@@ -1419,6 +1455,55 @@ function combineBankSeries(series, config) {
   };
 }
 
+// Today's highlights from the power history (5-minute buckets): the solar
+// and consumption peaks with their time, the battery's range, battery
+// cycles and the time the home ran without the grid.
+function dayHighlights(data, spec, today, forecast) {
+  if (!data || data.kind !== "power") return null;
+  const at = (i) => new Date(spec.start.getTime() + (i + 0.5) * spec.bucketMs);
+  const peak = (values) => {
+    if (!values) return null;
+    let best = -1;
+    values.forEach((v, i) => { if (isNum(v) && (best < 0 || v > values[best])) best = i; });
+    return best >= 0 && values[best] > ACTIVE_W ? { value: values[best], at: at(best) } : null;
+  };
+  const socs = (data.soc || []).filter(isNum);
+  let offGrid = 0;
+  let measured = 0;
+  (data.load || []).forEach((load, i) => {
+    if (!isNum(load)) return;
+    measured++;
+    const grid = data.grid?.[i];
+    if (load > ACTIVE_W && (!isNum(grid) || grid <= 4 * ACTIVE_W)) offGrid++;
+  });
+  const minutes = spec.bucketMs / 60000;
+  return {
+    solarPeak: peak(data.solar),
+    loadPeak: peak(data.load),
+    socMin: socs.length ? Math.min(...socs) : null,
+    socMax: socs.length ? Math.max(...socs) : null,
+    cycles: forecast?.capacity && isNum(today.charge) ? today.charge / forecast.capacity : null,
+    offGridMinutes: measured && data.grid ? offGrid * minutes : null,
+  };
+}
+
+// Today against yesterday, the 7-day average and this month, per flow.
+function comparisonRows(today, week, month) {
+  const days = week.buckets || [];
+  const yesterday = days.length >= 2 ? days[days.length - 2] : null;
+  const rows = ["solar", "load", "gridImport", "gridExport"].map((name) => {
+    const values = days.map((d) => d[name]).filter(isNum);
+    return {
+      name,
+      today: today[name],
+      yesterday: yesterday ? yesterday[name] : null,
+      average: values.length ? values.reduce((s, v) => s + v, 0) / values.length : null,
+      month: month.totals?.[name] ?? null,
+    };
+  }).filter((row) => [row.today, row.yesterday, row.month].some(isNum));
+  return rows.length ? rows : null;
+}
+
 // Weather from a Home Assistant weather entity (the `weather_entity` option,
 // otherwise the first one found), for themes that draw the sky.
 const WEATHER_LOOK = {
@@ -1733,11 +1818,51 @@ function systemHtml(m) {
     </section>`;
 }
 
+// Today at a glance and the comparison table.
+function insightsHtml(m) {
+  const data = m.insights;
+  if (!data || (!data.day && !data.compare)) return "";
+  const { t, locale } = m;
+  const d = data.day;
+  const kv = (cls, label, value, note) => `<div class="sfc-insight ${cls}"><small>${escapeHtml(label)}</small><b>${escapeHtml(value)}</b>${note ? `<span>${escapeHtml(note)}</span>` : ""}</div>`;
+  const tiles = d ? [
+    m.config.showSolar && d.solarPeak && kv("pv", t.peakSolar, formatPower(d.solarPeak.value, locale), fill(t.atTime, { time: formatClock(d.solarPeak.at, locale) })),
+    d.loadPeak && kv("load", t.peakLoad, formatPower(d.loadPeak.value, locale), fill(t.atTime, { time: formatClock(d.loadPeak.at, locale) })),
+    m.config.showBattery && isNum(d.socMin) && kv("battery", t.socRange, `${formatNumber(d.socMin, locale, 0)}–${formatPercent(d.socMax, locale)}`, ""),
+    m.config.showBattery && isNum(d.cycles) && kv("battery", t.batteryCycles, formatNumber(d.cycles, locale, 2), ""),
+    isNum(d.offGridMinutes) && kv("grid", t.offGrid, formatDuration(d.offGridMinutes / 60, t), ""),
+  ].filter(Boolean).join("") : "";
+  const labels = { solar: t.pvProduction, load: t.consumption, gridImport: t.gridImport, gridExport: t.gridExport };
+  const cell = (v) => `<td>${escapeHtml(isNum(v) ? formatNumber(v, locale, v < 10 ? 1 : 0) : "—")}</td>`;
+  const trend = (row) => {
+    if (!isNum(row.today) || !isNum(row.yesterday) || row.yesterday < 0.05) return "<td></td>";
+    const pct = ((row.today - row.yesterday) / row.yesterday) * 100;
+    // More production or export is good news, more consumption or import is not.
+    const good = (pct >= 0) === (row.name === "solar" || row.name === "gridExport");
+    return `<td class="${good ? "good" : "bad"}">${pct >= 0 ? "▲" : "▼"} ${escapeHtml(formatNumber(Math.abs(pct), locale, 0))}%</td>`;
+  };
+  const rows = (data.compare || []).filter((row) => m.config.showSolar || row.name !== "solar");
+  return `
+    ${tiles ? `
+    <section class="sfc-section sfc-insights">
+      <div class="sfc-head"><div><span class="sfc-kicker">${MINI_ICONS.bolt}</span><h3>${escapeHtml(t.insightsTitle)}</h3></div></div>
+      <div class="sfc-insight-grid">${tiles}</div>
+    </section>` : ""}
+    ${rows.length ? `
+    <section class="sfc-section sfc-compare">
+      <div class="sfc-head"><div><span class="sfc-kicker">kWh</span><h3>${escapeHtml(t.compareTitle)}</h3></div></div>
+      <table class="sfc-compare-table">
+        <thead><tr><th></th><th>${escapeHtml(t.periodToday)}</th><th>${escapeHtml(t.colYesterday)}</th><th></th><th>${escapeHtml(t.colAvg7)}</th><th>${escapeHtml(t.colMonth)}</th></tr></thead>
+        <tbody>${rows.map((row) => `<tr class="${row.name}"><th><i></i>${escapeHtml(labels[row.name])}</th>${cell(row.today)}${cell(row.yesterday)}${trend(row)}${cell(row.average)}${cell(row.month)}</tr>`).join("")}</tbody>
+      </table>
+    </section>` : ""}`;
+}
+
 function standardSections(m) {
   // Wide: the energy section leads across the full width, the rest flow
   // into balanced columns below it.
-  if (m.config.wide) return `${energySectionHtml(m)}<div class="sfc-wide-rest">${inverterHtml(m)}${forecastHtml(m)}${systemHtml(m)}${panelsHtml(m)}</div>`;
-  return `${inverterHtml(m)}${forecastHtml(m)}${systemHtml(m)}${energySectionHtml(m)}${panelsHtml(m)}`;
+  if (m.config.wide) return `${energySectionHtml(m)}<div class="sfc-wide-rest">${inverterHtml(m)}${forecastHtml(m)}${insightsHtml(m)}${systemHtml(m)}${panelsHtml(m)}</div>`;
+  return `${inverterHtml(m)}${forecastHtml(m)}${systemHtml(m)}${energySectionHtml(m)}${insightsHtml(m)}${panelsHtml(m)}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -2978,7 +3103,7 @@ function renderGate(m) {
         </div>
       </div>
       <div class="gt-energy">${energySectionHtml(m)}</div>
-      <div class="sfc-sections">${inverterHtml(m)}${systemHtml(m)}${panelsHtml(m)}</div>
+      <div class="sfc-sections">${inverterHtml(m)}${insightsHtml(m)}${systemHtml(m)}${panelsHtml(m)}</div>
     </div>`;
 }
 
@@ -3168,6 +3293,23 @@ const BASE_CSS = `
     .lc-main.wide { display: grid; grid-template-columns: minmax(340px, 40%) minmax(0, 1fr); column-gap: 18px; align-items: start; }
     .lc-main.wide > .sfc-sections { padding-top: 0; }
   }
+
+  /* Today at a glance, comparison */
+  .sfc-insight-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+  .sfc-insight { min-width: 0; padding: 9px 11px; border: 1px solid var(--sfc-border); border-radius: var(--sfc-tile-radius, 11px); background: var(--sfc-tile-bg); --sfc-c: var(--sfc-accent); }
+  .sfc-insight.pv { --sfc-c: var(--sfc-pv); } .sfc-insight.load { --sfc-c: var(--sfc-load); } .sfc-insight.battery { --sfc-c: var(--sfc-battery); } .sfc-insight.grid { --sfc-c: var(--sfc-grid); }
+  .sfc-insight small { display: block; color: var(--sfc-muted); font-size: 11px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sfc-insight b { display: block; margin-top: 2px; font-size: 16px; font-family: var(--sfc-num-font, inherit); color: var(--sfc-c); white-space: nowrap; }
+  .sfc-insight span { display: block; color: var(--sfc-muted); font-size: 10px; }
+  .sfc-compare-table { width: 100%; border-collapse: collapse; font-size: 13px; font-family: var(--sfc-num-font, inherit); }
+  .sfc-compare-table th, .sfc-compare-table td { padding: 6px 4px; text-align: right; border-bottom: 1px solid var(--sfc-border); white-space: nowrap; }
+  .sfc-compare-table thead th { color: var(--sfc-muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+  .sfc-compare-table tbody th { text-align: left; font-weight: 600; font-family: var(--sfc-font); }
+  .sfc-compare-table tbody th i { display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: var(--sfc-c); }
+  .sfc-compare-table tr.solar { --sfc-c: var(--sfc-pv); } .sfc-compare-table tr.load { --sfc-c: var(--sfc-load); }
+  .sfc-compare-table tr.gridImport, .sfc-compare-table tr.gridExport { --sfc-c: var(--sfc-grid); }
+  .sfc-compare-table td.good { color: #2bb673; font-size: 11px; } .sfc-compare-table td.bad { color: #e5534b; font-size: 11px; }
+  .sfc-compare-table tr:last-child > * { border-bottom: 0; }
 
   /* Installation */
   .sfc-phases { display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); gap: 8px; }
@@ -3935,16 +4077,39 @@ class SolarFlowCard extends HTMLElement {
     return { totals: sumBuckets(buckets), buckets, spec, loading: entry.loading, error: entry.error };
   }
 
+  // Recorder history of the power sensors for today or the last 3 days,
+  // shared by the chart and the day's highlights.
+  _powerHistory(resolved, period) {
+    const live = { ...resolved.live, ...bankHistorySources(this._hass, this._config) };
+    const ids = Object.values(live).filter(Boolean).map((entry) => entry.entityId);
+    if (!ids.length || typeof this._hass.callWS !== "function") return null;
+    const spec = powerSpec(period);
+    const entry = this._fetch(`history|${period}|${ids.join(",")}|${spec.start.toDateString()}`, spec.ttl, () =>
+      loadPowerHistory(this._hass, spec, live)
+    );
+    return { entry, spec };
+  }
+
+  // Today at a glance and the comparison with yesterday, the week and the
+  // month. Shown in the wide layout, or anywhere with show_insights: true.
+  _insights(resolved, today, forecast) {
+    const config = this._config;
+    if (config.show_insights === false || !(config.wide === true || config.show_insights === true)) return null;
+    const history = this._powerHistory(resolved, "today");
+    const day = history?.entry.data ? dayHighlights(this._powerChartData(history.entry.data.series, history.spec), history.spec, today, forecast) : null;
+    const week = this._periodEnergy(resolved, "7d", today);
+    const month = this._periodEnergy(resolved, "month", today);
+    const compare = comparisonRows(today, week, month);
+    if (!day && !compare) return { loading: Boolean(history?.entry.loading || week.loading) };
+    return { day, compare, at: [history?.entry.at, week.buckets?.length, month.buckets?.length] };
+  }
+
   _chartState(resolved, period, energy) {
     if (this._config.show_chart === false) return null;
     if (period === "today" || period === "3d") {
-      const live = { ...resolved.live, ...bankHistorySources(this._hass, this._config) };
-      const ids = Object.values(live).filter(Boolean).map((entry) => entry.entityId);
-      if (!ids.length || typeof this._hass.callWS !== "function") return null;
-      const spec = powerSpec(period);
-      const entry = this._fetch(`history|${period}|${ids.join(",")}|${spec.start.toDateString()}`, spec.ttl, () =>
-        loadPowerHistory(this._hass, spec, live)
-      );
+      const history = this._powerHistory(resolved, period);
+      if (!history) return null;
+      const { entry, spec } = history;
       return {
         loading: entry.loading,
         error: entry.error,
@@ -4053,6 +4218,7 @@ class SolarFlowCard extends HTMLElement {
       const chart = this._chartState(resolved, period, energy);
       const forecast = batteryForecast(live, bank?.capacity && !positiveNumber(config.battery_capacity) ? { ...config, battery_capacity: bank.capacity } : config);
       const panels = showSolar ? panelData(this._hass, resolved, config) : null;
+      const insights = this._insights(resolved, today, forecast);
       const weather = theme === "diorama" ? weatherData(this._hass, config) : null;
       // The wide layout has room for everything: inverter details stay open.
       const wide = config.wide === true;
@@ -4072,7 +4238,7 @@ class SolarFlowCard extends HTMLElement {
       const signature = JSON.stringify([
         language, config, period, [...this._hiddenSeries], live, status.state, today, energy.totals, Boolean(energy.loading),
         chart && [Boolean(chart.loading), Boolean(chart.error), chart.at], forecast.mode, Math.round(forecast.hours * 60 || 0),
-        panels?.panels.map((p) => [p.today, p.power]), system, bank, weather && [weather.condition, weather.temperature], inverterOpen,
+        panels?.panels.map((p) => [p.today, p.power]), system, bank, insights && [insights.loading, insights.at, insights.day?.offGridMinutes], weather && [weather.condition, weather.temperature], inverterOpen,
         inverter?.map((d) => [[...d.strings.values()].map((s) => Object.values(s).map((r) => r.value)), d.temperatures.map((r) => r.value), d.battery.map((r) => r.value), d.grid.map((r) => r.value)]),
         Math.floor(now.getTime() / 60000),
       ]);
@@ -4112,6 +4278,7 @@ class SolarFlowCard extends HTMLElement {
         inverter,
         system,
         bank,
+        insights,
         weather,
         inverterOpen,
         hiddenSeries: this._hiddenSeries,
@@ -4190,7 +4357,7 @@ const EDITOR_NUMBERS = [
   ["co2_factor", "editorCo2", "0.01"],
 ];
 // Switches that are off unless set: [config key, label key].
-const EDITOR_OPTIN = [["wide", "editorWide"]];
+const EDITOR_OPTIN = [["wide", "editorWide"], ["show_insights", "editorInsights"]];
 const EDITOR_SWITCHES = [
   ["show_solar", "editorSolar"],
   ["show_battery", "editorBattery"],

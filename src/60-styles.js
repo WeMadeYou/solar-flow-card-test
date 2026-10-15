@@ -173,6 +173,23 @@ const BASE_CSS = `
     .lc-main.wide > .sfc-sections { padding-top: 0; }
   }
 
+  /* Today at a glance, comparison */
+  .sfc-insight-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+  .sfc-insight { min-width: 0; padding: 9px 11px; border: 1px solid var(--sfc-border); border-radius: var(--sfc-tile-radius, 11px); background: var(--sfc-tile-bg); --sfc-c: var(--sfc-accent); }
+  .sfc-insight.pv { --sfc-c: var(--sfc-pv); } .sfc-insight.load { --sfc-c: var(--sfc-load); } .sfc-insight.battery { --sfc-c: var(--sfc-battery); } .sfc-insight.grid { --sfc-c: var(--sfc-grid); }
+  .sfc-insight small { display: block; color: var(--sfc-muted); font-size: 11px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sfc-insight b { display: block; margin-top: 2px; font-size: 16px; font-family: var(--sfc-num-font, inherit); color: var(--sfc-c); white-space: nowrap; }
+  .sfc-insight span { display: block; color: var(--sfc-muted); font-size: 10px; }
+  .sfc-compare-table { width: 100%; border-collapse: collapse; font-size: 13px; font-family: var(--sfc-num-font, inherit); }
+  .sfc-compare-table th, .sfc-compare-table td { padding: 6px 4px; text-align: right; border-bottom: 1px solid var(--sfc-border); white-space: nowrap; }
+  .sfc-compare-table thead th { color: var(--sfc-muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+  .sfc-compare-table tbody th { text-align: left; font-weight: 600; font-family: var(--sfc-font); }
+  .sfc-compare-table tbody th i { display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: var(--sfc-c); }
+  .sfc-compare-table tr.solar { --sfc-c: var(--sfc-pv); } .sfc-compare-table tr.load { --sfc-c: var(--sfc-load); }
+  .sfc-compare-table tr.gridImport, .sfc-compare-table tr.gridExport { --sfc-c: var(--sfc-grid); }
+  .sfc-compare-table td.good { color: #2bb673; font-size: 11px; } .sfc-compare-table td.bad { color: #e5534b; font-size: 11px; }
+  .sfc-compare-table tr:last-child > * { border-bottom: 0; }
+
   /* Installation */
   .sfc-phases { display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); gap: 8px; }
   .sfc-phase, .sfc-meter { position: relative; min-width: 0; display: grid; gap: 2px; padding: 9px 11px; text-align: left;

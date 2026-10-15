@@ -265,11 +265,51 @@ function systemHtml(m) {
     </section>`;
 }
 
+// Today at a glance and the comparison table.
+function insightsHtml(m) {
+  const data = m.insights;
+  if (!data || (!data.day && !data.compare)) return "";
+  const { t, locale } = m;
+  const d = data.day;
+  const kv = (cls, label, value, note) => `<div class="sfc-insight ${cls}"><small>${escapeHtml(label)}</small><b>${escapeHtml(value)}</b>${note ? `<span>${escapeHtml(note)}</span>` : ""}</div>`;
+  const tiles = d ? [
+    m.config.showSolar && d.solarPeak && kv("pv", t.peakSolar, formatPower(d.solarPeak.value, locale), fill(t.atTime, { time: formatClock(d.solarPeak.at, locale) })),
+    d.loadPeak && kv("load", t.peakLoad, formatPower(d.loadPeak.value, locale), fill(t.atTime, { time: formatClock(d.loadPeak.at, locale) })),
+    m.config.showBattery && isNum(d.socMin) && kv("battery", t.socRange, `${formatNumber(d.socMin, locale, 0)}–${formatPercent(d.socMax, locale)}`, ""),
+    m.config.showBattery && isNum(d.cycles) && kv("battery", t.batteryCycles, formatNumber(d.cycles, locale, 2), ""),
+    isNum(d.offGridMinutes) && kv("grid", t.offGrid, formatDuration(d.offGridMinutes / 60, t), ""),
+  ].filter(Boolean).join("") : "";
+  const labels = { solar: t.pvProduction, load: t.consumption, gridImport: t.gridImport, gridExport: t.gridExport };
+  const cell = (v) => `<td>${escapeHtml(isNum(v) ? formatNumber(v, locale, v < 10 ? 1 : 0) : "—")}</td>`;
+  const trend = (row) => {
+    if (!isNum(row.today) || !isNum(row.yesterday) || row.yesterday < 0.05) return "<td></td>";
+    const pct = ((row.today - row.yesterday) / row.yesterday) * 100;
+    // More production or export is good news, more consumption or import is not.
+    const good = (pct >= 0) === (row.name === "solar" || row.name === "gridExport");
+    return `<td class="${good ? "good" : "bad"}">${pct >= 0 ? "▲" : "▼"} ${escapeHtml(formatNumber(Math.abs(pct), locale, 0))}%</td>`;
+  };
+  const rows = (data.compare || []).filter((row) => m.config.showSolar || row.name !== "solar");
+  return `
+    ${tiles ? `
+    <section class="sfc-section sfc-insights">
+      <div class="sfc-head"><div><span class="sfc-kicker">${MINI_ICONS.bolt}</span><h3>${escapeHtml(t.insightsTitle)}</h3></div></div>
+      <div class="sfc-insight-grid">${tiles}</div>
+    </section>` : ""}
+    ${rows.length ? `
+    <section class="sfc-section sfc-compare">
+      <div class="sfc-head"><div><span class="sfc-kicker">kWh</span><h3>${escapeHtml(t.compareTitle)}</h3></div></div>
+      <table class="sfc-compare-table">
+        <thead><tr><th></th><th>${escapeHtml(t.periodToday)}</th><th>${escapeHtml(t.colYesterday)}</th><th></th><th>${escapeHtml(t.colAvg7)}</th><th>${escapeHtml(t.colMonth)}</th></tr></thead>
+        <tbody>${rows.map((row) => `<tr class="${row.name}"><th><i></i>${escapeHtml(labels[row.name])}</th>${cell(row.today)}${cell(row.yesterday)}${trend(row)}${cell(row.average)}${cell(row.month)}</tr>`).join("")}</tbody>
+      </table>
+    </section>` : ""}`;
+}
+
 function standardSections(m) {
   // Wide: the energy section leads across the full width, the rest flow
   // into balanced columns below it.
-  if (m.config.wide) return `${energySectionHtml(m)}<div class="sfc-wide-rest">${inverterHtml(m)}${forecastHtml(m)}${systemHtml(m)}${panelsHtml(m)}</div>`;
-  return `${inverterHtml(m)}${forecastHtml(m)}${systemHtml(m)}${energySectionHtml(m)}${panelsHtml(m)}`;
+  if (m.config.wide) return `${energySectionHtml(m)}<div class="sfc-wide-rest">${inverterHtml(m)}${forecastHtml(m)}${insightsHtml(m)}${systemHtml(m)}${panelsHtml(m)}</div>`;
+  return `${inverterHtml(m)}${forecastHtml(m)}${systemHtml(m)}${energySectionHtml(m)}${insightsHtml(m)}${panelsHtml(m)}`;
 }
 
 // ---------------------------------------------------------------------------

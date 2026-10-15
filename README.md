@@ -37,7 +37,7 @@ DeyeCloud sensors are found automatically; any other inverter works by pointing 
 - **Installation**: power on each phase (L1/L2/L3) with grid power and voltage and the spread between phases, inverter load against its rated power, battery temperature, voltage and current with a warning when the battery is too cold or hot to charge fully, and the generator while it runs.
 - **Inverter details** (tap the inverter or the house): PV strings, temperatures, battery and grid readings.
 - **Panels**: one tile per optimizer with today's production; the weakest panel is highlighted when it falls below 85% of the median.
-- **Wide layout** (`wide: true`) for every theme: everything visible at once on a wide dashboard.
+- **Wide layout** (`wide: true`) for every theme: everything visible at once on a wide dashboard, plus "Today at a glance" (peaks, battery range and cycles, time without the grid) and a comparison with yesterday, the week and the month.
 - English, Polish and Dutch, with a visual editor; [more languages welcome](CONTRIBUTING.md#add-or-improve-a-translation).
 
 History comes from Home Assistant itself (recorder history and long-term statistics), so the card adds no requests to your inverter's cloud.
@@ -98,6 +98,7 @@ co2_factor: 0.7
 | `title` | station name | Card title. |
 | `language` | Home Assistant language | `en`, `pl` or `nl`; also in the visual editor. |
 | `wide` | `false` | Wide layout for a wide dashboard (a panel view or a full-width section): the main view and the chart side by side, every section open below in columns, inverter details included. Below about 880 px of card width the card stays compact. Also in the editor. |
+| `show_insights` | with `wide` | "Today at a glance" (solar and consumption peaks with their time, the battery's range today, battery cycles, time without the grid) and a comparison of today with yesterday, the 7-day average and this month. Shown in the wide layout; `true` shows it in the compact layout too, `false` hides it. Also in the editor. |
 | `period` | `today` | Tab shown when the dashboard opens: `today`, `3d`, `7d`, `month` or `all`. |
 | `station_id` | first station | DeyeCloud station, when the account has several. |
 | `animation` | `true` | Animated flows. |
