@@ -223,6 +223,13 @@ batteries:
 
 The 3D, 7D, month and all-time totals and bars come from the long-term statistics of the daily energy sensors, so those need `state_class: total_increasing`. Statistics are compiled hourly; today's part always uses the live sensor.
 
+## Roadmap
+
+Planned, in no particular order. Ideas and votes are welcome in [issues](https://github.com/gratak/solar-flow-card/issues).
+
+- **Virtual storage with hourly net balancing** ([#43](https://github.com/gratak/solar-flow-card/issues/43)): the energy exported minus imported within the current hour, shown as a virtual battery that resets at every full hour, for tariffs that balance import and export per hour. Either from a ready sensor (e.g. [ha-balance-neto](https://github.com/miguelangellv/ha-balance-neto)) or calculated by the card from the grid import/export counters, with the choice to show a negative balance or clamp it at zero, plus an extra "self-sufficiency with hourly balancing" value.
+- **Several inverters** (`inverters:`, like `batteries:`): power and energy summed by the card without helper sensors, for example an on-grid and an off-grid inverter of different brands, with each inverter listed separately in the Installation section. Until then, combine them with Home Assistant "Sum" helpers under `entities:`.
+
 ## Translations
 
 The card speaks English, Polish and Dutch (thanks to @furian88). Every language is one JSON file in [`translations/`](translations/); adding yours takes a copy of `en.json` and no programming. See [CONTRIBUTING.md](CONTRIBUTING.md#add-or-improve-a-translation).
