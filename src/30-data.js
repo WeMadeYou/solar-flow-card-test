@@ -95,7 +95,7 @@ function hasAnyEntity(resolved) {
 // Live power in W. Battery and grid are also given as signed values:
 // battery > 0 discharging into the home, grid > 0 importing.
 function liveValues(resolved, config) {
-  const value = (entry) => stateNumber(entry?.stateObj);
+  const value = (entry) => wattsOf(entry?.stateObj);
   const positive = (entry) => Math.max(0, value(entry) ?? 0);
   const { live } = resolved;
   let charge = positive(live.charge);
@@ -133,7 +133,7 @@ function liveValues(resolved, config) {
     gridExport,
     battery: discharge - charge,
     grid: gridImport - gridExport,
-    soc: value(live.soc),
+    soc: stateNumber(live.soc?.stateObj),
     loadComputed,
     solarActive: solar > ACTIVE_W,
     loadActive: load > ACTIVE_W,
@@ -165,10 +165,37 @@ function deriveLoadEnergy(values) {
   return { ...values, load: Math.max(0, v("solar") + v("gridImport") - v("gridExport") + v("discharge") - v("charge")) };
 }
 
-function todayEnergy(resolved) {
+// Today's energy. Daily sensors (reset at midnight) are read as they are;
+// lifetime counters (`energy_sensors: total`) count from their reading at
+// midnight (`baseline`, from the recorder; null while it loads).
+function todayEnergy(resolved, baseline) {
   const values = {};
-  for (const name of ENERGY_ORDER) values[name] = stateNumber(resolved.energy[name]?.stateObj);
+  for (const name of ENERGY_ORDER) {
+    const now = kwhOf(resolved.energy[name]?.stateObj);
+    if (baseline === undefined) values[name] = now;
+    else values[name] = isNum(now) && isNum(baseline?.[name]) ? Math.max(0, now - baseline[name]) : null;
+  }
   return deriveLoadEnergy(values);
+}
+
+// Readings of the energy sensors at midnight, for lifetime counters.
+async function loadEnergyBaseline(hass, energy) {
+  const sources = Object.fromEntries(ENERGY_ORDER.map((name) => [name, energy[name]]).filter(([, e]) => e?.entityId));
+  const start = startOfDay(new Date());
+  const response = await hass.callWS({
+    type: "history/history_during_period",
+    start_time: start.toISOString(),
+    end_time: new Date(start.getTime() + 60000).toISOString(),
+    entity_ids: [...new Set(Object.values(sources).map((e) => e.entityId))],
+    minimal_response: true,
+    no_attributes: true,
+  });
+  const baseline = {};
+  for (const [name, entry] of Object.entries(sources)) {
+    const first = historyPoints(response?.[entry.entityId])[0];
+    baseline[name] = first ? first[1] * unitScale(entry.stateObj, ENERGY_SCALE) : null;
+  }
+  return baseline;
 }
 
 // Long-term statistics query for a period other than today.
@@ -193,6 +220,7 @@ async function loadStatistics(hass, spec, energy) {
     statistic_ids: Object.values(sources),
     period: spec.statPeriod,
     types: ["change"],
+    units: { energy: "kWh" },
   });
   const byKey = new Map();
   for (const [name, entityId] of Object.entries(sources)) {
@@ -467,11 +495,20 @@ function normalizeKey(key) {
   return String(key).toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
-// Power in W from a sensor in W or kW.
+// Power in W and energy in kWh, whichever of the usual units a sensor
+// reports (W/kW/MW, Wh/kWh/MWh). Other units are taken as they are.
+const POWER_SCALE = { w: 1, kw: 1000, mw: 1e6 };
+const ENERGY_SCALE = { wh: 0.001, kwh: 1, mwh: 1000 };
+function unitScale(stateObj, table) {
+  return table[stateUnit(stateObj).trim().toLowerCase()] ?? 1;
+}
 function wattsOf(stateObj) {
   const value = stateNumber(stateObj);
-  if (value === null) return null;
-  return /^kW$/i.test(stateUnit(stateObj)) ? value * 1000 : value;
+  return value === null ? null : value * unitScale(stateObj, POWER_SCALE);
+}
+function kwhOf(stateObj) {
+  const value = stateNumber(stateObj);
+  return value === null ? null : value * unitScale(stateObj, ENERGY_SCALE);
 }
 
 function systemData(hass, resolved, config) {
