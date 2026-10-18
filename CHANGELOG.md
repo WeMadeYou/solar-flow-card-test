@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.2
+
+- Power sensors in kW or MW and energy sensors in Wh or MWh are converted (before, only some readings converted kW, so a solar power sensor in kW was read as watts).
+- `energy_sensors: total` for lifetime energy counters (an energy meter's total import/export, an inverter's total yield): today's energy is counted from their reading at midnight instead of showing the lifetime total. Longer periods already came from Home Assistant's statistics and work with either kind.
+- A [configuration guide for any inverter](docs/configuration.md): every `entities:` entry with its unit and sign, what the card checks (units, state class), helper sensors for what is missing, and complete examples, including Huawei with a separate energy meter (#53).
+
 ## 1.4.1
 
 - `background: glass` (also in the editor): a translucent, blurred card, so a background image set on the dashboard view shows through it. Light glass in Diorama and Paper, dark in the other themes.

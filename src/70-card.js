@@ -164,6 +164,16 @@ class SolarFlowCard extends HTMLElement {
     return { totals: sumBuckets(buckets), buckets, spec, loading: entry.loading, error: entry.error };
   }
 
+  // Lifetime energy counters (`energy_sensors: total`): their readings at
+  // midnight, reloaded each day. undefined for daily sensors.
+  _energyBaseline(resolved) {
+    if (this._config.energy_sensors !== "total") return undefined;
+    const ids = ENERGY_ORDER.map((name) => resolved.energy[name]?.entityId).filter(Boolean);
+    if (!ids.length || typeof this._hass.callWS !== "function") return null;
+    const entry = this._fetch(`baseline|${ids.join(",")}|${new Date().toDateString()}`, 24 * 3600000, () => loadEnergyBaseline(this._hass, resolved.energy));
+    return entry.data || null;
+  }
+
   // Recorder history of the power sensors for today or the last 3 days,
   // shared by the chart and the day's highlights.
   _powerHistory(resolved, period) {
@@ -300,7 +310,7 @@ class SolarFlowCard extends HTMLElement {
         Object.assign(live, { charge: 0, discharge: 0, battery: 0, soc: null, chargeActive: false, dischargeActive: false });
       }
       const status = liveStatus(resolved);
-      const today = todayEnergy(resolved);
+      const today = todayEnergy(resolved, this._energyBaseline(resolved));
       const energy = this._periodEnergy(resolved, period, today);
       const chart = this._chartState(resolved, period, energy);
       const forecast = batteryForecast(live, bank?.capacity && !positiveNumber(config.battery_capacity) ? { ...config, battery_capacity: bank.capacity } : config);

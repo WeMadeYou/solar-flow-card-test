@@ -554,7 +554,9 @@ async function loadPowerHistory(hass, spec, live) {
   });
   const series = {};
   for (const [name, entityId] of Object.entries(sources)) {
-    series[name] = bucketHistory(historyPoints(response?.[entityId]), spec.start.getTime(), spec.count, spec.bucketMs, nowMs);
+    // Power history in W, whatever unit the sensor reports (% stays as is).
+    const scale = unitScale(live[name]?.stateObj, POWER_SCALE);
+    series[name] = bucketHistory(historyPoints(response?.[entityId]).map(([t, v]) => [t, v * scale]), spec.start.getTime(), spec.count, spec.bucketMs, nowMs);
   }
   return { series };
 }

@@ -12,7 +12,7 @@
 
 A Home Assistant dashboard card for solar installations with a battery: live power flow, charts, a battery forecast, inverter details and per-panel production, in ten themes, compact or wide.
 
-DeyeCloud sensors are found automatically; any other inverter works by pointing the card at its entities.
+DeyeCloud sensors are found automatically; any other inverter works by pointing the card at its entities, see the [configuration guide for any inverter](docs/configuration.md).
 
 | Diorama | Aurora | Paper | LCARS |
 |---|---|---|---|
@@ -82,6 +82,8 @@ Or add it by hand:
 Copy `solar-flow-card.js` to `config/www/` and add a dashboard resource `/local/solar-flow-card.js` of type **JavaScript module**.
 
 ## Configuration
+
+For inverters other than DeyeCloud, the [configuration guide](docs/configuration.md) explains every `entities:` entry, the units and state classes the card expects, the helper sensors to create when something is missing, and has complete examples (including Huawei with a separate energy meter).
 
 The visual editor covers the theme, title, language, your installation, sections and the summary items. `period`, `panel_strings` and the sensor options are YAML only.
 
@@ -162,6 +164,7 @@ co2_factor: 0.7
 | `batteries` | – | Several batteries (e.g. a hybrid inverter's BAT1 and BAT2), see below. |
 | `invert_battery` | `false` | Your signed battery power is positive while charging. |
 | `invert_grid` | `false` | Your signed grid power is positive while exporting. |
+| `energy_sensors` | `daily` | `total`: your energy sensors are lifetime counters (they never reset, like most energy meters); today's energy is counted from their reading at midnight. See the [configuration guide](docs/configuration.md). |
 
 ### Other inverters
 
