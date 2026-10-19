@@ -228,10 +228,10 @@ function systemHtml(m) {
     <div class="sfc-phases" style="--n:${data.phases.length}">
       ${data.phases.map((p) => `
         <button class="sfc-phase" ${attr(p.entityId)}>
-          <small>${escapeHtml(p.name)}</small>
-          <strong>${escapeHtml(formatPower(p.load, locale))}</strong>
-          <i style="--p:${isNum(p.load) ? ((p.load / data.phaseMax) * 100).toFixed(0) : 0}%"></i>
-          <span>${escapeHtml([isNum(p.grid) && fill(t.phaseGrid, { power: formatPower(p.grid, locale) }), isNum(p.voltage) && `${formatNumber(p.voltage, locale, 0)} V`].filter(Boolean).join(" · "))}</span>
+          <small>${escapeHtml(p.main === "grid" ? `${p.name} · ${t.grid}` : p.name)}</small>
+          <strong>${escapeHtml(formatPower(p.main === "grid" ? p.grid : p.load, locale))}</strong>
+          <i style="--p:${(() => { const v = p.main === "grid" ? Math.abs(p.grid ?? 0) : p.load; return isNum(v) ? ((v / data.phaseMax) * 100).toFixed(0) : 0; })()}%"></i>
+          <span>${escapeHtml([p.main !== "grid" && isNum(p.grid) && fill(t.phaseGrid, { power: formatPower(p.grid, locale) }), isNum(p.voltage) && `${formatNumber(p.voltage, locale, 0)} V`].filter(Boolean).join(" · "))}</span>
         </button>`).join("")}
     </div>` : "";
   const labels = { temperature: t.batteryTemperature, voltage: t.batteryVoltage, current: t.batteryCurrent };

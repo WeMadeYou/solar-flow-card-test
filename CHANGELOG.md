@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.4.4
+
+- Installation: with only a grid meter per phase (no per-phase consumption), each phase shows its grid power instead of "—".
+- Configuration guide: `solar_power` should be the inverter's AC output when the home consumption is computed; the Huawei example uses it and notes that the Panels section needs DeyeCloud data (#53).
+
 ## 1.4.3
 
 - The dashboard no longer jumps to the top whenever the card refreshes (#55). The card used to replace its whole frame on every update; Home Assistant draws that frame a moment later, so for an instant the card had no height and the page scrolled up. The frame now stays and only its contents are updated.
