@@ -282,8 +282,7 @@ class SolarFlowCard extends HTMLElement {
         const signature = `empty|${language}|${theme}`;
         if (signature === this._signature) return;
         this._signature = signature;
-        this.shadowRoot.innerHTML = `<style>${BASE_CSS}${THEME_CSS[theme]}</style>
-          <ha-card class="sfc theme-${theme}"><div class="sfc-empty"><h2>${escapeHtml(t.noData)}</h2><p>${escapeHtml(t.noDataHelp)}</p></div></ha-card>`;
+        this._paint(BASE_CSS + THEME_CSS[theme], `sfc theme-${theme}`, `<div class="sfc-empty"><h2>${escapeHtml(t.noData)}</h2><p>${escapeHtml(t.noDataHelp)}</p></div>`);
         return;
       }
       const period = PERIODS.includes(this._period) ? this._period : PERIODS.includes(config.period) ? config.period : "today";
@@ -389,16 +388,39 @@ class SolarFlowCard extends HTMLElement {
       };
       model.systemStatus = systemStatus(status, forecast, panels, system);
 
-      this.shadowRoot.innerHTML = `
-        <style>${BASE_CSS}${THEME_CSS[theme]}</style>
-        <ha-card class="sfc theme-${theme} ${config.animation === false ? "no-anim" : ""} ${config.background === "glass" ? "glass" : ""}">${wide ? wideLayout(theme, THEME_RENDER[theme](model)) : THEME_RENDER[theme](model)}</ha-card>`;
+      this._paint(
+        BASE_CSS + THEME_CSS[theme],
+        ["sfc", `theme-${theme}`, config.animation === false && "no-anim", config.background === "glass" && "glass"].filter(Boolean).join(" "),
+        wide ? wideLayout(theme, THEME_RENDER[theme](model)) : THEME_RENDER[theme](model),
+      );
       this._wire(model);
       if (wide) this._balanceWide();
     } catch (error) {
       console.error("Solar Flow Card render error", error);
-      this.shadowRoot.innerHTML = `<style>${BASE_CSS}${THEME_CSS.diorama}</style>
-        <ha-card class="sfc"><div class="sfc-empty"><h2>Solar Flow Card</h2><p>${escapeHtml(error?.message || error)}</p></div></ha-card>`;
+      this._paint(BASE_CSS + THEME_CSS.diorama, "sfc", `<div class="sfc-empty"><h2>Solar Flow Card</h2><p>${escapeHtml(error?.message || error)}</p></div>`);
     }
+  }
+
+  // Update the card in place: the <style> and the ha-card element stay
+  // between renders, only their contents change. A new ha-card on every
+  // render was empty for a moment in Home Assistant (it fills its slot
+  // asynchronously), so the dashboard got shorter and the page jumped to the
+  // top at every refresh (#55).
+  _paint(css, className, html) {
+    const root = this.shadowRoot;
+    let style = [...root.children].find((el) => el.localName === "style");
+    let card = [...root.children].find((el) => el.localName === "ha-card");
+    if (!style || !card) {
+      root.innerHTML = "<style></style><ha-card></ha-card>";
+      [style, card] = [root.querySelector("style"), root.querySelector("ha-card")];
+      this._css = null;
+    }
+    if (this._css !== css) {
+      style.textContent = css;
+      this._css = css;
+    }
+    if (card.className !== className) card.className = className;
+    card.innerHTML = html;
   }
 
   // Balance once the card has a layout; retried for a few frames while
