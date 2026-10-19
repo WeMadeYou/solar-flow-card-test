@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.3
+
+- The dashboard no longer jumps to the top whenever the card refreshes (#55). The card used to replace its whole frame on every update; Home Assistant draws that frame a moment later, so for an instant the card had no height and the page scrolled up. The frame now stays and only its contents are updated.
+
 ## 1.4.2
 
 - Power sensors in kW or MW and energy sensors in Wh or MWh are converted (before, only some readings converted kW, so a solar power sensor in kW was read as watts).
