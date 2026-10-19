@@ -36,7 +36,7 @@ All entries are optional. The card shows what it gets. With nothing for the batt
 
 | Key | Meaning | Sign |
 |---|---|---|
-| `solar_power` | Power from the panels. The inverter's DC input power is the closest to "what the panels give"; its AC output also works. | always ≥ 0 |
+| `solar_power` | Power from the panels. Use the inverter's **AC output** (active power): without `load_power` the card computes the home as `solar + grid + battery`, which needs the power the inverter actually delivers. The DC input is a little higher (inverter losses). | always ≥ 0 |
 | `load_power` | Power used by the home. **Optional:** without it the card computes `solar + grid + battery` (grid + import, battery + discharge). | ≥ 0 |
 | `grid_power` | Power exchanged with the grid, one signed sensor. | **+ import, − export** (`invert_grid: true` if yours is the other way round) |
 | `grid_import_power`, `grid_export_power` | The same as two sensors, both ≥ 0. Use these *or* `grid_power`. | ≥ 0 |
@@ -131,9 +131,8 @@ show_battery: false
 energy_sensors: total
 pv_capacity: 7.4                       # kWp of your panels
 inverter_power_rating: 5.5             # kW
-panels_per_string: [11, 7]
 entities:
-  solar_power: sensor.inverter_input_power             # W, DC input from the panels
+  solar_power: sensor.inverter_active_power            # W, AC output of the inverter
   grid_power: sensor.grid_power_total                  # W, + import / − export (Sum helper)
   inverter_power: sensor.inverter_active_power         # W, AC output
   grid_power_l1: sensor.0_electricity_meter_power_active_phase_1
@@ -147,7 +146,9 @@ entities:
   grid_export_energy: sensor.0_electricity_meter_total_reverse_active_energy  # kWh, lifetime
 ```
 
-`load_power` and `load_energy` are left out: the card works out the home's consumption from the panels and the grid.
+`load_power` and `load_energy` are left out: the card works out the home's consumption from the panels and the grid. Without per-phase consumption, the Installation section shows the grid power of each phase.
+
+The Panels section reads per-panel data from DeyeCloud optimizers, and `panels_per_string` estimates panels from DeyeCloud string readings; neither is available from huawei_solar yet, so the section stays hidden here.
 
 If you prefer daily sensors instead, use `sensor.inverter_daily_yield` for `solar_energy` and two *Utility meter* helpers (daily) for the grid counters, and leave out `energy_sensors: total`.
 

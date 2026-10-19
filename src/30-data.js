@@ -548,7 +548,11 @@ function systemData(hass, resolved, config) {
     ? (isNum(p.voltage) && p.voltage > 50) || Math.abs(p.load || 0) > ACTIVE_W || Math.abs(p.grid || 0) > ACTIVE_W
     : isNum(p.load) || isNum(p.grid)));
   const hasPhases = present.length >= 2;
-  const loads = present.map((p) => p.load).filter(isNum);
+  // Without per-phase consumption (e.g. only a grid meter), the grid power
+  // of each phase is the main reading.
+  const gridOnly = !present.some((p) => isNum(p.load)) && present.some((p) => isNum(p.grid));
+  if (gridOnly) for (const p of present) p.main = "grid";
+  const loads = present.map((p) => (gridOnly ? (isNum(p.grid) ? Math.abs(p.grid) : null) : p.load)).filter(isNum);
   const rated = positiveNumber(config.inverter_power_rating) ? positiveNumber(config.inverter_power_rating) * 1000 : watts("ratedPower");
   const inverterPower = watts("inverterPower");
   const batteryTemp = number("batteryTemp");

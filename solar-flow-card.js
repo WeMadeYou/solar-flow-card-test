@@ -7,7 +7,7 @@
  * Built from src/*.js by scripts/build.mjs. Edit the sources, not this file.
  */
 (() => {
-const CARD_VERSION = "1.4.3";
+const CARD_VERSION = "1.4.4";
 const CARD_TAG = "solar-flow-card";
 const EDITOR_TAG = "solar-flow-card-editor";
 const THEMES = ["diorama", "aurora", "paper", "lcars", "atlantis", "expanse", "foundation", "galaxy", "gate", "reactor"];
@@ -1523,7 +1523,11 @@ function systemData(hass, resolved, config) {
     ? (isNum(p.voltage) && p.voltage > 50) || Math.abs(p.load || 0) > ACTIVE_W || Math.abs(p.grid || 0) > ACTIVE_W
     : isNum(p.load) || isNum(p.grid)));
   const hasPhases = present.length >= 2;
-  const loads = present.map((p) => p.load).filter(isNum);
+  // Without per-phase consumption (e.g. only a grid meter), the grid power
+  // of each phase is the main reading.
+  const gridOnly = !present.some((p) => isNum(p.load)) && present.some((p) => isNum(p.grid));
+  if (gridOnly) for (const p of present) p.main = "grid";
+  const loads = present.map((p) => (gridOnly ? (isNum(p.grid) ? Math.abs(p.grid) : null) : p.load)).filter(isNum);
   const rated = positiveNumber(config.inverter_power_rating) ? positiveNumber(config.inverter_power_rating) * 1000 : watts("ratedPower");
   const inverterPower = watts("inverterPower");
   const batteryTemp = number("batteryTemp");
@@ -1997,10 +2001,10 @@ function systemHtml(m) {
     <div class="sfc-phases" style="--n:${data.phases.length}">
       ${data.phases.map((p) => `
         <button class="sfc-phase" ${attr(p.entityId)}>
-          <small>${escapeHtml(p.name)}</small>
-          <strong>${escapeHtml(formatPower(p.load, locale))}</strong>
-          <i style="--p:${isNum(p.load) ? ((p.load / data.phaseMax) * 100).toFixed(0) : 0}%"></i>
-          <span>${escapeHtml([isNum(p.grid) && fill(t.phaseGrid, { power: formatPower(p.grid, locale) }), isNum(p.voltage) && `${formatNumber(p.voltage, locale, 0)} V`].filter(Boolean).join(" · "))}</span>
+          <small>${escapeHtml(p.main === "grid" ? `${p.name} · ${t.grid}` : p.name)}</small>
+          <strong>${escapeHtml(formatPower(p.main === "grid" ? p.grid : p.load, locale))}</strong>
+          <i style="--p:${(() => { const v = p.main === "grid" ? Math.abs(p.grid ?? 0) : p.load; return isNum(v) ? ((v / data.phaseMax) * 100).toFixed(0) : 0; })()}%"></i>
+          <span>${escapeHtml([p.main !== "grid" && isNum(p.grid) && fill(t.phaseGrid, { power: formatPower(p.grid, locale) }), isNum(p.voltage) && `${formatNumber(p.voltage, locale, 0)} V`].filter(Boolean).join(" · "))}</span>
         </button>`).join("")}
     </div>` : "";
   const labels = { temperature: t.batteryTemperature, voltage: t.batteryVoltage, current: t.batteryCurrent };
