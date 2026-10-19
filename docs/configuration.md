@@ -26,7 +26,7 @@ The card calls nothing in the cloud: everything comes from Home Assistant.
 - **Units.** Power may be in `W`, `kW` or `MW`, and energy in `Wh`, `kWh` or `MWh`. The card converts them (`unit_of_measurement`). Sensors without a unit are taken as W and kWh.
 - **`device_class`** is not checked. Any sensor with a numeric state works.
 - **`state_class`** matters only for the energy sensors. The 3D, 7D, month and all-time periods come from long-term statistics, which Home Assistant keeps only for sensors with `state_class: total_increasing` or `total`. `measurement` energy sensors still work for today, but the longer periods stay empty.
-- **Daily or lifetime energy sensors.** By default the card expects energy sensors that reset at midnight (e.g. "daily yield", "today's import"). If yours keep counting forever, like most energy meters, set `energy_sensors: total`. The card then takes today's energy as the difference from the reading at midnight (from the recorder). All `*_energy` sensors of one card should be of the same kind; if they are not, see [Helpers](#helpers).
+- **Daily or lifetime energy sensors.** By default the card expects energy sensors that reset at midnight (e.g. "daily yield", "today's import"). If yours keep counting forever, like most energy meters, set `energy_sensors: total`. The card then takes today's energy from Home Assistant's hourly statistics (the same way the Energy dashboard does), so the sensors need `state_class: total_increasing` or `total`; it works even when a sensor is unavailable at night. All `*_energy` sensors of one card should be of the same kind; if they are not, see [Helpers](#helpers).
 
 ## Entities
 

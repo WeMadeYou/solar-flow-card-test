@@ -2,6 +2,7 @@
 
 ## 1.4.4
 
+- `energy_sensors: total`: today's energy now comes from Home Assistant's hourly statistics (the change of each hour since midnight plus what the counter added since the last full hour), like the Energy dashboard. Reading the counters at midnight failed when a sensor was unavailable then (an inverter switched off at night), and today's totals stayed empty (#53).
 - Installation: with only a grid meter per phase (no per-phase consumption), each phase shows its grid power instead of "—".
 - Configuration guide: `solar_power` should be the inverter's AC output when the home consumption is computed; the Huawei example uses it and notes that the Panels section needs DeyeCloud data (#53).
 
