@@ -164,7 +164,7 @@ co2_factor: 0.7
 | `batteries` | – | Several batteries (e.g. a hybrid inverter's BAT1 and BAT2), see below. |
 | `invert_battery` | `false` | Your signed battery power is positive while charging. |
 | `invert_grid` | `false` | Your signed grid power is positive while exporting. |
-| `energy_sensors` | `daily` | `total`: your energy sensors are lifetime counters (they never reset, like most energy meters); today's energy is counted from their reading at midnight. See the [configuration guide](docs/configuration.md). |
+| `energy_sensors` | `daily` | `total`: your energy sensors are lifetime counters (they never reset, like most energy meters); today's energy comes from Home Assistant's hourly statistics, like the Energy dashboard. See the [configuration guide](docs/configuration.md). |
 
 ### Other inverters
 

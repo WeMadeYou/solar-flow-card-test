@@ -1140,37 +1140,54 @@ function deriveLoadEnergy(values) {
   return { ...values, load: Math.max(0, v("solar") + v("gridImport") - v("gridExport") + v("discharge") - v("charge")) };
 }
 
-// Today's energy. Daily sensors (reset at midnight) are read as they are;
-// lifetime counters (`energy_sensors: total`) count from their reading at
-// midnight (`baseline`, from the recorder; null while it loads).
-function todayEnergy(resolved, baseline) {
+// Today's energy. Daily sensors (reset at midnight) are read as they are.
+// Lifetime counters (`energy_sensors: total`) use Home Assistant's hourly
+// statistics: the change of every hour since midnight, plus what the
+// sensor added since the last full hour (`stats`, null while it loads).
+// Statistics keep counting while a sensor is unavailable (an inverter at
+// night), unlike a reading taken at midnight.
+function todayEnergy(resolved, stats) {
   const values = {};
   for (const name of ENERGY_ORDER) {
     const now = kwhOf(resolved.energy[name]?.stateObj);
-    if (baseline === undefined) values[name] = now;
-    else values[name] = isNum(now) && isNum(baseline?.[name]) ? Math.max(0, now - baseline[name]) : null;
+    if (stats === undefined) values[name] = now;
+    else {
+      const s = stats?.[name];
+      values[name] = s ? s.change + (isNum(now) && isNum(s.last) ? Math.max(0, now - s.last) : 0) : null;
+    }
   }
   return deriveLoadEnergy(values);
 }
 
-// Readings of the energy sensors at midnight, for lifetime counters.
-async function loadEnergyBaseline(hass, energy) {
-  const sources = Object.fromEntries(ENERGY_ORDER.map((name) => [name, energy[name]]).filter(([, e]) => e?.entityId));
-  const start = startOfDay(new Date());
+// Hourly statistics since midnight for lifetime energy counters. The hour
+// before midnight is included only for its closing reading (`last` when no
+// hour of today has been compiled yet).
+async function loadTodayStats(hass, energy) {
+  const sources = Object.fromEntries(ENERGY_ORDER.map((name) => [name, energy[name]?.entityId]).filter(([, id]) => id));
+  const midnight = startOfDay(new Date()).getTime();
   const response = await hass.callWS({
-    type: "history/history_during_period",
-    start_time: start.toISOString(),
-    end_time: new Date(start.getTime() + 60000).toISOString(),
-    entity_ids: [...new Set(Object.values(sources).map((e) => e.entityId))],
-    minimal_response: true,
-    no_attributes: true,
+    type: "recorder/statistics_during_period",
+    start_time: new Date(midnight - 3600000).toISOString(),
+    end_time: new Date().toISOString(),
+    statistic_ids: [...new Set(Object.values(sources))],
+    period: "hour",
+    types: ["change", "state"],
+    units: { energy: "kWh" },
   });
-  const baseline = {};
-  for (const [name, entry] of Object.entries(sources)) {
-    const first = historyPoints(response?.[entry.entityId])[0];
-    baseline[name] = first ? first[1] * unitScale(entry.stateObj, ENERGY_SCALE) : null;
+  const out = {};
+  for (const [name, entityId] of Object.entries(sources)) {
+    const rows = response?.[entityId] || [];
+    if (!rows.length) continue;
+    let change = 0;
+    let last = null;
+    for (const row of rows) {
+      if (statStart(row.start) >= midnight) change += Math.max(0, Number(row.change) || 0);
+      const state = Number(row.state);
+      if (Number.isFinite(state)) last = state;
+    }
+    out[name] = { change, last };
   }
-  return baseline;
+  return out;
 }
 
 // Long-term statistics query for a period other than today.
@@ -4755,13 +4772,13 @@ class SolarFlowCard extends HTMLElement {
     return { totals: sumBuckets(buckets), buckets, spec, loading: entry.loading, error: entry.error };
   }
 
-  // Lifetime energy counters (`energy_sensors: total`): their readings at
-  // midnight, reloaded each day. undefined for daily sensors.
+  // Lifetime energy counters (`energy_sensors: total`): today's hourly
+  // statistics, refreshed every few minutes. undefined for daily sensors.
   _energyBaseline(resolved) {
     if (this._config.energy_sensors !== "total") return undefined;
     const ids = ENERGY_ORDER.map((name) => resolved.energy[name]?.entityId).filter(Boolean);
     if (!ids.length || typeof this._hass.callWS !== "function") return null;
-    const entry = this._fetch(`baseline|${ids.join(",")}|${new Date().toDateString()}`, 24 * 3600000, () => loadEnergyBaseline(this._hass, resolved.energy));
+    const entry = this._fetch(`today-stats|${ids.join(",")}|${new Date().toDateString()}`, 5 * 60000, () => loadTodayStats(this._hass, resolved.energy));
     return entry.data || null;
   }
 

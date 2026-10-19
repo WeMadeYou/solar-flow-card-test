@@ -164,13 +164,13 @@ class SolarFlowCard extends HTMLElement {
     return { totals: sumBuckets(buckets), buckets, spec, loading: entry.loading, error: entry.error };
   }
 
-  // Lifetime energy counters (`energy_sensors: total`): their readings at
-  // midnight, reloaded each day. undefined for daily sensors.
+  // Lifetime energy counters (`energy_sensors: total`): today's hourly
+  // statistics, refreshed every few minutes. undefined for daily sensors.
   _energyBaseline(resolved) {
     if (this._config.energy_sensors !== "total") return undefined;
     const ids = ENERGY_ORDER.map((name) => resolved.energy[name]?.entityId).filter(Boolean);
     if (!ids.length || typeof this._hass.callWS !== "function") return null;
-    const entry = this._fetch(`baseline|${ids.join(",")}|${new Date().toDateString()}`, 24 * 3600000, () => loadEnergyBaseline(this._hass, resolved.energy));
+    const entry = this._fetch(`today-stats|${ids.join(",")}|${new Date().toDateString()}`, 5 * 60000, () => loadTodayStats(this._hass, resolved.energy));
     return entry.data || null;
   }
 
