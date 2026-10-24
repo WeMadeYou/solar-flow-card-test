@@ -144,6 +144,7 @@ co2_factor: 0.7
 | `show_forecast` | `true` | Battery forecast (needs `battery_capacity`). |
 | `show_system` | `true` | Installation: phases, inverter load, battery temperature/voltage/current, generator (shown when the data exists). |
 | `show_panels` | `true` | Optimizer / panel tiles (shown only when panel data exists). |
+| `virtual_storage` | – | Virtual storage with hourly net balancing, see [below](#virtual-storage-hourly-net-balancing). |
 
 ### Period summary
 
@@ -202,6 +203,27 @@ panels:                                        # optional, energy today per pane
     name: South 2
 ```
 
+### Virtual storage (hourly net balancing)
+
+Some tariffs balance import and export within each hour: energy sent to the grid earlier in the hour pays for energy taken later in the same hour. `virtual_storage` shows that hour's balance as a virtual battery: the energy exported minus imported since the full hour (green while there is a surplus, red for a deficit), a bar with the time until it resets, and today's hours with a surplus and the energy balanced. The period summary gets an extra value, **self-sufficiency with hourly balancing**: the share of consumption not covered by the import left after each hour's balancing (for 24H, 3D, 7D and month).
+
+```yaml
+virtual_storage: true                 # calculated from the grid energy counters
+```
+
+```yaml
+virtual_storage:
+  entity: sensor.net_balance          # optional: a ready sensor, e.g. from ha-balance-neto
+  negative: zero                      # show (default): a deficit in red; zero: clamp at 0 kWh
+```
+
+| Key | Default | Description |
+|---|---|---|
+| `entity` | – | A sensor with this hour's balance in kWh (positive = surplus), resetting every full hour, e.g. the net balance of [ha-balance-neto](https://github.com/miguelangellv/ha-balance-neto). Without it the card calculates the balance itself. |
+| `negative` | `show` | `zero` shows a deficit as 0 kWh. |
+
+The card calculates the balance from the `grid_import_energy` and `grid_export_energy` sensors (daily or lifetime counters, with `state_class: total_increasing` or `total`): Home Assistant's 5-minute statistics since the full hour plus what the counters added since. Today's hours and the extra self-sufficiency value come from the hourly statistics, so they also need these two sensors when you use `entity`.
+
 ### Several batteries
 
 Two or more batteries (on one inverter's two battery inputs, on two inverters, or AC-coupled) are listed under `batteries:`. The themes show them as one battery: the power is summed, the charge level is weighted by capacity (10 kWh at 80% and 5 kWh at 20% make 60%) and the forecast uses the total capacity. The Installation section shows each battery with its charge, power, voltage and temperature.
@@ -230,7 +252,6 @@ The 3D, 7D, month and all-time totals and bars come from the long-term statistic
 
 Planned, in no particular order. Ideas and votes are welcome in [issues](https://github.com/gratak/solar-flow-card/issues).
 
-- **Virtual storage with hourly net balancing** ([#43](https://github.com/gratak/solar-flow-card/issues/43)): the energy exported minus imported within the current hour, shown as a virtual battery that resets at every full hour, for tariffs that balance import and export per hour. Either from a ready sensor (e.g. [ha-balance-neto](https://github.com/miguelangellv/ha-balance-neto)) or calculated by the card from the grid import/export counters, with the choice to show a negative balance or clamp it at zero, plus an extra "self-sufficiency with hourly balancing" value.
 - **Several inverters** (`inverters:`, like `batteries:`): power and energy summed by the card without helper sensors, for example an on-grid and an off-grid inverter of different brands, with each inverter listed separately in the Installation section. Until then, combine them with Home Assistant "Sum" helpers under `entities:`.
 
 ## Translations

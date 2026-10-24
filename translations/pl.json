@@ -237,5 +237,12 @@
     "exceptional": "Wyjątkowe warunki"
   },
   "editorPanelsAverage": "Średnia i najsłabszy panel osobno dla każdego stringu",
-  "editorGlass": "Szklane tło (tło dashboardu prześwituje przez kartę)"
+  "editorGlass": "Szklane tło (tło dashboardu prześwituje przez kartę)",
+  "vsTitle": "Wirtualny magazyn · bilans godzinowy",
+  "vsSurplus": "Nadwyżka w tej godzinie",
+  "vsDeficit": "Niedobór w tej godzinie",
+  "vsResetsIn": "zeruje się za {m} min",
+  "vsDay": "Dziś: {h} h z nadwyżką · zbilansowano {kwh}",
+  "autarkyHourly": "Samowystarcz. z bilansem godz.",
+  "vsNone": "Brak nadwyżki w tej godzinie"
 }

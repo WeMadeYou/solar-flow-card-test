@@ -118,6 +118,30 @@ function forecastHtml(m) {
     </section>`;
 }
 
+// Virtual storage (#43): this hour's export minus import, reset at every
+// full hour, for tariffs that balance per hour.
+function virtualStorageHtml(m) {
+  const v = m.virtualStorage;
+  if (!v) return "";
+  const { t, locale } = m;
+  const value = v.value;
+  const state = !isNum(value) ? "" : value > 0.0005 ? "surplus" : value < -0.0005 ? "deficit" : "";
+  const shown = isNum(value) ? `${value > 0.0005 ? "+" : value < -0.0005 ? "−" : ""}${formatEnergy(Math.abs(value), locale)}` : "—";
+  const day = v.day ? fill(t.vsDay, { h: formatNumber(v.day.surplusHours, locale, 0), kwh: formatEnergy(v.day.balanced, locale) }) : "";
+  return `
+    <section class="sfc-section sfc-vstore ${state}" ${v.entityId ? `data-entity="${escapeHtml(v.entityId)}"` : ""}>
+      <span class="sfc-forecast-icon">${MINI_ICONS.charge}</span>
+      <div class="sfc-forecast-copy">
+        <small>${escapeHtml(t.vsTitle)}</small>
+        <strong>${escapeHtml(state === "deficit" ? t.vsDeficit : v.deficit || !state ? t.vsNone : t.vsSurplus)}</strong>
+        ${day ? `<em>${escapeHtml(day)}</em>` : ""}
+      </div>
+      <b class="sfc-forecast-stored sfc-vstore-value">${escapeHtml(shown)}</b>
+      <div class="sfc-forecast-bar" aria-hidden="true"><i style="width:${v.progress.toFixed(1)}%"></i></div>
+      <span class="sfc-vstore-reset">${escapeHtml(fill(t.vsResetsIn, { m: formatNumber(v.minutesLeft, locale, 0) }))}</span>
+    </section>`;
+}
+
 function readingLabel(key) {
   return key.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/_/g, " ").replace(/\s+/g, " ").trim();
 }
@@ -310,8 +334,8 @@ function insightsHtml(m) {
 function standardSections(m) {
   // Wide: the energy section leads across the full width, the rest flow
   // into balanced columns below it.
-  if (m.config.wide) return `${energySectionHtml(m)}<div class="sfc-wide-rest">${inverterHtml(m)}${forecastHtml(m)}${insightsHtml(m)}${systemHtml(m)}${panelsHtml(m)}</div>`;
-  return `${inverterHtml(m)}${forecastHtml(m)}${systemHtml(m)}${energySectionHtml(m)}${insightsHtml(m)}${panelsHtml(m)}`;
+  if (m.config.wide) return `${energySectionHtml(m)}<div class="sfc-wide-rest">${inverterHtml(m)}${forecastHtml(m)}${virtualStorageHtml(m)}${insightsHtml(m)}${systemHtml(m)}${panelsHtml(m)}</div>`;
+  return `${inverterHtml(m)}${forecastHtml(m)}${virtualStorageHtml(m)}${systemHtml(m)}${energySectionHtml(m)}${insightsHtml(m)}${panelsHtml(m)}`;
 }
 
 // ---------------------------------------------------------------------------

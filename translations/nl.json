@@ -237,5 +237,12 @@
     "exceptional": "Uitzonderlijk"
   },
   "editorPanelsAverage": "Gemiddelde en zwakste paneel per string",
-  "editorGlass": "Glazen achtergrond (de dashboardachtergrond schijnt door de kaart)"
+  "editorGlass": "Glazen achtergrond (de dashboardachtergrond schijnt door de kaart)",
+  "vsTitle": "Virtuele opslag · uurbalans",
+  "vsSurplus": "Overschot dit uur",
+  "vsDeficit": "Tekort dit uur",
+  "vsResetsIn": "reset over {m} min",
+  "vsDay": "Vandaag: {h} u met overschot · {kwh} verrekend",
+  "autarkyHourly": "Zelfvoorz. met uurbalans",
+  "vsNone": "Geen overschot dit uur"
 }

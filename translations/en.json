@@ -237,5 +237,12 @@
     "exceptional": "Exceptional"
   },
   "editorPanelsAverage": "Panel average and weakest panel per string",
-  "editorGlass": "Glass background (the dashboard background shows through the card)"
+  "editorGlass": "Glass background (the dashboard background shows through the card)",
+  "vsTitle": "Virtual storage · hourly balance",
+  "vsSurplus": "Surplus this hour",
+  "vsDeficit": "Deficit this hour",
+  "vsResetsIn": "resets in {m} min",
+  "vsDay": "Today: {h} h with a surplus · {kwh} balanced",
+  "autarkyHourly": "Self-suff. with hourly balance",
+  "vsNone": "No surplus this hour"
 }

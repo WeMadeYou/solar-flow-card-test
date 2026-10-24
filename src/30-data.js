@@ -215,6 +215,130 @@ async function loadTodayStats(hass, energy) {
   return out;
 }
 
+// Virtual storage (#43): `virtual_storage: true` or an object with an
+// optional ready net balance `entity` and `negative: show|zero`.
+function virtualStorageConfig(config) {
+  const vs = config.virtual_storage;
+  if (vs === true) return { entity: null, negative: "show" };
+  if (!vs || typeof vs !== "object" || Array.isArray(vs)) return null;
+  return { entity: typeof vs.entity === "string" && vs.entity ? vs.entity : null, negative: vs.negative === "zero" ? "zero" : "show" };
+}
+
+function startOfHour(date) {
+  const d = new Date(date);
+  d.setMinutes(0, 0, 0);
+  return d;
+}
+
+const GRID_COUNTERS = ["gridImport", "gridExport"];
+
+// Grid import and export of every full hour since `start`, from the hourly
+// statistics: Map(hour start ms -> { gridImport, gridExport }) in kWh.
+async function loadHourlyGrid(hass, energy, start) {
+  const ids = GRID_COUNTERS.map((name) => energy[name]?.entityId);
+  const response = await hass.callWS({
+    type: "recorder/statistics_during_period",
+    start_time: start.toISOString(),
+    end_time: new Date().toISOString(),
+    statistic_ids: [...new Set(ids)],
+    period: "hour",
+    types: ["change"],
+    units: { energy: "kWh" },
+  });
+  const hours = new Map();
+  GRID_COUNTERS.forEach((name, i) => {
+    for (const row of response?.[ids[i]] || []) {
+      const at = statStart(row.start);
+      const hour = hours.get(at) || { gridImport: 0, gridExport: 0 };
+      hour[name] += Math.max(0, Number(row.change) || 0);
+      hours.set(at, hour);
+    }
+  });
+  return hours;
+}
+
+// The current hour so far, from the 5-minute statistics: the change since
+// the full hour and the last compiled reading, which the live state
+// continues (see hourSoFar()).
+async function loadCurrentHour(hass, energy) {
+  const ids = GRID_COUNTERS.map((name) => energy[name]?.entityId);
+  const hourStart = startOfHour(new Date()).getTime();
+  const response = await hass.callWS({
+    type: "recorder/statistics_during_period",
+    start_time: new Date(hourStart - 15 * 60000).toISOString(),
+    end_time: new Date().toISOString(),
+    statistic_ids: [...new Set(ids)],
+    period: "5minute",
+    types: ["change", "state"],
+    units: { energy: "kWh" },
+  });
+  const out = {};
+  GRID_COUNTERS.forEach((name, i) => {
+    const rows = response?.[ids[i]] || [];
+    if (!rows.length) return;
+    let change = 0;
+    let last = null;
+    for (const row of rows) {
+      if (statStart(row.start) >= hourStart) change += Math.max(0, Number(row.change) || 0);
+      const state = Number(row.state);
+      if (Number.isFinite(state)) last = state;
+    }
+    out[name] = { change, last };
+  });
+  return out;
+}
+
+// Import and export within the current hour: the compiled 5-minute change
+// plus what the counter added since (a counter that went down was reset).
+function hourSoFar(resolved, current) {
+  if (!current) return null;
+  const out = {};
+  for (const name of GRID_COUNTERS) {
+    const s = current[name];
+    if (!s) return null;
+    const now = kwhOf(resolved.energy[name]?.stateObj);
+    out[name] = s.change + (isNum(now) && isNum(s.last) ? (now >= s.last ? now - s.last : now) : 0);
+  }
+  return out;
+}
+
+// Import left after balancing import and export within each hour.
+function hourlyNetImport(hours, since, current) {
+  if (!hours) return null;
+  let net = 0;
+  for (const [at, h] of hours) if (at >= since) net += Math.max(0, h.gridImport - h.gridExport);
+  if (current) net += Math.max(0, current.gridImport - current.gridExport);
+  return net;
+}
+
+// The virtual storage: this hour's balance (export minus import), the time
+// until it resets, and today's hours.
+function virtualStorage(hass, resolved, vs, todayHours, current, now = new Date()) {
+  const hourStart = startOfHour(now);
+  const minutesLeft = Math.max(0, Math.ceil((hourStart.getTime() + 3600000 - now.getTime()) / 60000));
+  let value = null;
+  let entityId = null;
+  if (vs.entity) {
+    entityId = vs.entity;
+    value = kwhOf(hass.states?.[vs.entity]);
+  } else if (current) {
+    value = current.gridExport - current.gridImport;
+    entityId = resolved.energy.gridExport?.entityId || null;
+  }
+  let day = null;
+  if (todayHours) {
+    const hours = [...todayHours.entries()].filter(([at]) => at >= startOfDay(now).getTime() && at < hourStart.getTime()).map(([, h]) => h);
+    if (current) hours.push(current);
+    day = {
+      surplusHours: hours.filter((h) => h.gridExport - h.gridImport > 0.005).length,
+      balanced: hours.reduce((sum, h) => sum + Math.min(h.gridImport, h.gridExport), 0),
+    };
+  }
+  const deficit = isNum(value) && value < -0.0005;
+  if (deficit && vs.negative === "zero") value = 0;
+  return { value, deficit, entityId, minutesLeft, progress: ((60 - minutesLeft) / 60) * 100, day };
+}
+
 // Long-term statistics query for a period other than today.
 function statsSpec(period) {
   const now = new Date();
@@ -298,13 +422,17 @@ function migrateConfig(config) {
   return next;
 }
 
-function periodSummary(totals, config, t, locale) {
+function periodSummary(totals, config, t, locale, netImport = null) {
   const { solar, load, gridImport, gridExport } = totals;
   const items = [];
   const show = (key) => config[key] !== false;
   const hasSolar = show("show_solar");
   if (show("show_self_sufficiency") && isNum(load) && isNum(gridImport) && load > 0.05) {
     items.push(["autarky", t.autarky, formatPercent(clamp(((load - gridImport) / load) * 100, 0, 100), locale)]);
+  }
+  // With virtual storage: the import left after hourly balancing.
+  if (show("show_self_sufficiency") && isNum(load) && isNum(netImport) && load > 0.05) {
+    items.push(["autarky", t.autarkyHourly, formatPercent(clamp(((load - netImport) / load) * 100, 0, 100), locale)]);
   }
   if (hasSolar && show("show_self_use") && isNum(solar) && isNum(gridExport) && solar > 0.05) {
     items.push(["selfuse", t.selfUse, formatPercent(clamp(((solar - gridExport) / solar) * 100, 0, 100), locale)]);
