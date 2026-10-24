@@ -263,7 +263,8 @@ const TRANSLATIONS = {
     "vsResetsIn": "resets in {m} min",
     "vsDay": "Today: {h} h with a surplus · {kwh} balanced",
     "autarkyHourly": "Self-suff. with hourly balance",
-    "vsNone": "No surplus this hour"
+    "vsNone": "No surplus this hour",
+    "otherDetails": "Other readings"
   },
   "nl": {
     "languageName": "Nederlands",
@@ -511,7 +512,8 @@ const TRANSLATIONS = {
     "vsResetsIn": "reset over {m} min",
     "vsDay": "Vandaag: {h} u met overschot · {kwh} verrekend",
     "autarkyHourly": "Zelfvoorz. met uurbalans",
-    "vsNone": "Geen overschot dit uur"
+    "vsNone": "Geen overschot dit uur",
+    "otherDetails": "Overige metingen"
   },
   "pl": {
     "languageName": "Polski",
@@ -759,7 +761,8 @@ const TRANSLATIONS = {
     "vsResetsIn": "zeruje się za {m} min",
     "vsDay": "Dziś: {h} h z nadwyżką · zbilansowano {kwh}",
     "autarkyHourly": "Samowystarcz. z bilansem godz.",
-    "vsNone": "Brak nadwyżki w tej godzinie"
+    "vsNone": "Brak nadwyżki w tej godzinie",
+    "otherDetails": "Inne odczyty"
   }
 };
 
@@ -1491,7 +1494,46 @@ function deviceKey(stateObj) {
   return index > 0 ? words[index - 1] : "";
 }
 
-function inverterReadings(resolved) {
+// Inverter readings set in the card config, for any inverter: string power,
+// voltage and current (`entities: pv1_power … pv4_current`, the power is
+// worked out from voltage × current when missing) and `inverter_details:`,
+// a list of any sensors.
+function configuredInverter(hass, config) {
+  const states = hass?.states || {};
+  const configured = config.entities || {};
+  const device = { serial: "", strings: new Map(), temperatures: [], battery: [], grid: [], other: [] };
+  const read = (entityId, key) => {
+    const stateObj = states[entityId];
+    if (!stateObj) return null;
+    const value = stateNumber(stateObj);
+    return { entityId, key, value, unit: stateUnit(stateObj), text: value === null ? String(stateObj.state) : null };
+  };
+  for (let n = 1; n <= 4; n++) {
+    const string = {};
+    const power = configured[`pv${n}_power`] ? read(configured[`pv${n}_power`], `PV${n} power`) : null;
+    if (isNum(power?.value)) string.W = { ...power, value: wattsOf(states[power.entityId]), unit: "W" };
+    for (const [unit, name] of [["V", "voltage"], ["A", "current"]]) {
+      const r = configured[`pv${n}_${name}`] ? read(configured[`pv${n}_${name}`], `PV${n} ${name}`) : null;
+      if (isNum(r?.value)) string[unit] = r;
+    }
+    if (!string.W && string.V && string.A) string.W = { ...string.V, key: `PV${n} power`, value: string.V.value * string.A.value, unit: "W" };
+    if (Object.keys(string).length) device.strings.set(n, string);
+  }
+  const details = Array.isArray(config.inverter_details) ? config.inverter_details : [];
+  for (const item of details) {
+    const entityId = typeof item === "string" ? item : item?.entity;
+    const r = entityId ? read(entityId, (typeof item === "object" && item?.name) || states[entityId]?.attributes?.friendly_name || entityId) : null;
+    if (r) device.other.push(r);
+  }
+  return device.strings.size || device.other.length ? device : null;
+}
+
+function inverterReadings(resolved, hass, config = {}) {
+  const own = configuredInverter(hass, config);
+  return own ? [own, ...deyeInverterReadings(resolved)] : deyeInverterReadings(resolved);
+}
+
+function deyeInverterReadings(resolved) {
   const devices = resolved.candidates.filter(([, s]) => s.attributes?.sensor_type === "device");
   const inverters = devices.filter(([, s]) => String(s.attributes?.device_type || "").includes("INVERTER"));
   const bySerial = new Map();
@@ -1500,7 +1542,7 @@ function inverterReadings(resolved) {
     const value = stateNumber(stateObj);
     if (!key || value === null) continue;
     const serial = String(stateObj.attributes?.device_sn || "");
-    const device = bySerial.get(serial) || { serial, strings: new Map(), temperatures: [], battery: [], grid: [] };
+    const device = bySerial.get(serial) || { serial, strings: new Map(), temperatures: [], battery: [], grid: [], other: [] };
     const unit = stateUnit(stateObj);
     const reading = { entityId, key, value, unit };
     const stringMatch = key.match(/PV\s*(\d+)/i);
@@ -2092,12 +2134,12 @@ function inverterHtml(m) {
   const reading = (r) => `
     <button class="sfc-reading" data-entity="${escapeHtml(r.entityId)}">
       <small>${escapeHtml(readingLabel(r.key))}</small>
-      <b>${escapeHtml(`${formatNumber(r.value, locale, Math.abs(r.value) < 100 ? 1 : 0)} ${r.unit}`)}</b>
+      <b>${escapeHtml(r.text ?? `${formatNumber(r.value, locale, Math.abs(r.value) < 100 ? 1 : 0)} ${r.unit}`.trim())}</b>
     </button>`;
   const group = (title, items) => items.length ? `
     <div class="sfc-group"><h4>${escapeHtml(title)}</h4><div class="sfc-readings">${items.map(reading).join("")}</div></div>` : "";
   const content = devices.length ? devices.map((device) => `
-    ${devices.length > 1 ? `<h4 class="sfc-serial">${escapeHtml(device.serial)}</h4>` : ""}
+    ${devices.length > 1 && device.serial ? `<h4 class="sfc-serial">${escapeHtml(device.serial)}</h4>` : ""}
     ${device.strings.size ? `
       <div class="sfc-group">
         <h4>${escapeHtml(t.pvStrings)}</h4>
@@ -2112,7 +2154,8 @@ function inverterHtml(m) {
       </div>` : ""}
     ${group(t.temperatures, device.temperatures)}
     ${group(t.batteryDetails, device.battery)}
-    ${group(t.gridDetails, device.grid)}`).join("") : `<p class="sfc-empty-note">${escapeHtml(t.noDetails)}</p>`;
+    ${group(t.gridDetails, device.grid)}
+    ${group(t.otherDetails, device.other || [])}`).join("") : `<p class="sfc-empty-note">${escapeHtml(t.noDetails)}</p>`;
   return `
     <section class="sfc-section sfc-inverter">
       <div class="sfc-head">
@@ -2190,7 +2233,7 @@ function systemHtml(m) {
   const phases = data.phases ? `
     <div class="sfc-phases" style="--n:${data.phases.length}">
       ${data.phases.map((p) => `
-        <button class="sfc-phase" ${attr(p.entityId)}>
+        <button class="sfc-phase ${p.main === "grid" && isNum(p.grid) ? (p.grid < -ACTIVE_W ? "export" : p.grid > ACTIVE_W ? "import" : "") : ""}" ${attr(p.entityId)}>
           <small>${escapeHtml(p.main === "grid" ? `${p.name} · ${t.grid}` : p.name)}</small>
           <strong>${escapeHtml(formatPower(p.main === "grid" ? p.grid : p.load, locale))}</strong>
           <i style="--p:${(() => { const v = p.main === "grid" ? Math.abs(p.grid ?? 0) : p.load; return isNum(v) ? ((v / data.phaseMax) * 100).toFixed(0) : 0; })()}%"></i>
@@ -2743,7 +2786,7 @@ function renderDiorama(m) {
   const { t, locale, live } = m;
   const { svg, sky } = dioramaScene(m);
   const pill = (x, y, cls, value, note, entityId) => `
-    <button class="dio-pill" style="left:${((x / 520) * 100).toFixed(1)}%;top:${((y / 360) * 100).toFixed(1)}%" ${entityAttr(entityId)}>
+    <button class="dio-pill ${cls}" style="left:${((x / 520) * 100).toFixed(1)}%;top:${((y / 360) * 100).toFixed(1)}%" ${entityAttr(entityId)}>
       <i class="${cls}"></i>${escapeHtml(value)} <small>${escapeHtml(note)}</small>
     </button>`;
   const batteryNote = live.dischargeActive ? `−${formatPower(live.discharge, locale)}` : live.chargeActive ? `+${formatPower(live.charge, locale)}` : t.idle;
@@ -2763,7 +2806,7 @@ function renderDiorama(m) {
       <div class="dio-clock">${escapeHtml(clockText(m))}${isNum(m.weather?.temperature) ? ` <button class="dio-temp" ${entityAttr(m.weather.entityId)}>${escapeHtml(`${formatNumber(m.weather.temperature, locale, 0)}${m.weather.unit}`)}</button>` : ""}</div>
       ${m.config.showSolar ? pill(288, 78, "pv", formatPower(live.solar, locale), t.fromRoof, m.ids.live.solar) : ""}
       ${m.config.showBattery ? pill(22, 208, "battery", formatPercent(live.soc, locale), batteryNote, batteryEntityId(m)) : ""}
-      ${pill(378, 240, "grid", formatPower(gridValue, locale), t.grid.toLowerCase(), gridEntityId(m))}
+      ${pill(378, 240, "grid", formatPower(gridValue, locale), `${live.exportActive ? "↑ " : live.importActive ? "↓ " : ""}${t.grid.toLowerCase()}`, gridEntityId(m))}
       ${pill(120, 296, "load", formatPower(live.load, locale), t.inHome, m.ids.live.load)}
     </div>
     <div class="dio-bottom">
@@ -2965,7 +3008,7 @@ function renderPaper(m) {
     ${lede ? `<p class="pap-lede">${lede}</p>` : ""}
     <hr>
     ${sankeyHtml(m)}
-    <button type="button" class="sfc-link pap-inverter" data-action="inverter">${escapeHtml(t.inverterDetails)} →</button>
+    ${m.hasDetails ? `<button type="button" class="sfc-link pap-inverter" data-action="inverter">${escapeHtml(t.inverterDetails)} →</button>` : ""}
     <div class="sfc-sections">${standardSections(m)}</div>`;
 }
 
@@ -4014,6 +4057,14 @@ const BASE_CSS = `
   .sfc-phase i, .sfc-meter i { display: block; height: 4px; margin: 3px 0 1px; border-radius: 999px;
     background: linear-gradient(90deg, var(--sfc-c, var(--sfc-load)) var(--p), var(--sfc-track) var(--p)); }
   .sfc-bank { grid-template-columns: repeat(var(--n), minmax(0, 1fr)); }
+  /* Grid per phase: green while exporting, red while importing. */
+  .sfc-phase.export { --sfc-c: var(--sfc-good, #3fb950); }
+  .sfc-phase.import { --sfc-c: var(--sfc-bad, #f0524a); }
+  /* The grid's status in the themes' flow views. */
+  ha-card.grid-export :is(.aur-node, .atl-label, .exp-box, .fnd-node, .gal-readout, .rx-node).grid > :is(em, small:last-child),
+  ha-card.grid-export :is(.gt-row.grid em, .dio-pill.grid small) { color: var(--sfc-good, #3fb950); }
+  ha-card.grid-import :is(.aur-node, .atl-label, .exp-box, .fnd-node, .gal-readout, .rx-node).grid > :is(em, small:last-child),
+  ha-card.grid-import :is(.gt-row.grid em, .dio-pill.grid small) { color: var(--sfc-bad, #f0524a); }
   .sfc-bank + .sfc-phases { margin-top: 8px; }
   .sfc-bat { --sfc-c: var(--sfc-battery); }
   .sfc-bat strong { color: var(--sfc-battery); }
@@ -4064,7 +4115,7 @@ const THEME_CSS = {
       --sfc-glass: rgba(255, 255, 255, .55);
       --sfc-font: "Nunito", system-ui, sans-serif;
       --sfc-bg: #ffffff; --sfc-surface: #f5f8fb; --sfc-border: #e3eaf1; --sfc-text: #24364a; --sfc-muted: #6a7d92;
-      --sfc-pv: #f5a400; --sfc-load: #f26b5b; --sfc-battery: #1fbf86; --sfc-grid: #5b8def;
+      --sfc-pv: #f5a400; --sfc-load: #f26b5b; --sfc-battery: #1fbf86; --sfc-grid: #5b8def; --sfc-good: #1f9d55; --sfc-bad: #d64545;
       --sfc-accent: #3b82f6; --sfc-accent-soft: #e3eefe; --sfc-tile-bg: #ffffff; --sfc-track: #e7eef4;
       --sfc-tab-bg: #eaf0f6; --sfc-tab-on-bg: #ffffff; --sfc-tab-on: #24364a; --sfc-tab-shadow: 0 2px 8px rgba(30,60,90,.12);
       --sfc-flow-base: rgba(255,255,255,.0); --sfc-flow-w: 4;
@@ -4173,7 +4224,7 @@ const THEME_CSS = {
       --sfc-font: "Inter", system-ui, sans-serif; --sfc-heading-font: "Fraunces", Georgia, serif; --sfc-num-font: "Fraunces", Georgia, serif;
       --sfc-heading-weight: 600;
       --sfc-bg: #f6f1e7; --sfc-surface: transparent; --sfc-border: #ddd3c2; --sfc-text: #2a2722; --sfc-muted: #8a8173;
-      --sfc-pv: #c9862b; --sfc-load: #a8473a; --sfc-battery: #6f8f6a; --sfc-grid: #56677a;
+      --sfc-pv: #c9862b; --sfc-load: #a8473a; --sfc-battery: #6f8f6a; --sfc-grid: #56677a; --sfc-good: #4f7d3a; --sfc-bad: #b0412e;
       --sfc-accent: #b06a1f; --sfc-accent-soft: transparent; --sfc-tile-bg: transparent; --sfc-track: #e6ddcd;
       --sfc-tab-bg: transparent; --sfc-tab-on-bg: transparent; --sfc-tab-on: #2a2722; --sfc-tip-bg: #fbf8f1;
       --sfc-radius: 6px; --sfc-section-radius: 0; --sfc-tile-radius: 0; --sfc-shadow: 0 20px 40px rgba(60,45,20,.15); --sfc-frame: #e6ddcd;
@@ -5125,13 +5176,15 @@ class SolarFlowCard extends HTMLElement {
       const energy = this._periodEnergy(resolved, period, today);
       const chart = this._chartState(resolved, period, energy);
       const forecast = batteryForecast(live, bank?.capacity && !positiveNumber(config.battery_capacity) ? { ...config, battery_capacity: bank.capacity } : config);
-      const readings = inverterReadings(resolved);
+      const readings = inverterReadings(resolved, this._hass, config);
       const panels = showSolar ? panelData(this._hass, resolved, config) || estimatePanels(readings, config, today) : null;
       const insights = this._insights(resolved, today, forecast);
       const weather = theme === "diorama" || theme === "reactor" ? weatherData(this._hass, config) : null;
       // The wide layout has room for everything: inverter details stay open.
       const wide = config.wide === true;
-      const inverterOpen = wide || this._inverterOpen;
+      // Nothing to show: no details section and no link to it.
+      const hasDetails = readings.length > 0;
+      const inverterOpen = hasDetails && (wide || this._inverterOpen);
       const inverter = inverterOpen ? readings : null;
       const system = config.show_system !== false ? systemData(this._hass, resolved, config) : null;
       if (system && !showBattery) Object.assign(system, { battery: [], batteryWarn: null });
@@ -5196,6 +5249,7 @@ class SolarFlowCard extends HTMLElement {
         insights,
         weather,
         inverterOpen,
+        hasDetails,
         hiddenSeries: this._hiddenSeries,
         // Seconds since the card was first shown, during its start-up
         // animation (re-renders continue it), then null.
@@ -5205,7 +5259,7 @@ class SolarFlowCard extends HTMLElement {
 
       this._paint(
         BASE_CSS + THEME_CSS[theme],
-        ["sfc", `theme-${theme}`, config.animation === false && "no-anim", config.background === "glass" && "glass"].filter(Boolean).join(" "),
+        ["sfc", `theme-${theme}`, config.animation === false && "no-anim", config.background === "glass" && "glass", live.exportActive ? "grid-export" : live.importActive && "grid-import"].filter(Boolean).join(" "),
         wide ? wideLayout(theme, THEME_RENDER[theme](model)) : THEME_RENDER[theme](model),
       );
       this._wire(model);
@@ -5261,6 +5315,7 @@ class SolarFlowCard extends HTMLElement {
     root.querySelectorAll('[data-action="inverter"]').forEach((element) => {
       element.addEventListener("click", (event) => {
         event.stopPropagation();
+        if (!model.hasDetails) return;
         if (model.config.wide) {
           root.querySelector(".sfc-inverter")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
           return;
@@ -5309,7 +5364,7 @@ const EDITOR_NUMBERS = [
 // The inverter's PV strings, for one "panels on this string" field each.
 function editorStrings(hass, config) {
   try {
-    const device = inverterReadings(resolveEntities(hass, config)).find((d) => d.strings.size);
+    const device = inverterReadings(resolveEntities(hass, config), hass, config).find((d) => d.strings.size);
     return device ? [...device.strings.entries()].sort((a, b) => a[0] - b[0]).map(([index, s]) => ({ index, voltage: s.V?.value ?? null })) : [];
   } catch (error) {
     return [];

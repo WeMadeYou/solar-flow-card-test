@@ -244,5 +244,6 @@
   "vsResetsIn": "zeruje się za {m} min",
   "vsDay": "Dziś: {h} h z nadwyżką · zbilansowano {kwh}",
   "autarkyHourly": "Samowystarcz. z bilansem godz.",
-  "vsNone": "Brak nadwyżki w tej godzinie"
+  "vsNone": "Brak nadwyżki w tej godzinie",
+  "otherDetails": "Inne odczyty"
 }

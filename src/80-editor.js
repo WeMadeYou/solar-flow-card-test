@@ -13,7 +13,7 @@ const EDITOR_NUMBERS = [
 // The inverter's PV strings, for one "panels on this string" field each.
 function editorStrings(hass, config) {
   try {
-    const device = inverterReadings(resolveEntities(hass, config)).find((d) => d.strings.size);
+    const device = inverterReadings(resolveEntities(hass, config), hass, config).find((d) => d.strings.size);
     return device ? [...device.strings.entries()].sort((a, b) => a[0] - b[0]).map(([index, s]) => ({ index, voltage: s.V?.value ?? null })) : [];
   } catch (error) {
     return [];

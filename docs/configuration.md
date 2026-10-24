@@ -68,8 +68,24 @@ kWh (Wh and MWh are converted), daily by default or lifetime with `energy_sensor
 | `inverter_rated_power` | Inverter rated power (W). Or set `inverter_power_rating` in kW instead. |
 | `battery_temperature`, `battery_voltage`, `battery_current` | Battery readings (°C, V, A) |
 | `generator_power` | Generator power (W), shown while it runs |
+| `pv1_power` … `pv4_power` | Power of each PV string (W) |
+| `pv1_voltage` … `pv4_voltage`, `pv1_current` … `pv4_current` | Voltage (V) and current (A) of each PV string; without `pvN_power` the card shows voltage × current |
 
 A single-phase installation simply gives `_l1` only; the card shows the phases it gets.
+
+With only grid power per phase (no per-phase consumption), each phase shows its grid power: the bar is green while the phase exports and red while it imports.
+
+The PV string entries fill the **Inverter details** (tap the inverter in the flow, always open in the wide layout) and let `panels_per_string` estimate the panels. Any other sensor goes under `inverter_details:`, a list shown as tiles in the same section (a text state such as "On-grid" works too):
+
+```yaml
+inverter_details:
+  - sensor.inverter_internal_temperature
+  - entity: sensor.inverter_efficiency
+    name: Efficiency
+  - sensor.inverter_device_status
+```
+
+Without any of these (and without DeyeCloud) the card shows no inverter details and no link to them.
 
 ## Helpers
 
@@ -144,11 +160,20 @@ entities:
   solar_energy: sensor.inverter_total_yield                                # kWh, lifetime
   grid_import_energy: sensor.0_electricity_meter_total_forward_active_energy  # kWh, lifetime
   grid_export_energy: sensor.0_electricity_meter_total_reverse_active_energy  # kWh, lifetime
+  pv1_voltage: sensor.inverter_pv_1_voltage
+  pv1_current: sensor.inverter_pv_1_current
+  pv2_voltage: sensor.inverter_pv_2_voltage
+  pv2_current: sensor.inverter_pv_2_current
+panels_per_string: [11, 7]
+inverter_details:
+  - sensor.inverter_internal_temperature
+  - sensor.inverter_efficiency
+  - sensor.inverter_device_status
 ```
 
 `load_power` and `load_energy` are left out: the card works out the home's consumption from the panels and the grid. Without per-phase consumption, the Installation section shows the grid power of each phase.
 
-The Panels section reads per-panel data from DeyeCloud optimizers, and `panels_per_string` estimates panels from DeyeCloud string readings; neither is available from huawei_solar yet, so the section stays hidden here.
+With the PV string voltage and current, `panels_per_string: [11, 7]` estimates each panel's power and energy from its string (the optimizers' own readings are not used). The inverter's temperature, efficiency and status show in the Inverter details.
 
 With an hourly net-balancing tariff, add `virtual_storage: true`: the card works out each hour's balance from the two ZAMEL counters (see the [README](../README.md#virtual-storage-hourly-net-balancing)). With [ha-balance-neto](https://github.com/miguelangellv/ha-balance-neto) installed you can point it at its net balance sensor instead (`virtual_storage: { entity: sensor.… }`).
 

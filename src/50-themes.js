@@ -217,7 +217,7 @@ function renderDiorama(m) {
   const { t, locale, live } = m;
   const { svg, sky } = dioramaScene(m);
   const pill = (x, y, cls, value, note, entityId) => `
-    <button class="dio-pill" style="left:${((x / 520) * 100).toFixed(1)}%;top:${((y / 360) * 100).toFixed(1)}%" ${entityAttr(entityId)}>
+    <button class="dio-pill ${cls}" style="left:${((x / 520) * 100).toFixed(1)}%;top:${((y / 360) * 100).toFixed(1)}%" ${entityAttr(entityId)}>
       <i class="${cls}"></i>${escapeHtml(value)} <small>${escapeHtml(note)}</small>
     </button>`;
   const batteryNote = live.dischargeActive ? `−${formatPower(live.discharge, locale)}` : live.chargeActive ? `+${formatPower(live.charge, locale)}` : t.idle;
@@ -237,7 +237,7 @@ function renderDiorama(m) {
       <div class="dio-clock">${escapeHtml(clockText(m))}${isNum(m.weather?.temperature) ? ` <button class="dio-temp" ${entityAttr(m.weather.entityId)}>${escapeHtml(`${formatNumber(m.weather.temperature, locale, 0)}${m.weather.unit}`)}</button>` : ""}</div>
       ${m.config.showSolar ? pill(288, 78, "pv", formatPower(live.solar, locale), t.fromRoof, m.ids.live.solar) : ""}
       ${m.config.showBattery ? pill(22, 208, "battery", formatPercent(live.soc, locale), batteryNote, batteryEntityId(m)) : ""}
-      ${pill(378, 240, "grid", formatPower(gridValue, locale), t.grid.toLowerCase(), gridEntityId(m))}
+      ${pill(378, 240, "grid", formatPower(gridValue, locale), `${live.exportActive ? "↑ " : live.importActive ? "↓ " : ""}${t.grid.toLowerCase()}`, gridEntityId(m))}
       ${pill(120, 296, "load", formatPower(live.load, locale), t.inHome, m.ids.live.load)}
     </div>
     <div class="dio-bottom">
@@ -439,7 +439,7 @@ function renderPaper(m) {
     ${lede ? `<p class="pap-lede">${lede}</p>` : ""}
     <hr>
     ${sankeyHtml(m)}
-    <button type="button" class="sfc-link pap-inverter" data-action="inverter">${escapeHtml(t.inverterDetails)} →</button>
+    ${m.hasDetails ? `<button type="button" class="sfc-link pap-inverter" data-action="inverter">${escapeHtml(t.inverterDetails)} →</button>` : ""}
     <div class="sfc-sections">${standardSections(m)}</div>`;
 }
 
