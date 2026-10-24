@@ -190,14 +190,18 @@ const THEME_FONTS = {
   reactor: "Rajdhani:wght@500;600;700&family=Orbitron:wght@500;700",
 };
 
-// Fonts declared inside a shadow root are ignored, so add the theme's font
-// stylesheet to the document once.
-function ensureThemeFonts(theme) {
-  const id = `solar-flow-card-font-${theme}`;
-  if (!THEME_FONTS[theme] || document.getElementById(id)) return;
+// Fonts declared inside a shadow root are ignored, so add the font
+// stylesheet to the document once: the theme's Google Fonts with
+// `load_fonts: true`, or your own (`font_url`, e.g. a self-hosted CSS in
+// /config/www). By default nothing is loaded and the themes use system fonts.
+function ensureThemeFonts(config) {
+  const custom = typeof config.font_url === "string" && config.font_url.trim();
+  const href = custom || (config.load_fonts === true && THEME_FONTS[config.theme]
+    ? `https://fonts.googleapis.com/css2?family=${THEME_FONTS[config.theme]}&display=swap` : null);
+  if (!href || [...document.querySelectorAll("link[data-solar-flow-card-font]")].some((el) => el.getAttribute("href") === href)) return;
   const link = document.createElement("link");
-  link.id = id;
+  link.dataset.solarFlowCardFont = "";
   link.rel = "stylesheet";
-  link.href = `https://fonts.googleapis.com/css2?family=${THEME_FONTS[theme]}&display=swap`;
+  link.href = href;
   document.head.appendChild(link);
 }

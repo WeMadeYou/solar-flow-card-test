@@ -6,7 +6,6 @@ const DEFAULT_CONFIG = {
   show_forecast: true,
   show_panels: true,
   animation: true,
-  load_fonts: true,
 };
 
 // Chart series the viewer switched off by clicking the legend; remembered in
@@ -300,7 +299,7 @@ class SolarFlowCard extends HTMLElement {
       const t = stringsFor(language);
       const locale = t.locale;
       const theme = config.theme;
-      if (config.load_fonts !== false) ensureThemeFonts(theme);
+      ensureThemeFonts(config);
       const resolved = resolveEntities(this._hass, config);
       if (!hasAnyEntity(resolved)) {
         const signature = `empty|${language}|${theme}`;

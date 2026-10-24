@@ -7,7 +7,7 @@
  * Built from src/*.js by scripts/build.mjs. Edit the sources, not this file.
  */
 (() => {
-const CARD_VERSION = "1.4.4";
+const CARD_VERSION = "1.5.0";
 const CARD_TAG = "solar-flow-card";
 const EDITOR_TAG = "solar-flow-card-editor";
 const THEMES = ["diorama", "aurora", "paper", "lcars", "atlantis", "expanse", "foundation", "galaxy", "gate", "reactor"];
@@ -985,15 +985,19 @@ const THEME_FONTS = {
   reactor: "Rajdhani:wght@500;600;700&family=Orbitron:wght@500;700",
 };
 
-// Fonts declared inside a shadow root are ignored, so add the theme's font
-// stylesheet to the document once.
-function ensureThemeFonts(theme) {
-  const id = `solar-flow-card-font-${theme}`;
-  if (!THEME_FONTS[theme] || document.getElementById(id)) return;
+// Fonts declared inside a shadow root are ignored, so add the font
+// stylesheet to the document once: the theme's Google Fonts with
+// `load_fonts: true`, or your own (`font_url`, e.g. a self-hosted CSS in
+// /config/www). By default nothing is loaded and the themes use system fonts.
+function ensureThemeFonts(config) {
+  const custom = typeof config.font_url === "string" && config.font_url.trim();
+  const href = custom || (config.load_fonts === true && THEME_FONTS[config.theme]
+    ? `https://fonts.googleapis.com/css2?family=${THEME_FONTS[config.theme]}&display=swap` : null);
+  if (!href || [...document.querySelectorAll("link[data-solar-flow-card-font]")].some((el) => el.getAttribute("href") === href)) return;
   const link = document.createElement("link");
-  link.id = id;
+  link.dataset.solarFlowCardFont = "";
   link.rel = "stylesheet";
-  link.href = `https://fonts.googleapis.com/css2?family=${THEME_FONTS[theme]}&display=swap`;
+  link.href = href;
   document.head.appendChild(link);
 }
 
@@ -4113,7 +4117,7 @@ const THEME_CSS = {
   diorama: `
     .sfc {
       --sfc-glass: rgba(255, 255, 255, .55);
-      --sfc-font: "Nunito", system-ui, sans-serif;
+      --sfc-font: "Nunito", ui-rounded, "SF Pro Rounded", "Segoe UI", Roboto, "Helvetica Neue", system-ui, sans-serif;
       --sfc-bg: #ffffff; --sfc-surface: #f5f8fb; --sfc-border: #e3eaf1; --sfc-text: #24364a; --sfc-muted: #6a7d92;
       --sfc-pv: #f5a400; --sfc-load: #f26b5b; --sfc-battery: #1fbf86; --sfc-grid: #5b8def; --sfc-good: #1f9d55; --sfc-bad: #d64545;
       --sfc-accent: #3b82f6; --sfc-accent-soft: #e3eefe; --sfc-tile-bg: #ffffff; --sfc-track: #e7eef4;
@@ -4169,7 +4173,7 @@ const THEME_CSS = {
   // ----------------------------------------------------------------- Aurora
   aurora: `
     .sfc {
-      --sfc-font: "Space Grotesk", system-ui, sans-serif; --sfc-num-font: "JetBrains Mono", ui-monospace, monospace;
+      --sfc-font: "Space Grotesk", "Segoe UI", Roboto, "Helvetica Neue", system-ui, sans-serif; --sfc-num-font: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, "Roboto Mono", monospace;
       --sfc-bg: radial-gradient(60% 40% at 15% 0%, rgba(0,255,200,.18), transparent 70%), radial-gradient(50% 40% at 100% 30%, rgba(140,80,255,.22), transparent 70%), radial-gradient(70% 50% at 50% 110%, rgba(255,60,160,.16), transparent 70%), #0a0d1a;
       --sfc-surface: rgba(255,255,255,.035); --sfc-border: rgba(255,255,255,.08); --sfc-text: #e9f1ff; --sfc-muted: #8390b8;
       --sfc-pv: #ffd23f; --sfc-load: #ff4fa3; --sfc-battery: #4dffd2; --sfc-grid: #a28bff;
@@ -4221,7 +4225,7 @@ const THEME_CSS = {
   paper: `
     .sfc {
       --sfc-glass: rgba(255, 255, 255, .55);
-      --sfc-font: "Inter", system-ui, sans-serif; --sfc-heading-font: "Fraunces", Georgia, serif; --sfc-num-font: "Fraunces", Georgia, serif;
+      --sfc-font: "Inter", "Segoe UI", Roboto, "Helvetica Neue", system-ui, sans-serif; --sfc-heading-font: "Fraunces", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; --sfc-num-font: "Fraunces", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
       --sfc-heading-weight: 600;
       --sfc-bg: #f6f1e7; --sfc-surface: transparent; --sfc-border: #ddd3c2; --sfc-text: #2a2722; --sfc-muted: #8a8173;
       --sfc-pv: #c9862b; --sfc-load: #a8473a; --sfc-battery: #6f8f6a; --sfc-grid: #56677a; --sfc-good: #4f7d3a; --sfc-bad: #b0412e;
@@ -4275,7 +4279,7 @@ const THEME_CSS = {
   // ------------------------------------------------------------------ LCARS
   lcars: `
     .sfc {
-      --sfc-font: "Antonio", "Arial Narrow", sans-serif; --sfc-num-font: "Antonio", "Arial Narrow", sans-serif;
+      --sfc-font: "Antonio", "Bahnschrift SemiCondensed", "Arial Narrow", "Roboto Condensed", sans-serif-condensed, sans-serif; --sfc-num-font: "Antonio", "Bahnschrift SemiCondensed", "Arial Narrow", "Roboto Condensed", sans-serif-condensed, sans-serif;
       --orange: #ff9c00; --peach: #ffcc99; --lav: #cc99cc; --blue: #9999ff; --red: #cc6666; --gold: #ffcc66; --sky: #99ccff;
       --sfc-bg: #000; --sfc-surface: #000; --sfc-border: #222; --sfc-text: #ffcc99; --sfc-muted: #9999ff;
       --sfc-pv: #ff9c00; --sfc-load: #cc6666; --sfc-battery: #99ccff; --sfc-grid: #cc99cc;
@@ -4364,7 +4368,7 @@ const THEME_CSS = {
   // --------------------------------------------------------------- Atlantis
   atlantis: `
     .sfc {
-      --sfc-font: "Exo 2", system-ui, sans-serif;
+      --sfc-font: "Exo 2", "Segoe UI", Roboto, "Helvetica Neue", system-ui, sans-serif;
       --sfc-bg: radial-gradient(70% 55% at 50% 28%, rgba(0,200,255,.16), transparent 70%), radial-gradient(40% 30% at 85% 90%, rgba(0,255,210,.08), transparent 70%), linear-gradient(180deg, #04202c, #021018);
       --sfc-surface: rgba(0,140,190,.07); --sfc-border: rgba(110,230,255,.22); --sfc-text: #dffbff; --sfc-muted: #5fc6d8;
       --sfc-pv: #ffd36b; --sfc-load: #7affd8; --sfc-battery: #3fe0ff; --sfc-grid: #8fb4ff;
@@ -4423,7 +4427,7 @@ const THEME_CSS = {
   `,
   expanse: `
     .sfc {
-      --sfc-font: "Rajdhani", "Arial Narrow", sans-serif; --sfc-num-font: "Share Tech Mono", ui-monospace, monospace;
+      --sfc-font: "Rajdhani", "Bahnschrift SemiCondensed", "Arial Narrow", "Roboto Condensed", sans-serif-condensed, sans-serif; --sfc-num-font: "Share Tech Mono", ui-monospace, "SF Mono", Menlo, Consolas, "Roboto Mono", monospace;
       --sfc-bg: radial-gradient(80% 60% at 50% 30%, rgba(80,170,200,.10), transparent 70%), linear-gradient(180deg, #0d1218, #070a0e);
       --sfc-surface: rgba(140,190,210,.04); --sfc-border: rgba(170,210,225,.18); --sfc-text: #e4edf1; --sfc-muted: #7f99a6;
       --sfc-pv: #ffb347; --sfc-load: #e8eef2; --sfc-battery: #57d6c4; --sfc-grid: #ff6a3d;
@@ -4481,7 +4485,7 @@ const THEME_CSS = {
   `,
   foundation: `
     .sfc {
-      --sfc-font: "Cormorant Garamond", Georgia, serif; --sfc-heading-font: "Cinzel", Georgia, serif; --sfc-num-font: "Cinzel", Georgia, serif;
+      --sfc-font: "Cormorant Garamond", Garamond, "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; --sfc-heading-font: "Cinzel", "Trajan Pro", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; --sfc-num-font: "Cinzel", "Trajan Pro", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
       --sfc-bg: radial-gradient(60% 45% at 50% 32%, rgba(232,196,122,.13), transparent 70%), radial-gradient(120% 80% at 50% 120%, #1a1408, transparent 60%), #07070a;
       --sfc-surface: rgba(232,196,122,.035); --sfc-border: rgba(232,196,122,.2); --sfc-text: #f1e6cf; --sfc-muted: #a8946c;
       --sfc-pv: #f3cf7a; --sfc-load: #f1e6cf; --sfc-battery: #c99a4a; --sfc-grid: #8fa6c8;
@@ -4527,7 +4531,7 @@ const THEME_CSS = {
   `,
   galaxy: `
     .sfc {
-      --sfc-font: "Share Tech Mono", ui-monospace, monospace; --sfc-heading-font: "Orbitron", sans-serif; --sfc-num-font: "Share Tech Mono", ui-monospace, monospace;
+      --sfc-font: "Share Tech Mono", ui-monospace, "SF Mono", Menlo, Consolas, "Roboto Mono", monospace; --sfc-heading-font: "Orbitron", "Bahnschrift", "Eurostile", "Segoe UI", Roboto, sans-serif; --sfc-num-font: "Share Tech Mono", ui-monospace, "SF Mono", Menlo, Consolas, "Roboto Mono", monospace;
       --sfc-bg: #020203; --sfc-surface: rgba(255,200,40,.03); --sfc-border: rgba(255,190,40,.22); --sfc-text: #ffe8a8; --sfc-muted: #b08a3a;
       --sfc-pv: #ffe81f; --sfc-load: #ff9d2e; --sfc-battery: #4fe3ff; --sfc-grid: #ff4b3a;
       --sfc-accent: #ffe81f; --sfc-accent-soft: rgba(255,232,31,.12); --sfc-tile-bg: rgba(255,200,40,.025); --sfc-track: rgba(255,190,40,.12);
@@ -4550,7 +4554,7 @@ const THEME_CSS = {
     .gal-crawl { width: 100%; height: 66px; margin-top: 6px; overflow: hidden; perspective: 220px; perspective-origin: 50% 0%;
       mask-image: linear-gradient(180deg, transparent, #000 30%, #000); -webkit-mask-image: linear-gradient(180deg, transparent, #000 30%, #000); }
     .gal-crawl p { margin: 0 auto; max-width: 92%; transform: rotateX(28deg); transform-origin: 50% 100%;
-      color: #ffe81f; font: 500 clamp(13px, 3.4cqw, 16px)/1.3 "Oswald", "Arial Narrow", sans-serif; text-align: justify; text-align-last: center; }
+      color: #ffe81f; font: 500 clamp(13px, 3.4cqw, 16px)/1.3 "Oswald", "Bahnschrift SemiCondensed", "Arial Narrow", "Roboto Condensed", sans-serif-condensed, sans-serif; text-align: justify; text-align-last: center; }
     .gal-crawl em { font-style: normal; color: #fff6b0; }
     .gal-scope { position: relative; aspect-ratio: 480 / 300; margin: 4px 10px 12px; border: 1px solid rgba(255,190,40,.25); background: radial-gradient(closest-side, rgba(255,120,0,.06), transparent); }
     .gal-scope svg { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -4580,7 +4584,7 @@ const THEME_CSS = {
   `,
   gate: `
     .sfc {
-      --sfc-font: "Rajdhani", "Arial Narrow", sans-serif; --sfc-num-font: "Share Tech Mono", ui-monospace, monospace; --sfc-heading-weight: 700;
+      --sfc-font: "Rajdhani", "Bahnschrift SemiCondensed", "Arial Narrow", "Roboto Condensed", sans-serif-condensed, sans-serif; --sfc-num-font: "Share Tech Mono", ui-monospace, "SF Mono", Menlo, Consolas, "Roboto Mono", monospace; --sfc-heading-weight: 700;
       --gt-cyan: #6fd3ff; --gt-amber: #ff8f1f; --gt-line: #173149;
       --sfc-bg: radial-gradient(60% 50% at 50% 30%, #0b1a2a 0%, #04070b 70%);
       --sfc-surface: linear-gradient(180deg, rgba(13,28,44,.9), rgba(6,13,21,.9)); --sfc-border: #173149; --sfc-text: #cfe8ff; --sfc-muted: #5f87a6;
@@ -4718,7 +4722,7 @@ const THEME_CSS = {
   `,
   reactor: `
     .sfc {
-      --sfc-font: "Rajdhani", system-ui, sans-serif; --sfc-heading-font: "Orbitron", sans-serif; --sfc-num-font: "Rajdhani", sans-serif;
+      --sfc-font: "Rajdhani", "Bahnschrift SemiCondensed", "Arial Narrow", "Roboto Condensed", sans-serif-condensed, sans-serif; --sfc-heading-font: "Orbitron", "Bahnschrift", "Eurostile", "Segoe UI", Roboto, sans-serif; --sfc-num-font: "Rajdhani", "Bahnschrift SemiCondensed", "Arial Narrow", "Roboto Condensed", sans-serif-condensed, sans-serif;
       --sfc-bg: radial-gradient(60% 30% at 50% 12%, rgba(79,216,255,.10), transparent 70%), linear-gradient(180deg, #050b14, #02060b);
       --sfc-surface: linear-gradient(180deg, rgba(20,70,100,.22), rgba(6,20,32,.5)); --sfc-border: rgba(79,216,255,.24);
       --sfc-text: #e9fbff; --sfc-muted: #6fb6d6;
@@ -4845,7 +4849,6 @@ const DEFAULT_CONFIG = {
   show_forecast: true,
   show_panels: true,
   animation: true,
-  load_fonts: true,
 };
 
 // Chart series the viewer switched off by clicking the legend; remembered in
@@ -5139,7 +5142,7 @@ class SolarFlowCard extends HTMLElement {
       const t = stringsFor(language);
       const locale = t.locale;
       const theme = config.theme;
-      if (config.load_fonts !== false) ensureThemeFonts(theme);
+      ensureThemeFonts(config);
       const resolved = resolveEntities(this._hass, config);
       if (!hasAnyEntity(resolved)) {
         const signature = `empty|${language}|${theme}`;
@@ -5372,7 +5375,7 @@ function editorStrings(hass, config) {
 }
 
 // Switches that are off unless set: [config key, label key, value when on].
-const EDITOR_OPTIN = [["wide", "editorWide"], ["show_insights", "editorInsights"], ["panels_average", "editorPanelsAverage", "per_string"], ["background", "editorGlass", "glass"]];
+const EDITOR_OPTIN = [["wide", "editorWide"], ["show_insights", "editorInsights"], ["panels_average", "editorPanelsAverage", "per_string"], ["background", "editorGlass", "glass"], ["load_fonts", "editorFonts"]];
 const EDITOR_SWITCHES = [
   ["show_solar", "editorSolar"],
   ["show_battery", "editorBattery"],
@@ -5388,7 +5391,6 @@ const EDITOR_SWITCHES = [
   ["show_co2", "editorShowCo2"],
   ["show_yield", "editorShowYield"],
   ["animation", "editorAnimation"],
-  ["load_fonts", "editorFonts"],
 ];
 
 class SolarFlowCardEditor extends HTMLElement {

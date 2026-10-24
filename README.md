@@ -112,7 +112,8 @@ co2_factor: 0.7
 | `period` | `today` | Tab shown when the dashboard opens: `today`, `3d`, `7d`, `month` or `all`. |
 | `station_id` | first station | DeyeCloud station, when the account has several. |
 | `animation` | `true` | Animated flows. |
-| `load_fonts` | `true` | Load the theme's font from Google Fonts; `false` uses system fonts. |
+| `load_fonts` | `false` | `true` loads the theme's own fonts from Google Fonts (see [Fonts](#fonts)). By default the card uses fonts already on your device and connects nowhere. Also in the editor. |
+| `font_url` | – | Your own font stylesheet instead, e.g. a self-hosted copy in `/config/www` (`/local/fonts/solar-flow-card.css`). |
 | `show_weather` | `true` | Diorama and Reactor: draw the weather of a Home Assistant weather entity (the Diorama sky, the Reactor visor), with the temperature next to the clock. |
 | `weather_entity` | first `weather.*` entity | Weather entity for the Diorama and Reactor themes. |
 
@@ -134,6 +135,15 @@ co2_factor: 0.7
 | `price_export` | `0` | Price per kWh sold to the grid. |
 | `currency` | by language (`zł`, `€`) | Currency shown with the savings. |
 | `co2_factor` | `0.5` | kg of CO₂ per kWh from the grid (Poland: about `0.7`). |
+
+### Fonts
+
+By default the card loads nothing from the internet: each theme uses the fonts already on your device (for example Segoe UI, Roboto or San Francisco, a condensed font for the sci-fi themes and a serif for Paper and Foundation). The themes were designed with their own fonts (Nunito, Space Grotesk, Fraunces, Antonio, Exo 2, Rajdhani, Cinzel, Orbitron…), which you can get in two ways:
+
+- `load_fonts: true` loads them from Google Fonts. Your browser then connects to Google's servers, which see your IP address.
+- `font_url` loads a stylesheet you host yourself. Download the fonts (for example with [google-webfonts-helper](https://gwfh.mranftl.com/fonts)), put them and a CSS file with their `@font-face` rules in `/config/www/fonts/`, and set `font_url: /local/fonts/solar-flow-card.css`. Keep the font family names (e.g. `"Nunito"`), the themes ask for them by name.
+
+A font installed on your device is used too, with neither option.
 
 ### Sections
 
