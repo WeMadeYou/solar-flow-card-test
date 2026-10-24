@@ -2,6 +2,8 @@
 
 ## 1.5.0
 
+**Visual change:** the card no longer loads fonts from Google Fonts by default, so it connects to no outside server (thanks @frenck). Each theme now uses fonts already on your device, with fallbacks chosen per theme (rounded, condensed, monospace or serif). To get the themes' own fonts back, set `load_fonts: true` (also in the editor) or host them yourself with `font_url`. See [Fonts](README.md#fonts).
+
 - **Virtual storage with hourly net balancing** (`virtual_storage`, #43): for tariffs that balance import and export within each hour. A new section shows this hour's balance (export minus import since the full hour) as a virtual battery, green for a surplus and red for a deficit (`negative: zero` clamps it at 0 kWh), with the time until it resets and today's hours with a surplus and the energy balanced. Calculated from the grid energy counters (daily or lifetime), or read from a ready sensor such as ha-balance-neto's net balance (`entity`). The period summary adds "self-sufficiency with hourly balancing" for 24H, 3D, 7D and month. Without the option nothing changes.
 - Installation: with grid power per phase, the bars are green while a phase exports and red while it imports (#53).
 - The grid's status shows the direction: in Diorama an arrow (↑ export, ↓ import) in green or red, in the other themes the status text in the same colours (#53).
