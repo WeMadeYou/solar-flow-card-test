@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.0
+
+- **Virtual storage with hourly net balancing** (`virtual_storage`, #43): for tariffs that balance import and export within each hour. A new section shows this hour's balance (export minus import since the full hour) as a virtual battery, green for a surplus and red for a deficit (`negative: zero` clamps it at 0 kWh), with the time until it resets and today's hours with a surplus and the energy balanced. Calculated from the grid energy counters (daily or lifetime), or read from a ready sensor such as ha-balance-neto's net balance (`entity`). The period summary adds "self-sufficiency with hourly balancing" for 24H, 3D, 7D and month. Without the option nothing changes.
+
 ## 1.4.4
 
 - `energy_sensors: total`: today's energy now comes from Home Assistant's hourly statistics (the change of each hour since midnight plus what the counter added since the last full hour), like the Energy dashboard. Reading the counters at midnight failed when a sensor was unavailable then (an inverter switched off at night), and today's totals stayed empty (#53).

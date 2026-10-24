@@ -86,6 +86,13 @@ const BASE_CSS = `
   .sfc-forecast-bar { grid-column: 1 / -1; position: relative; height: 7px; border-radius: 999px; background: var(--sfc-track); }
   .sfc-forecast-bar i { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: var(--sfc-battery); }
   .sfc-forecast-bar b { position: absolute; top: -3px; bottom: -3px; width: 2px; border-radius: 1px; background: var(--sfc-load); }
+  .sfc-vstore { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px 12px; --sfc-vs: var(--sfc-muted); }
+  .sfc-vstore.surplus { --sfc-vs: var(--sfc-good, #3fb950); }
+  .sfc-vstore.deficit { --sfc-vs: var(--sfc-bad, #f0524a); }
+  .sfc-vstore .sfc-forecast-icon { color: var(--sfc-vs); }
+  .sfc-vstore-value { color: var(--sfc-vs); }
+  .sfc-vstore .sfc-forecast-bar i { background: var(--sfc-vs); opacity: .75; }
+  .sfc-vstore-reset { grid-column: 1 / -1; margin-top: -4px; color: var(--sfc-muted); font-size: 11px; text-align: right; }
 
   /* Inverter details */
   .sfc-group + .sfc-group { margin-top: 12px; }

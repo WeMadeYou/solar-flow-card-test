@@ -150,6 +150,8 @@ entities:
 
 The Panels section reads per-panel data from DeyeCloud optimizers, and `panels_per_string` estimates panels from DeyeCloud string readings; neither is available from huawei_solar yet, so the section stays hidden here.
 
+With an hourly net-balancing tariff, add `virtual_storage: true`: the card works out each hour's balance from the two ZAMEL counters (see the [README](../README.md#virtual-storage-hourly-net-balancing)). With [ha-balance-neto](https://github.com/miguelangellv/ha-balance-neto) installed you can point it at its net balance sensor instead (`virtual_storage: { entity: sensor.… }`).
+
 If you prefer daily sensors instead, use `sensor.inverter_daily_yield` for `solar_energy` and two *Utility meter* helpers (daily) for the grid counters, and leave out `energy_sensors: total`.
 
 ## What DeyeCloud provides, for comparison

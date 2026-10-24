@@ -256,7 +256,14 @@ const TRANSLATIONS = {
       "exceptional": "Exceptional"
     },
     "editorPanelsAverage": "Panel average and weakest panel per string",
-    "editorGlass": "Glass background (the dashboard background shows through the card)"
+    "editorGlass": "Glass background (the dashboard background shows through the card)",
+    "vsTitle": "Virtual storage · hourly balance",
+    "vsSurplus": "Surplus this hour",
+    "vsDeficit": "Deficit this hour",
+    "vsResetsIn": "resets in {m} min",
+    "vsDay": "Today: {h} h with a surplus · {kwh} balanced",
+    "autarkyHourly": "Self-suff. with hourly balance",
+    "vsNone": "No surplus this hour"
   },
   "nl": {
     "languageName": "Nederlands",
@@ -497,7 +504,14 @@ const TRANSLATIONS = {
       "exceptional": "Uitzonderlijk"
     },
     "editorPanelsAverage": "Gemiddelde en zwakste paneel per string",
-    "editorGlass": "Glazen achtergrond (de dashboardachtergrond schijnt door de kaart)"
+    "editorGlass": "Glazen achtergrond (de dashboardachtergrond schijnt door de kaart)",
+    "vsTitle": "Virtuele opslag · uurbalans",
+    "vsSurplus": "Overschot dit uur",
+    "vsDeficit": "Tekort dit uur",
+    "vsResetsIn": "reset over {m} min",
+    "vsDay": "Vandaag: {h} u met overschot · {kwh} verrekend",
+    "autarkyHourly": "Zelfvoorz. met uurbalans",
+    "vsNone": "Geen overschot dit uur"
   },
   "pl": {
     "languageName": "Polski",
@@ -738,7 +752,14 @@ const TRANSLATIONS = {
       "exceptional": "Wyjątkowe warunki"
     },
     "editorPanelsAverage": "Średnia i najsłabszy panel osobno dla każdego stringu",
-    "editorGlass": "Szklane tło (tło dashboardu prześwituje przez kartę)"
+    "editorGlass": "Szklane tło (tło dashboardu prześwituje przez kartę)",
+    "vsTitle": "Wirtualny magazyn · bilans godzinowy",
+    "vsSurplus": "Nadwyżka w tej godzinie",
+    "vsDeficit": "Niedobór w tej godzinie",
+    "vsResetsIn": "zeruje się za {m} min",
+    "vsDay": "Dziś: {h} h z nadwyżką · zbilansowano {kwh}",
+    "autarkyHourly": "Samowystarcz. z bilansem godz.",
+    "vsNone": "Brak nadwyżki w tej godzinie"
   }
 };
 
@@ -1190,6 +1211,130 @@ async function loadTodayStats(hass, energy) {
   return out;
 }
 
+// Virtual storage (#43): `virtual_storage: true` or an object with an
+// optional ready net balance `entity` and `negative: show|zero`.
+function virtualStorageConfig(config) {
+  const vs = config.virtual_storage;
+  if (vs === true) return { entity: null, negative: "show" };
+  if (!vs || typeof vs !== "object" || Array.isArray(vs)) return null;
+  return { entity: typeof vs.entity === "string" && vs.entity ? vs.entity : null, negative: vs.negative === "zero" ? "zero" : "show" };
+}
+
+function startOfHour(date) {
+  const d = new Date(date);
+  d.setMinutes(0, 0, 0);
+  return d;
+}
+
+const GRID_COUNTERS = ["gridImport", "gridExport"];
+
+// Grid import and export of every full hour since `start`, from the hourly
+// statistics: Map(hour start ms -> { gridImport, gridExport }) in kWh.
+async function loadHourlyGrid(hass, energy, start) {
+  const ids = GRID_COUNTERS.map((name) => energy[name]?.entityId);
+  const response = await hass.callWS({
+    type: "recorder/statistics_during_period",
+    start_time: start.toISOString(),
+    end_time: new Date().toISOString(),
+    statistic_ids: [...new Set(ids)],
+    period: "hour",
+    types: ["change"],
+    units: { energy: "kWh" },
+  });
+  const hours = new Map();
+  GRID_COUNTERS.forEach((name, i) => {
+    for (const row of response?.[ids[i]] || []) {
+      const at = statStart(row.start);
+      const hour = hours.get(at) || { gridImport: 0, gridExport: 0 };
+      hour[name] += Math.max(0, Number(row.change) || 0);
+      hours.set(at, hour);
+    }
+  });
+  return hours;
+}
+
+// The current hour so far, from the 5-minute statistics: the change since
+// the full hour and the last compiled reading, which the live state
+// continues (see hourSoFar()).
+async function loadCurrentHour(hass, energy) {
+  const ids = GRID_COUNTERS.map((name) => energy[name]?.entityId);
+  const hourStart = startOfHour(new Date()).getTime();
+  const response = await hass.callWS({
+    type: "recorder/statistics_during_period",
+    start_time: new Date(hourStart - 15 * 60000).toISOString(),
+    end_time: new Date().toISOString(),
+    statistic_ids: [...new Set(ids)],
+    period: "5minute",
+    types: ["change", "state"],
+    units: { energy: "kWh" },
+  });
+  const out = {};
+  GRID_COUNTERS.forEach((name, i) => {
+    const rows = response?.[ids[i]] || [];
+    if (!rows.length) return;
+    let change = 0;
+    let last = null;
+    for (const row of rows) {
+      if (statStart(row.start) >= hourStart) change += Math.max(0, Number(row.change) || 0);
+      const state = Number(row.state);
+      if (Number.isFinite(state)) last = state;
+    }
+    out[name] = { change, last };
+  });
+  return out;
+}
+
+// Import and export within the current hour: the compiled 5-minute change
+// plus what the counter added since (a counter that went down was reset).
+function hourSoFar(resolved, current) {
+  if (!current) return null;
+  const out = {};
+  for (const name of GRID_COUNTERS) {
+    const s = current[name];
+    if (!s) return null;
+    const now = kwhOf(resolved.energy[name]?.stateObj);
+    out[name] = s.change + (isNum(now) && isNum(s.last) ? (now >= s.last ? now - s.last : now) : 0);
+  }
+  return out;
+}
+
+// Import left after balancing import and export within each hour.
+function hourlyNetImport(hours, since, current) {
+  if (!hours) return null;
+  let net = 0;
+  for (const [at, h] of hours) if (at >= since) net += Math.max(0, h.gridImport - h.gridExport);
+  if (current) net += Math.max(0, current.gridImport - current.gridExport);
+  return net;
+}
+
+// The virtual storage: this hour's balance (export minus import), the time
+// until it resets, and today's hours.
+function virtualStorage(hass, resolved, vs, todayHours, current, now = new Date()) {
+  const hourStart = startOfHour(now);
+  const minutesLeft = Math.max(0, Math.ceil((hourStart.getTime() + 3600000 - now.getTime()) / 60000));
+  let value = null;
+  let entityId = null;
+  if (vs.entity) {
+    entityId = vs.entity;
+    value = kwhOf(hass.states?.[vs.entity]);
+  } else if (current) {
+    value = current.gridExport - current.gridImport;
+    entityId = resolved.energy.gridExport?.entityId || null;
+  }
+  let day = null;
+  if (todayHours) {
+    const hours = [...todayHours.entries()].filter(([at]) => at >= startOfDay(now).getTime() && at < hourStart.getTime()).map(([, h]) => h);
+    if (current) hours.push(current);
+    day = {
+      surplusHours: hours.filter((h) => h.gridExport - h.gridImport > 0.005).length,
+      balanced: hours.reduce((sum, h) => sum + Math.min(h.gridImport, h.gridExport), 0),
+    };
+  }
+  const deficit = isNum(value) && value < -0.0005;
+  if (deficit && vs.negative === "zero") value = 0;
+  return { value, deficit, entityId, minutesLeft, progress: ((60 - minutesLeft) / 60) * 100, day };
+}
+
 // Long-term statistics query for a period other than today.
 function statsSpec(period) {
   const now = new Date();
@@ -1273,13 +1418,17 @@ function migrateConfig(config) {
   return next;
 }
 
-function periodSummary(totals, config, t, locale) {
+function periodSummary(totals, config, t, locale, netImport = null) {
   const { solar, load, gridImport, gridExport } = totals;
   const items = [];
   const show = (key) => config[key] !== false;
   const hasSolar = show("show_solar");
   if (show("show_self_sufficiency") && isNum(load) && isNum(gridImport) && load > 0.05) {
     items.push(["autarky", t.autarky, formatPercent(clamp(((load - gridImport) / load) * 100, 0, 100), locale)]);
+  }
+  // With virtual storage: the import left after hourly balancing.
+  if (show("show_self_sufficiency") && isNum(load) && isNum(netImport) && load > 0.05) {
+    items.push(["autarky", t.autarkyHourly, formatPercent(clamp(((load - netImport) / load) * 100, 0, 100), locale)]);
   }
   if (hasSolar && show("show_self_use") && isNum(solar) && isNum(gridExport) && solar > 0.05) {
     items.push(["selfuse", t.selfUse, formatPercent(clamp(((solar - gridExport) / solar) * 100, 0, 100), locale)]);
@@ -1908,6 +2057,30 @@ function forecastHtml(m) {
     </section>`;
 }
 
+// Virtual storage (#43): this hour's export minus import, reset at every
+// full hour, for tariffs that balance per hour.
+function virtualStorageHtml(m) {
+  const v = m.virtualStorage;
+  if (!v) return "";
+  const { t, locale } = m;
+  const value = v.value;
+  const state = !isNum(value) ? "" : value > 0.0005 ? "surplus" : value < -0.0005 ? "deficit" : "";
+  const shown = isNum(value) ? `${value > 0.0005 ? "+" : value < -0.0005 ? "−" : ""}${formatEnergy(Math.abs(value), locale)}` : "—";
+  const day = v.day ? fill(t.vsDay, { h: formatNumber(v.day.surplusHours, locale, 0), kwh: formatEnergy(v.day.balanced, locale) }) : "";
+  return `
+    <section class="sfc-section sfc-vstore ${state}" ${v.entityId ? `data-entity="${escapeHtml(v.entityId)}"` : ""}>
+      <span class="sfc-forecast-icon">${MINI_ICONS.charge}</span>
+      <div class="sfc-forecast-copy">
+        <small>${escapeHtml(t.vsTitle)}</small>
+        <strong>${escapeHtml(state === "deficit" ? t.vsDeficit : v.deficit || !state ? t.vsNone : t.vsSurplus)}</strong>
+        ${day ? `<em>${escapeHtml(day)}</em>` : ""}
+      </div>
+      <b class="sfc-forecast-stored sfc-vstore-value">${escapeHtml(shown)}</b>
+      <div class="sfc-forecast-bar" aria-hidden="true"><i style="width:${v.progress.toFixed(1)}%"></i></div>
+      <span class="sfc-vstore-reset">${escapeHtml(fill(t.vsResetsIn, { m: formatNumber(v.minutesLeft, locale, 0) }))}</span>
+    </section>`;
+}
+
 function readingLabel(key) {
   return key.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/_/g, " ").replace(/\s+/g, " ").trim();
 }
@@ -2100,8 +2273,8 @@ function insightsHtml(m) {
 function standardSections(m) {
   // Wide: the energy section leads across the full width, the rest flow
   // into balanced columns below it.
-  if (m.config.wide) return `${energySectionHtml(m)}<div class="sfc-wide-rest">${inverterHtml(m)}${forecastHtml(m)}${insightsHtml(m)}${systemHtml(m)}${panelsHtml(m)}</div>`;
-  return `${inverterHtml(m)}${forecastHtml(m)}${systemHtml(m)}${energySectionHtml(m)}${insightsHtml(m)}${panelsHtml(m)}`;
+  if (m.config.wide) return `${energySectionHtml(m)}<div class="sfc-wide-rest">${inverterHtml(m)}${forecastHtml(m)}${virtualStorageHtml(m)}${insightsHtml(m)}${systemHtml(m)}${panelsHtml(m)}</div>`;
+  return `${inverterHtml(m)}${forecastHtml(m)}${virtualStorageHtml(m)}${systemHtml(m)}${energySectionHtml(m)}${insightsHtml(m)}${panelsHtml(m)}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -3409,7 +3582,7 @@ function renderGate(m) {
         </div>
       </div>
       <div class="gt-energy">${energySectionHtml(m)}</div>
-      <div class="sfc-sections">${inverterHtml(m)}${insightsHtml(m)}${systemHtml(m)}${panelsHtml(m)}</div>
+      <div class="sfc-sections">${inverterHtml(m)}${virtualStorageHtml(m)}${insightsHtml(m)}${systemHtml(m)}${panelsHtml(m)}</div>
     </div>`;
 }
 
@@ -3709,6 +3882,13 @@ const BASE_CSS = `
   .sfc-forecast-bar { grid-column: 1 / -1; position: relative; height: 7px; border-radius: 999px; background: var(--sfc-track); }
   .sfc-forecast-bar i { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: var(--sfc-battery); }
   .sfc-forecast-bar b { position: absolute; top: -3px; bottom: -3px; width: 2px; border-radius: 1px; background: var(--sfc-load); }
+  .sfc-vstore { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px 12px; --sfc-vs: var(--sfc-muted); }
+  .sfc-vstore.surplus { --sfc-vs: var(--sfc-good, #3fb950); }
+  .sfc-vstore.deficit { --sfc-vs: var(--sfc-bad, #f0524a); }
+  .sfc-vstore .sfc-forecast-icon { color: var(--sfc-vs); }
+  .sfc-vstore-value { color: var(--sfc-vs); }
+  .sfc-vstore .sfc-forecast-bar i { background: var(--sfc-vs); opacity: .75; }
+  .sfc-vstore-reset { grid-column: 1 / -1; margin-top: -4px; color: var(--sfc-muted); font-size: 11px; text-align: right; }
 
   /* Inverter details */
   .sfc-group + .sfc-group { margin-top: 12px; }
@@ -4782,6 +4962,30 @@ class SolarFlowCard extends HTMLElement {
     return entry.data || null;
   }
 
+  // Virtual storage (#43): the current hour, the full hours of today, and the
+  // import left after hourly balancing for the selected period.
+  _virtualStorage(resolved, config, period, now) {
+    const vs = virtualStorageConfig(config);
+    if (!vs) return { store: null, netImport: null };
+    const ids = GRID_COUNTERS.map((name) => resolved.energy[name]?.entityId);
+    const counters = ids.every(Boolean) && typeof this._hass.callWS === "function";
+    let current = null;
+    let todayHours = null;
+    let netImport = null;
+    if (counters) {
+      const hourStart = startOfHour(now).getTime();
+      current = hourSoFar(resolved, this._fetch(`vs-hour|${ids.join(",")}|${hourStart}`, 5 * 60000, () => loadCurrentHour(this._hass, resolved.energy)).data);
+      const hourly = (start) => this._fetch(`vs-hours|${ids.join(",")}|${start.getTime()}`, 5 * 60000, () => loadHourlyGrid(this._hass, resolved.energy, start)).data || null;
+      const today = startOfDay(now);
+      todayHours = hourly(today);
+      if (period !== "all") {
+        const start = period === "today" ? today : statsSpec(period).start;
+        netImport = hourlyNetImport(period === "today" ? todayHours : hourly(start), start.getTime(), current);
+      }
+    }
+    return { store: virtualStorage(this._hass, resolved, vs, todayHours, current, now), netImport };
+  }
+
   // Recorder history of the power sensors for today or the last 3 days,
   // shared by the chart and the day's highlights.
   _powerHistory(resolved, period) {
@@ -4940,6 +5144,7 @@ class SolarFlowCard extends HTMLElement {
       };
       if (bank && !ids.live.soc && !ids.live.battery) ids.live.soc = bank.items[0].entityId;
       const now = new Date();
+      const vstore = this._virtualStorage(resolved, config, period, now);
       this._introAt ??= Date.now();
       const introElapsed = (Date.now() - this._introAt) / 1000;
       const introAt = introElapsed < 2.6 ? introElapsed : null;
@@ -4948,6 +5153,7 @@ class SolarFlowCard extends HTMLElement {
         chart && [Boolean(chart.loading), Boolean(chart.error), chart.at], forecast.mode, Math.round(forecast.hours * 60 || 0),
         panels?.panels.map((p) => [p.today, p.power]), system, bank, insights && [insights.loading, insights.at, insights.day?.offGridMinutes], weather && [weather.condition, weather.temperature], inverterOpen,
         inverter?.map((d) => [[...d.strings.values()].map((s) => Object.values(s).map((r) => r.value)), d.temperatures.map((r) => r.value), d.battery.map((r) => r.value), d.grid.map((r) => r.value)]),
+        vstore,
         Math.floor(now.getTime() / 60000),
       ]);
       if (signature === this._signature) return;
@@ -4978,7 +5184,8 @@ class SolarFlowCard extends HTMLElement {
         period,
         totals: energy.totals || {},
         energyLoading: Boolean(energy.loading),
-        summary: periodSummary(energy.totals || {}, config, t, locale),
+        summary: periodSummary(energy.totals || {}, config, t, locale, vstore.netImport),
+        virtualStorage: vstore.store,
         since,
         chart,
         forecast,

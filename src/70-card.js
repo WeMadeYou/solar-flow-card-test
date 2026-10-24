@@ -174,6 +174,30 @@ class SolarFlowCard extends HTMLElement {
     return entry.data || null;
   }
 
+  // Virtual storage (#43): the current hour, the full hours of today, and the
+  // import left after hourly balancing for the selected period.
+  _virtualStorage(resolved, config, period, now) {
+    const vs = virtualStorageConfig(config);
+    if (!vs) return { store: null, netImport: null };
+    const ids = GRID_COUNTERS.map((name) => resolved.energy[name]?.entityId);
+    const counters = ids.every(Boolean) && typeof this._hass.callWS === "function";
+    let current = null;
+    let todayHours = null;
+    let netImport = null;
+    if (counters) {
+      const hourStart = startOfHour(now).getTime();
+      current = hourSoFar(resolved, this._fetch(`vs-hour|${ids.join(",")}|${hourStart}`, 5 * 60000, () => loadCurrentHour(this._hass, resolved.energy)).data);
+      const hourly = (start) => this._fetch(`vs-hours|${ids.join(",")}|${start.getTime()}`, 5 * 60000, () => loadHourlyGrid(this._hass, resolved.energy, start)).data || null;
+      const today = startOfDay(now);
+      todayHours = hourly(today);
+      if (period !== "all") {
+        const start = period === "today" ? today : statsSpec(period).start;
+        netImport = hourlyNetImport(period === "today" ? todayHours : hourly(start), start.getTime(), current);
+      }
+    }
+    return { store: virtualStorage(this._hass, resolved, vs, todayHours, current, now), netImport };
+  }
+
   // Recorder history of the power sensors for today or the last 3 days,
   // shared by the chart and the day's highlights.
   _powerHistory(resolved, period) {
@@ -332,6 +356,7 @@ class SolarFlowCard extends HTMLElement {
       };
       if (bank && !ids.live.soc && !ids.live.battery) ids.live.soc = bank.items[0].entityId;
       const now = new Date();
+      const vstore = this._virtualStorage(resolved, config, period, now);
       this._introAt ??= Date.now();
       const introElapsed = (Date.now() - this._introAt) / 1000;
       const introAt = introElapsed < 2.6 ? introElapsed : null;
@@ -340,6 +365,7 @@ class SolarFlowCard extends HTMLElement {
         chart && [Boolean(chart.loading), Boolean(chart.error), chart.at], forecast.mode, Math.round(forecast.hours * 60 || 0),
         panels?.panels.map((p) => [p.today, p.power]), system, bank, insights && [insights.loading, insights.at, insights.day?.offGridMinutes], weather && [weather.condition, weather.temperature], inverterOpen,
         inverter?.map((d) => [[...d.strings.values()].map((s) => Object.values(s).map((r) => r.value)), d.temperatures.map((r) => r.value), d.battery.map((r) => r.value), d.grid.map((r) => r.value)]),
+        vstore,
         Math.floor(now.getTime() / 60000),
       ]);
       if (signature === this._signature) return;
@@ -370,7 +396,8 @@ class SolarFlowCard extends HTMLElement {
         period,
         totals: energy.totals || {},
         energyLoading: Boolean(energy.loading),
-        summary: periodSummary(energy.totals || {}, config, t, locale),
+        summary: periodSummary(energy.totals || {}, config, t, locale, vstore.netImport),
+        virtualStorage: vstore.store,
         since,
         chart,
         forecast,
