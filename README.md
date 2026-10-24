@@ -144,6 +144,7 @@ co2_factor: 0.7
 | `show_forecast` | `true` | Battery forecast (needs `battery_capacity`). |
 | `show_system` | `true` | Installation: phases, inverter load, battery temperature/voltage/current, generator (shown when the data exists). |
 | `show_panels` | `true` | Optimizer / panel tiles (shown only when panel data exists). |
+| `inverter_details` | – | Any sensors to show in the Inverter details, e.g. the temperature or status of an inverter that is not DeyeCloud. See the [configuration guide](docs/configuration.md#installation-section-all-optional). |
 | `virtual_storage` | – | Virtual storage with hourly net balancing, see [below](#virtual-storage-hourly-net-balancing). |
 
 ### Period summary

@@ -244,5 +244,6 @@
   "vsResetsIn": "reset over {m} min",
   "vsDay": "Vandaag: {h} u met overschot · {kwh} verrekend",
   "autarkyHourly": "Zelfvoorz. met uurbalans",
-  "vsNone": "Geen overschot dit uur"
+  "vsNone": "Geen overschot dit uur",
+  "otherDetails": "Overige metingen"
 }

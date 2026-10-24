@@ -244,5 +244,6 @@
   "vsResetsIn": "resets in {m} min",
   "vsDay": "Today: {h} h with a surplus · {kwh} balanced",
   "autarkyHourly": "Self-suff. with hourly balance",
-  "vsNone": "No surplus this hour"
+  "vsNone": "No surplus this hour",
+  "otherDetails": "Other readings"
 }

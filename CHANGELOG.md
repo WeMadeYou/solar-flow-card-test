@@ -3,6 +3,9 @@
 ## 1.5.0
 
 - **Virtual storage with hourly net balancing** (`virtual_storage`, #43): for tariffs that balance import and export within each hour. A new section shows this hour's balance (export minus import since the full hour) as a virtual battery, green for a surplus and red for a deficit (`negative: zero` clamps it at 0 kWh), with the time until it resets and today's hours with a surplus and the energy balanced. Calculated from the grid energy counters (daily or lifetime), or read from a ready sensor such as ha-balance-neto's net balance (`entity`). The period summary adds "self-sufficiency with hourly balancing" for 24H, 3D, 7D and month. Without the option nothing changes.
+- Installation: with grid power per phase, the bars are green while a phase exports and red while it imports (#53).
+- The grid's status shows the direction: in Diorama an arrow (↑ export, ↓ import) in green or red, in the other themes the status text in the same colours (#53).
+- Inverter details for any inverter (#53): PV string power, voltage and current under `entities:` (`pv1_power` … `pv4_current`, power from voltage × current when missing), also used by `panels_per_string`, and `inverter_details:`, a list of any sensors shown as tiles. Without any inverter data the section and its link are hidden instead of showing an empty section.
 
 ## 1.4.4
 

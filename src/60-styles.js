@@ -218,6 +218,14 @@ const BASE_CSS = `
   .sfc-phase i, .sfc-meter i { display: block; height: 4px; margin: 3px 0 1px; border-radius: 999px;
     background: linear-gradient(90deg, var(--sfc-c, var(--sfc-load)) var(--p), var(--sfc-track) var(--p)); }
   .sfc-bank { grid-template-columns: repeat(var(--n), minmax(0, 1fr)); }
+  /* Grid per phase: green while exporting, red while importing. */
+  .sfc-phase.export { --sfc-c: var(--sfc-good, #3fb950); }
+  .sfc-phase.import { --sfc-c: var(--sfc-bad, #f0524a); }
+  /* The grid's status in the themes' flow views. */
+  ha-card.grid-export :is(.aur-node, .atl-label, .exp-box, .fnd-node, .gal-readout, .rx-node).grid > :is(em, small:last-child),
+  ha-card.grid-export :is(.gt-row.grid em, .dio-pill.grid small) { color: var(--sfc-good, #3fb950); }
+  ha-card.grid-import :is(.aur-node, .atl-label, .exp-box, .fnd-node, .gal-readout, .rx-node).grid > :is(em, small:last-child),
+  ha-card.grid-import :is(.gt-row.grid em, .dio-pill.grid small) { color: var(--sfc-bad, #f0524a); }
   .sfc-bank + .sfc-phases { margin-top: 8px; }
   .sfc-bat { --sfc-c: var(--sfc-battery); }
   .sfc-bat strong { color: var(--sfc-battery); }
@@ -268,7 +276,7 @@ const THEME_CSS = {
       --sfc-glass: rgba(255, 255, 255, .55);
       --sfc-font: "Nunito", system-ui, sans-serif;
       --sfc-bg: #ffffff; --sfc-surface: #f5f8fb; --sfc-border: #e3eaf1; --sfc-text: #24364a; --sfc-muted: #6a7d92;
-      --sfc-pv: #f5a400; --sfc-load: #f26b5b; --sfc-battery: #1fbf86; --sfc-grid: #5b8def;
+      --sfc-pv: #f5a400; --sfc-load: #f26b5b; --sfc-battery: #1fbf86; --sfc-grid: #5b8def; --sfc-good: #1f9d55; --sfc-bad: #d64545;
       --sfc-accent: #3b82f6; --sfc-accent-soft: #e3eefe; --sfc-tile-bg: #ffffff; --sfc-track: #e7eef4;
       --sfc-tab-bg: #eaf0f6; --sfc-tab-on-bg: #ffffff; --sfc-tab-on: #24364a; --sfc-tab-shadow: 0 2px 8px rgba(30,60,90,.12);
       --sfc-flow-base: rgba(255,255,255,.0); --sfc-flow-w: 4;
@@ -377,7 +385,7 @@ const THEME_CSS = {
       --sfc-font: "Inter", system-ui, sans-serif; --sfc-heading-font: "Fraunces", Georgia, serif; --sfc-num-font: "Fraunces", Georgia, serif;
       --sfc-heading-weight: 600;
       --sfc-bg: #f6f1e7; --sfc-surface: transparent; --sfc-border: #ddd3c2; --sfc-text: #2a2722; --sfc-muted: #8a8173;
-      --sfc-pv: #c9862b; --sfc-load: #a8473a; --sfc-battery: #6f8f6a; --sfc-grid: #56677a;
+      --sfc-pv: #c9862b; --sfc-load: #a8473a; --sfc-battery: #6f8f6a; --sfc-grid: #56677a; --sfc-good: #4f7d3a; --sfc-bad: #b0412e;
       --sfc-accent: #b06a1f; --sfc-accent-soft: transparent; --sfc-tile-bg: transparent; --sfc-track: #e6ddcd;
       --sfc-tab-bg: transparent; --sfc-tab-on-bg: transparent; --sfc-tab-on: #2a2722; --sfc-tip-bg: #fbf8f1;
       --sfc-radius: 6px; --sfc-section-radius: 0; --sfc-tile-radius: 0; --sfc-shadow: 0 20px 40px rgba(60,45,20,.15); --sfc-frame: #e6ddcd;

@@ -337,13 +337,15 @@ class SolarFlowCard extends HTMLElement {
       const energy = this._periodEnergy(resolved, period, today);
       const chart = this._chartState(resolved, period, energy);
       const forecast = batteryForecast(live, bank?.capacity && !positiveNumber(config.battery_capacity) ? { ...config, battery_capacity: bank.capacity } : config);
-      const readings = inverterReadings(resolved);
+      const readings = inverterReadings(resolved, this._hass, config);
       const panels = showSolar ? panelData(this._hass, resolved, config) || estimatePanels(readings, config, today) : null;
       const insights = this._insights(resolved, today, forecast);
       const weather = theme === "diorama" || theme === "reactor" ? weatherData(this._hass, config) : null;
       // The wide layout has room for everything: inverter details stay open.
       const wide = config.wide === true;
-      const inverterOpen = wide || this._inverterOpen;
+      // Nothing to show: no details section and no link to it.
+      const hasDetails = readings.length > 0;
+      const inverterOpen = hasDetails && (wide || this._inverterOpen);
       const inverter = inverterOpen ? readings : null;
       const system = config.show_system !== false ? systemData(this._hass, resolved, config) : null;
       if (system && !showBattery) Object.assign(system, { battery: [], batteryWarn: null });
@@ -408,6 +410,7 @@ class SolarFlowCard extends HTMLElement {
         insights,
         weather,
         inverterOpen,
+        hasDetails,
         hiddenSeries: this._hiddenSeries,
         // Seconds since the card was first shown, during its start-up
         // animation (re-renders continue it), then null.
@@ -417,7 +420,7 @@ class SolarFlowCard extends HTMLElement {
 
       this._paint(
         BASE_CSS + THEME_CSS[theme],
-        ["sfc", `theme-${theme}`, config.animation === false && "no-anim", config.background === "glass" && "glass"].filter(Boolean).join(" "),
+        ["sfc", `theme-${theme}`, config.animation === false && "no-anim", config.background === "glass" && "glass", live.exportActive ? "grid-export" : live.importActive && "grid-import"].filter(Boolean).join(" "),
         wide ? wideLayout(theme, THEME_RENDER[theme](model)) : THEME_RENDER[theme](model),
       );
       this._wire(model);
@@ -473,6 +476,7 @@ class SolarFlowCard extends HTMLElement {
     root.querySelectorAll('[data-action="inverter"]').forEach((element) => {
       element.addEventListener("click", (event) => {
         event.stopPropagation();
+        if (!model.hasDetails) return;
         if (model.config.wide) {
           root.querySelector(".sfc-inverter")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
           return;

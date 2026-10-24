@@ -153,12 +153,12 @@ function inverterHtml(m) {
   const reading = (r) => `
     <button class="sfc-reading" data-entity="${escapeHtml(r.entityId)}">
       <small>${escapeHtml(readingLabel(r.key))}</small>
-      <b>${escapeHtml(`${formatNumber(r.value, locale, Math.abs(r.value) < 100 ? 1 : 0)} ${r.unit}`)}</b>
+      <b>${escapeHtml(r.text ?? `${formatNumber(r.value, locale, Math.abs(r.value) < 100 ? 1 : 0)} ${r.unit}`.trim())}</b>
     </button>`;
   const group = (title, items) => items.length ? `
     <div class="sfc-group"><h4>${escapeHtml(title)}</h4><div class="sfc-readings">${items.map(reading).join("")}</div></div>` : "";
   const content = devices.length ? devices.map((device) => `
-    ${devices.length > 1 ? `<h4 class="sfc-serial">${escapeHtml(device.serial)}</h4>` : ""}
+    ${devices.length > 1 && device.serial ? `<h4 class="sfc-serial">${escapeHtml(device.serial)}</h4>` : ""}
     ${device.strings.size ? `
       <div class="sfc-group">
         <h4>${escapeHtml(t.pvStrings)}</h4>
@@ -173,7 +173,8 @@ function inverterHtml(m) {
       </div>` : ""}
     ${group(t.temperatures, device.temperatures)}
     ${group(t.batteryDetails, device.battery)}
-    ${group(t.gridDetails, device.grid)}`).join("") : `<p class="sfc-empty-note">${escapeHtml(t.noDetails)}</p>`;
+    ${group(t.gridDetails, device.grid)}
+    ${group(t.otherDetails, device.other || [])}`).join("") : `<p class="sfc-empty-note">${escapeHtml(t.noDetails)}</p>`;
   return `
     <section class="sfc-section sfc-inverter">
       <div class="sfc-head">
@@ -251,7 +252,7 @@ function systemHtml(m) {
   const phases = data.phases ? `
     <div class="sfc-phases" style="--n:${data.phases.length}">
       ${data.phases.map((p) => `
-        <button class="sfc-phase" ${attr(p.entityId)}>
+        <button class="sfc-phase ${p.main === "grid" && isNum(p.grid) ? (p.grid < -ACTIVE_W ? "export" : p.grid > ACTIVE_W ? "import" : "") : ""}" ${attr(p.entityId)}>
           <small>${escapeHtml(p.main === "grid" ? `${p.name} · ${t.grid}` : p.name)}</small>
           <strong>${escapeHtml(formatPower(p.main === "grid" ? p.grid : p.load, locale))}</strong>
           <i style="--p:${(() => { const v = p.main === "grid" ? Math.abs(p.grid ?? 0) : p.load; return isNum(v) ? ((v / data.phaseMax) * 100).toFixed(0) : 0; })()}%"></i>

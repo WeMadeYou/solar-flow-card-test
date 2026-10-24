@@ -495,7 +495,46 @@ function deviceKey(stateObj) {
   return index > 0 ? words[index - 1] : "";
 }
 
-function inverterReadings(resolved) {
+// Inverter readings set in the card config, for any inverter: string power,
+// voltage and current (`entities: pv1_power … pv4_current`, the power is
+// worked out from voltage × current when missing) and `inverter_details:`,
+// a list of any sensors.
+function configuredInverter(hass, config) {
+  const states = hass?.states || {};
+  const configured = config.entities || {};
+  const device = { serial: "", strings: new Map(), temperatures: [], battery: [], grid: [], other: [] };
+  const read = (entityId, key) => {
+    const stateObj = states[entityId];
+    if (!stateObj) return null;
+    const value = stateNumber(stateObj);
+    return { entityId, key, value, unit: stateUnit(stateObj), text: value === null ? String(stateObj.state) : null };
+  };
+  for (let n = 1; n <= 4; n++) {
+    const string = {};
+    const power = configured[`pv${n}_power`] ? read(configured[`pv${n}_power`], `PV${n} power`) : null;
+    if (isNum(power?.value)) string.W = { ...power, value: wattsOf(states[power.entityId]), unit: "W" };
+    for (const [unit, name] of [["V", "voltage"], ["A", "current"]]) {
+      const r = configured[`pv${n}_${name}`] ? read(configured[`pv${n}_${name}`], `PV${n} ${name}`) : null;
+      if (isNum(r?.value)) string[unit] = r;
+    }
+    if (!string.W && string.V && string.A) string.W = { ...string.V, key: `PV${n} power`, value: string.V.value * string.A.value, unit: "W" };
+    if (Object.keys(string).length) device.strings.set(n, string);
+  }
+  const details = Array.isArray(config.inverter_details) ? config.inverter_details : [];
+  for (const item of details) {
+    const entityId = typeof item === "string" ? item : item?.entity;
+    const r = entityId ? read(entityId, (typeof item === "object" && item?.name) || states[entityId]?.attributes?.friendly_name || entityId) : null;
+    if (r) device.other.push(r);
+  }
+  return device.strings.size || device.other.length ? device : null;
+}
+
+function inverterReadings(resolved, hass, config = {}) {
+  const own = configuredInverter(hass, config);
+  return own ? [own, ...deyeInverterReadings(resolved)] : deyeInverterReadings(resolved);
+}
+
+function deyeInverterReadings(resolved) {
   const devices = resolved.candidates.filter(([, s]) => s.attributes?.sensor_type === "device");
   const inverters = devices.filter(([, s]) => String(s.attributes?.device_type || "").includes("INVERTER"));
   const bySerial = new Map();
@@ -504,7 +543,7 @@ function inverterReadings(resolved) {
     const value = stateNumber(stateObj);
     if (!key || value === null) continue;
     const serial = String(stateObj.attributes?.device_sn || "");
-    const device = bySerial.get(serial) || { serial, strings: new Map(), temperatures: [], battery: [], grid: [] };
+    const device = bySerial.get(serial) || { serial, strings: new Map(), temperatures: [], battery: [], grid: [], other: [] };
     const unit = stateUnit(stateObj);
     const reading = { entityId, key, value, unit };
     const stringMatch = key.match(/PV\s*(\d+)/i);
