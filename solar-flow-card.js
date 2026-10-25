@@ -788,7 +788,7 @@ const TRANSLATIONS = {
     "exporting": "Експорт",
     "balanced": "Balanced",
     "fromRoof": "from the roof",
-    "inHome": "in the home",
+    "inHome": "навантаження",
     "periodToday": "Сьогодні",
     "period3d": "Останні 3 дні",
     "period7d": "Останні 7 днів",
