@@ -18,7 +18,7 @@ const ACTIVE_W = 5;
 // Generated from translations/*.json.
 const TRANSLATIONS = {
   "en": {
-    "languageName": "English 333",
+    "languageName": "English",
     "locale": "en-GB",
     "currency": "€",
     "hourShort": "h",
@@ -42,7 +42,7 @@ const TRANSLATIONS = {
     "balanced": "Balanced",
     "fromRoof": "from the roof",
     "inHome": "in the home",
-    "periodToday": "Стогодні",
+    "periodToday": "Today",
     "period3d": "Last 3 days",
     "period7d": "Last 7 days",
     "periodMonth": "This month",
